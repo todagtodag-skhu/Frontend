@@ -12,6 +12,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 
+import TreeSvg from '../../../assets/tree.svg';
 import { fontFamily } from '@/constants/fonts';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -46,11 +47,7 @@ const DEFAULT_MISSIONS: Mission[] = [
 
 const STICKER_OPTIONS = ['⭐', '🌟', '🎯', '❤️', '🏆', '🍀', '🎨', '🦋'];
 
-const BG_COLOR = '#F3EEE5';
-const TREE_TOP = '#5BCB6B';
-const TREE_MID = '#27B66E';
-const TREE_BOTTOM = '#17A866';
-const TRUNK = '#94624A';
+const BG_COLOR = '#FFF9EE';
 const EMPTY_SPOT = '#D8D8D8';
 const BLUE_TEXT = '#4C84FF';
 const DOT_ACTIVE = '#E9C784';
@@ -82,12 +79,12 @@ const SPOT_LAYOUT: { x: number; y: number }[] = [
   { x: 0.63, y: 0.56 },
   { x: 0.75, y: 0.56 },
 
-  { x: 0.18, y: 0.76 },
-  { x: 0.31, y: 0.76 },
-  { x: 0.44, y: 0.76 },
-  { x: 0.56, y: 0.76 },
-  { x: 0.69, y: 0.76 },
-  { x: 0.82, y: 0.76 },
+  { x: 0.22, y: 0.76 },
+  { x: 0.34, y: 0.76 },
+  { x: 0.45, y: 0.76 },
+  { x: 0.55, y: 0.76 },
+  { x: 0.66, y: 0.76 },
+  { x: 0.78, y: 0.76 },
 ];
 
 export default function GrowthTree({
@@ -179,7 +176,7 @@ export default function GrowthTree({
 
         <View style={styles.treeSection}>
           <View style={styles.treeWrapper}>
-            <TreeShape />
+            <TreeSvg width={TREE_WIDTH} height={TREE_HEIGHT} style={styles.treeSvg} />
 
             {spots.map((pos, i) => {
               const spotId = i + 1;
@@ -338,17 +335,6 @@ export default function GrowthTree({
   );
 }
 
-function TreeShape() {
-  return (
-    <View style={styles.treeBase}>
-      <View style={styles.treeLayerTop} />
-      <View style={styles.treeLayerMid} />
-      <View style={styles.treeLayerBottom} />
-      <View style={styles.trunk} />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -399,60 +385,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  treeBase: {
-    width: TREE_WIDTH,
-    height: TREE_HEIGHT,
+  treeSvg: {
     position: 'absolute',
-    alignItems: 'center',
-  },
-
-  treeLayerTop: {
-    position: 'absolute',
-    top: 28,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 60,
-    borderRightWidth: 60,
-    borderBottomWidth: 90,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: TREE_TOP,
-  },
-  treeLayerMid: {
-    position: 'absolute',
-    top: 95,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 95,
-    borderRightWidth: 95,
-    borderBottomWidth: 120,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: TREE_MID,
-  },
-  treeLayerBottom: {
-    position: 'absolute',
-    top: 182,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 118,
-    borderRightWidth: 118,
-    borderBottomWidth: 120,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: TREE_BOTTOM,
-  },
-  trunk: {
-    position: 'absolute',
-    bottom: 8,
-    width: 28,
-    height: 60,
-    backgroundColor: TRUNK,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
   },
 
   spot: {
