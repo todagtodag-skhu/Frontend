@@ -15,7 +15,7 @@ export default function HomeScreen() {
       </Text>
       <Button
         title="토닥이"
-        onPress={() => router.push('/todagi')}
+        onPress={() => router.push('/onboarding')}
         style={styles.button}
       />
     </View>
