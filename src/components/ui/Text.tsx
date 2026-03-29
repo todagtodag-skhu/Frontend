@@ -14,7 +14,7 @@ type AppTextProps = TextProps & {
 
 export function Text({
   style,
-  weight = 'regular',
+  weight = 'bold',
   ...props
 }: AppTextProps) {
   return (
