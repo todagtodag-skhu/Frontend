@@ -6,8 +6,8 @@ import { fontFamily } from '@/constants/fonts';
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    GangwonEduAllLight: require('../../assets/fonts/강원교육모두 Light.otf'),
-    GangwonEduAllBold: require('../../assets/fonts/강원교육모두 Bold.otf'),
+    GangwonEduAllLight: require('../../assets/fonts/GangwonEduAll-Light.otf'),
+    GangwonEduAllBold: require('../../assets/fonts/GangwonEduAll-Bold.otf'),
   });
 
   if (!fontsLoaded) {
