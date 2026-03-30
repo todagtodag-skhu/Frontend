@@ -13,7 +13,7 @@ export default function LoginRoute() {
     try {
       setIsSubmitting(true);
       await signInWithApple();
-      router.replace('/children');
+      router.replace('/onboarding');
     } catch (error) {
       const message =
         error instanceof Error ? error.message : '로그인에 실패했습니다. 다시 시도해주세요.';
