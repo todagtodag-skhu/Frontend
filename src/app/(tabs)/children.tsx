@@ -86,7 +86,7 @@ export default function ChildrenScreen() {
 
         <Button
           title="새 성장이 연결하기"
-          onPress={() => router.push('/onboarding')}
+          onPress={() => router.push('/register-child')}
           style={styles.addButton}
         />
       </ScrollView>

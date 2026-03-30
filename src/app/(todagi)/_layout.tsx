@@ -9,10 +9,10 @@ export default function TodagiLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen
-        name="onboarding"
+        name="register-child"
         options={{
           headerShown: true,
-          title: '성장이 연결하기',
+          title: '성장이 등록하기',
           headerLeft: () => (
             <Pressable onPress={() => router.replace('/children')} style={{ paddingHorizontal: 16 }}>
               <Text>뒤로</Text>
