@@ -10,7 +10,6 @@ import {
   Alert,
   SafeAreaView,
   PanResponder,
-  ScrollView,
 } from 'react-native';
 
 import TreeSvg from '../../../assets/tree.svg';
@@ -230,10 +229,7 @@ export default function GrowthTree({
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+      <View style={styles.content}>
         <View style={styles.topSection}>
           <Text style={styles.title}>{boardName}</Text>
 
@@ -372,7 +368,7 @@ export default function GrowthTree({
         >
           <Text style={styles.requestButtonText}>스티커 조르기</Text>
         </TouchableOpacity>
-      </ScrollView>
+      </View>
 
       {/* 손가락을 따라다니는 스티커 (드래그 중일 때만 표시) */}
       {draggingStickerIdx !== null && (
@@ -455,11 +451,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: BG_COLOR,
   },
-  scrollContent: {
+  content: {
     paddingTop: 32,
     paddingBottom: 40,
     paddingHorizontal: 22,
     alignItems: 'center',
+    flex: 1,
   },
 
   topSection: {
