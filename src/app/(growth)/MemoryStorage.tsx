@@ -1,21 +1,19 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
-  FlatList,
   StyleSheet,
-  Dimensions,
   SafeAreaView,
   TouchableOpacity,
   ScrollView,
+  PanResponder,
 } from 'react-native';
+import { router } from 'expo-router';
 import CompletedStickerCard from '@/components/growth/CompletedCard';
 import GiftCard from '@/components/growth/GiftCard';
 import { fontFamily } from '@/constants/fonts';
 import { colors } from '@/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ── 타입 ──────────────────────────────────────────────────────────────────────
 interface StickerBoard {
@@ -51,6 +49,7 @@ const PAGES: Page[] = [
       { id: 'g-2', label: '베스킨라빈스', status: '열기전', isUnlocked: false },
     ],
   },
+  /*
   {
     id: 'page-2',
     stickerBoards: [
@@ -71,22 +70,52 @@ const PAGES: Page[] = [
       { id: 'g-6', label: '투썸', status: '열기전', isUnlocked: false },
     ],
   },
+  */
 ];
+
 
 const TOTAL_COMPLETED = 12;
 
 // ── 컴포넌트 ──────────────────────────────────────────────────────────────────
 const MemoryStorageScreen: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState(0);
-  const flatListRef = useRef<FlatList>(null);
+  const item = PAGES[0];
 
-  const handleScroll = (event: any) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const page = Math.round(offsetX / SCREEN_WIDTH);
-    setCurrentPage(page);
+  const handleDotPress = (index: number) => {
+    if (index === 0) {
+      router.push('/tree');
+      return;
+    }
+
+    if (index === 1) {
+      router.push('/MissionHome');
+    }
   };
 
-  const renderPage = ({ item }: { item: Page }) => (
+  const swipeResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          Math.abs(gestureState.dx) > 24 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.2,
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dx >= 60) {
+            router.push('/MissionHome');
+          }
+        },
+      }),
+    [],
+  );
+
+  return (
+    <SafeAreaView style={styles.safe} {...swipeResponder.panHandlers}>
+      {/* 헤더 */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>추억 저장소</Text>
+        <View style={styles.badge}>
+          <Ionicons name="trophy" size={14} color={colors.grayscale[100]} style={styles.badgeIcon} />
+          <Text style={styles.badgeText}>완료 {TOTAL_COMPLETED}개</Text>
+        </View>
+      </View>
+
     <ScrollView
       style={styles.page}
       contentContainerStyle={styles.pageContent}
@@ -121,43 +150,14 @@ const MemoryStorageScreen: React.FC = () => {
         {item.gifts.length % 2 !== 0 && <View style={{ flex: 1 }} />}
       </View>
     </ScrollView>
-  );
 
-  return (
-    <SafeAreaView style={styles.safe}>
-      {/* 헤더 */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>추억 저장소</Text>
-        <View style={styles.badge}>
-          <Ionicons name="trophy" size={14} color={colors.grayscale[100]} style={styles.badgeIcon} />
-          <Text style={styles.badgeText}>완료 {TOTAL_COMPLETED}개</Text>
-        </View>
-      </View>
-
-      {/* 페이지 슬라이더 */}
-      <FlatList
-        ref={flatListRef}
-        data={PAGES}
-        keyExtractor={(item) => item.id}
-        renderItem={renderPage}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        style={styles.flatList}
-      />
-
-      {/* 페이지 인디케이터 */}
+      {/* 하단 네비게이션 도트 */}
       <View style={styles.dotContainer}>
-        {PAGES.map((_, index) => (
+        {[0, 1, 2].map((index) => (
           <TouchableOpacity
             key={index}
-            style={[styles.dot, currentPage === index && styles.dotActive]}
-            onPress={() => {
-              flatListRef.current?.scrollToIndex({ index, animated: true });
-              setCurrentPage(index);
-            }}
+            style={[styles.dot, index === 2 && styles.dotActive]}
+            onPress={() => handleDotPress(index)}
           />
         ))}
       </View>
@@ -207,13 +207,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: fontFamily.bold,
   },
-  // ── FlatList
-  flatList: {
-    flex: 1,
-  },
   // ── 페이지
   page: {
-    width: SCREEN_WIDTH,
+    flex: 1,
   },
   pageContent: {
     paddingHorizontal: 20,

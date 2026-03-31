@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   SafeAreaView,
   PanResponder,
 } from 'react-native';
+import { router } from 'expo-router';
 
 import TreeSvg from '../../../assets/tree.svg';
 import { fontFamily } from '@/constants/fonts';
@@ -227,8 +228,33 @@ export default function GrowthTree({
     return responder.panHandlers;
   };
 
+  const handleScreenDotPress = (index: number) => {
+    if (index === 1) {
+      router.push('/MissionHome');
+      return;
+    }
+
+    if (index === 2) {
+      router.push('/MemoryStorage');
+    }
+  };
+
+  const swipeResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          Math.abs(gestureState.dx) > 24 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.2,
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dx <= -60) {
+            router.push('/MissionHome');
+          }
+        },
+      }),
+    [],
+  );
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} {...swipeResponder.panHandlers}>
       <View style={styles.content}>
         <View style={styles.topSection}>
           <Text style={styles.title}>{boardName}</Text>
@@ -368,6 +394,16 @@ export default function GrowthTree({
         >
           <Text style={styles.requestButtonText}>스티커 조르기</Text>
         </TouchableOpacity>
+
+        <View style={styles.screenDotContainer}>
+          {[0, 1, 2].map((index) => (
+            <TouchableOpacity
+              key={index}
+              style={[styles.screenDot, index === 0 && styles.screenDotActive]}
+              onPress={() => handleScreenDotPress(index)}
+            />
+          ))}
+        </View>
       </View>
 
       {/* 손가락을 따라다니는 스티커 (드래그 중일 때만 표시) */}
@@ -616,6 +652,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#6C523C',
+  },
+  screenDotContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 70,
+    marginTop: 36,
+    paddingBottom: 12,
+  },
+  screenDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 16,
+    backgroundColor: '#D9D9D9',
+  },
+  screenDotActive: {
+    backgroundColor: '#FBBF4E',
   },
 
   // 드래그 중인 스티커 스타일

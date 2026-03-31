@@ -1,20 +1,18 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  FlatList,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
   SafeAreaView,
+  PanResponder,
 } from 'react-native';
+import { router } from 'expo-router';
 import MissionCard from '@/components/growth/Missionlist';
 import { fontFamily } from '@/constants/fonts';
 import { colors } from '@/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ── 타입 ──────────────────────────────────────────────────────────────────────
 interface Mission {
@@ -39,19 +37,8 @@ const PAGES: Page[] = [
       { id: '3', title: '엄마한테 사랑한다고 말하기', frequency: '주 1회', reward: '스티커 1개' },
       { id: '4', title: '엄마한테 사랑한다고 말하기', frequency: '주 1회', reward: '스티커 1개' },
       { id: '5', title: '엄마한테 사랑한다고 말하기', frequency: '주 1회', reward: '스티커 1개' },
-    ],
-  },
-  {
-    id: 'page-2',
-    missions: [
       { id: '6', title: '하루 30분 독서하기', frequency: '매일', reward: '스티커 2개' },
       { id: '7', title: '방 청소하기', frequency: '주 2회', reward: '스티커 1개' },
-    ],
-  },
-  {
-    id: 'page-3',
-    missions: [
-      { id: '8', title: '물 8잔 마시기', frequency: '매일', reward: '스티커 1개' },
     ],
   },
 ];
@@ -61,17 +48,45 @@ const PROGRESS_TOTAL = 20;
 
 // ── 컴포넌트 ──────────────────────────────────────────────────────────────────
 const MissionListScreen: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState(0);
-  const flatListRef = useRef<FlatList>(null);
+  const item = PAGES[0];
 
-  const handleScroll = (event: any) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const page = Math.round(offsetX / SCREEN_WIDTH);
-    setCurrentPage(page);
+  const handleDotPress = (index: number) => {
+    if (index === 0) {
+      router.push('/tree');
+      return;
+    }
+
+    if (index === 2) {
+      router.push('/MemoryStorage');
+    }
   };
 
-  const renderPage = ({ item }: { item: Page }) => (
-    <View style={styles.page}>
+  const swipeResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          Math.abs(gestureState.dx) > 24 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.2,
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dx <= -60) {
+            router.push('/MemoryStorage');
+            return;
+          }
+
+          if (gestureState.dx >= 60) {
+            router.push('/tree');
+          }
+        },
+      }),
+    [],
+  );
+
+  return (
+    <SafeAreaView style={styles.safe} {...swipeResponder.panHandlers}>
+      <View style={styles.container}>
+        {/* 헤더 */}
+        <Text style={styles.header}>유진이의 미션 목록</Text>
+
+        <View style={styles.page}>
       {/* 페이지 상단 대표 카드 */}
       <View style={styles.heroCard} >
         <Ionicons name="heart" size={22} color="red" style={styles.heroEmoji} />
@@ -100,39 +115,15 @@ const MissionListScreen: React.FC = () => {
         성장나무 완성까지{' '}
           {PROGRESS_CURRENT}/{PROGRESS_TOTAL} 개
       </Text>
-    </View>
-  );
+        </View>
 
-  return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
-        {/* 헤더 */}
-        <Text style={styles.header}>유진이의 미션 목록</Text>
-
-        {/* 페이지 슬라이더 */}
-        <FlatList
-          ref={flatListRef}
-          data={PAGES}
-          keyExtractor={(item) => item.id}
-          renderItem={renderPage}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-          style={styles.flatList}
-        />
-
-        {/* 페이지 인디케이터 */}
+        {/* 하단 네비게이션 도트 */}
         <View style={styles.dotContainer}>
-          {PAGES.map((_, index) => (
+          {[0, 1, 2].map((index) => (
             <TouchableOpacity
               key={index}
-              style={[styles.dot, currentPage === index && styles.dotActive]}
-              onPress={() => {
-                flatListRef.current?.scrollToIndex({ index, animated: true });
-                setCurrentPage(index);
-              }}
+              style={[styles.dot, index === 1 && styles.dotActive]}
+              onPress={() => handleDotPress(index)}
             />
           ))}
         </View>
@@ -161,13 +152,8 @@ const styles = StyleSheet.create({
     paddingTop: 36,
     paddingBottom: 32,
   },
-  // ── FlatList
-  flatList: {
-    flex: 1,
-  },
   // ── 페이지 단위
   page: {
-    width: SCREEN_WIDTH,
     paddingHorizontal: 20,
     flex: 1,
   },
