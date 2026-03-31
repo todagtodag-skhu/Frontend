@@ -556,22 +556,22 @@ const styles = StyleSheet.create({
     marginTop: 44,
     backgroundColor: '#E7DDCD',
     borderRadius: 999,
-    paddingHorizontal: 22,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 11,
     borderWidth: 1,
     borderColor: '#D7C9B2',
   },
-  requestButtonText: { fontSize: 15, fontWeight: '700', color: '#6C523C' },
+  requestButtonText: { fontSize: 17, fontFamily: fontFamily.bold, color: '#6C523C' },
 
   screenDotContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 70,
+    gap: 68,
     marginTop: 77,
     paddingBottom: 12,
   },
-  screenDot: { width: 16, height: 16, borderRadius: 16, backgroundColor: '#D9D9D9' },
+  screenDot: { width: 17, height: 17, borderRadius: 16, backgroundColor: '#D9D9D9' },
   screenDotActive: { backgroundColor: '#FBBF4E' },
 
   // 드래그 중 떠다니는 스티커도 하단 스티커와 같은 색상

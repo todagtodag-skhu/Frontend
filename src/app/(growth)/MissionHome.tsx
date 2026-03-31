@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -43,12 +43,12 @@ const PAGES: Page[] = [
   },
 ];
 
-const PROGRESS_CURRENT = 1;
 const PROGRESS_TOTAL = 20;
 
 // ── 컴포넌트 ──────────────────────────────────────────────────────────────────
 const MissionListScreen: React.FC = () => {
   const item = PAGES[0];
+  const [likedMissionIds, setLikedMissionIds] = useState<string[]>([]);
 
   const handleDotPress = (index: number) => {
     if (index === 0) {
@@ -80,6 +80,14 @@ const MissionListScreen: React.FC = () => {
     [],
   );
 
+  const toggleMissionHeart = (missionId: string) => {
+    setLikedMissionIds((prev) =>
+      prev.includes(missionId)
+        ? prev.filter((id) => id !== missionId)
+        : [...prev, missionId],
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safe} {...swipeResponder.panHandlers}>
       <View style={styles.container}>
@@ -89,9 +97,9 @@ const MissionListScreen: React.FC = () => {
         <View style={styles.page}>
       {/* 페이지 상단 대표 카드 */}
       <View style={styles.heroCard} >
-        <Ionicons name="heart" size={22} color="red" style={styles.heroEmoji} />
+        <Ionicons name="heart" size={24} color="red" style={styles.heroEmoji} />
         <View style={{ flex: 1 }} />
-        <Ionicons name="heart" size={22} color="red" style={styles.heroEmoji} />  
+        <Ionicons name="heart" size={24} color="red" style={styles.heroEmoji} />  
       </View>
 
       {/* 미션 카드 목록 */}
@@ -105,7 +113,8 @@ const MissionListScreen: React.FC = () => {
             title={mission.title}
             frequency={mission.frequency}
             reward={mission.reward}
-            onHeartPress={() => console.log('heart pressed:', mission.id)}
+            isHeartFilled={likedMissionIds.includes(mission.id)}
+            onHeartPress={() => toggleMissionHeart(mission.id)}
           />
         ))}
       </ScrollView>
@@ -113,7 +122,7 @@ const MissionListScreen: React.FC = () => {
       {/* 성장 진행 텍스트 */}
       <Text style={styles.progressText}>
         성장나무 완성까지{' '}
-          {PROGRESS_CURRENT}/{PROGRESS_TOTAL} 개
+          {likedMissionIds.length}/{PROGRESS_TOTAL} 개
       </Text>
         </View>
 
@@ -138,7 +147,7 @@ export default MissionListScreen;
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FAF6EE',
+    backgroundColor: '#FFF9EE',
   },
   container: {
     flex: 1,

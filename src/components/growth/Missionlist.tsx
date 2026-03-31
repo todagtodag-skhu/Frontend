@@ -13,6 +13,7 @@ interface MissionCardProps {
   title: string;
   frequency: string;   // e.g. '주 1회'
   reward: string;      // e.g. '스티커 1개'
+  isHeartFilled?: boolean;
   onHeartPress?: () => void;
 }
 
@@ -20,12 +21,13 @@ const MissionCard: React.FC<MissionCardProps> = ({
   title,
   frequency,
   reward,
+  isHeartFilled = false,
   onHeartPress,
 }) => {
   return (
     <View style={styles.card}>
       {/* 왼쪽 하트 */}
-      <Ionicons name="heart" size={22} color="red" style={styles.leftEmoji} />
+      <Ionicons name="heart" size={24} color="red" style={styles.leftEmoji} />
 
       {/* 텍스트 영역 */}
       <View style={styles.textArea}>
@@ -39,7 +41,12 @@ const MissionCard: React.FC<MissionCardProps> = ({
 
       {/* 오른쪽 하트 버튼 */}
       <TouchableOpacity style={styles.heartButton} onPress={onHeartPress} activeOpacity={0.7}>
-        <Ionicons name="heart" size={22} color="red" style={styles.heartButtonEmoji} />
+        <Ionicons
+          name={isHeartFilled ? 'heart' : 'heart-outline'}
+          size={24}
+          color="red"
+          style={styles.heartButtonEmoji}
+        />
       </TouchableOpacity>
     </View>
   );
@@ -90,9 +97,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.grayscale[100],
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 16,
+    marginLeft: 20,
   },
   heartButtonEmoji: {
     marginTop: 1,
+    marginLeft: 13,
   },
 });

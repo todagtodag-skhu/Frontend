@@ -171,7 +171,7 @@ export default MemoryStorageScreen;
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FAF6EE',
+    backgroundColor: '#FFF9EE',
   },
   // ── 헤더
   header: {
