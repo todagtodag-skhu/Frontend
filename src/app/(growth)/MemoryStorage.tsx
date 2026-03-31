@@ -130,7 +130,7 @@ const MemoryStorageScreen: React.FC = () => {
           title={board.title}
           filled={board.filled}
           total={board.total}
-          onReview={() => console.log('review:', board.id)}
+          onReview={() => router.push('/tree')}
         />
       ))}
 
