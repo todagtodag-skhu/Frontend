@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,12 @@ import {
   Alert,
   SafeAreaView,
   PanResponder,
-  ScrollView,
 } from 'react-native';
+import { router } from 'expo-router';
 
 import TreeSvg from '../../../assets/tree.svg';
 import { fontFamily } from '@/constants/fonts';
+import { colors } from '@/constants/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -45,17 +46,18 @@ const DEFAULT_MISSIONS: Mission[] = [
   { id: 'm5', title: '동생이랑 사이좋게 지내기', completed: false },
 ];
 
-// 기존 색상 유지
 const BG_COLOR = '#FFF9EE';
 const EMPTY_SPOT = '#D8D8D8';
 const BLUE_TEXT = '#4C84FF';
-const DOT_ACTIVE = '#E9C784';   // 스티커(동그라미) 기본 색상으로 사용
-const DOT_INACTIVE = '#DFDFDF'; // 스티커 쓴 후 빈자리 색상으로 사용
+const DOT_ACTIVE = '#E9C784';
+const DOT_INACTIVE = '#DFDFDF';
 
 const TREE_WIDTH = Math.min(SCREEN_WIDTH - 44, 320);
 const TREE_HEIGHT = TREE_WIDTH * 1.08;
 const SPOT_SIZE = 28;
 const STICKERS_PER_PAGE = 4;
+// 드롭 인식 반경 (px) — 기존 38보다 넓혀서 스냅 성공률 향상
+const DROP_RADIUS = 48;
 
 const SPOT_LAYOUT: { x: number; y: number }[] = [
   { x: 0.50, y: 0.08 },
@@ -67,17 +69,17 @@ const SPOT_LAYOUT: { x: number; y: number }[] = [
   { x: 0.61, y: 0.35 },
   { x: 0.73, y: 0.35 },
   { x: 0.50, y: 0.45 },
-  { x: 0.22, y: 0.56 },
-  { x: 0.36, y: 0.56 },
-  { x: 0.50, y: 0.56 },
-  { x: 0.64, y: 0.56 },
-  { x: 0.78, y: 0.56 },
-  { x: 0.14, y: 0.77 },
-  { x: 0.28, y: 0.77 },
-  { x: 0.43, y: 0.77 },
-  { x: 0.57, y: 0.77 },
-  { x: 0.71, y: 0.77 },
-  { x: 0.85, y: 0.77 },
+  { x: 0.22, y: 0.55 },
+  { x: 0.36, y: 0.55 },
+  { x: 0.50, y: 0.55 },
+  { x: 0.64, y: 0.55 },
+  { x: 0.78, y: 0.55 },
+  { x: 0.14, y: 0.76 },
+  { x: 0.28, y: 0.76 },
+  { x: 0.43, y: 0.76 },
+  { x: 0.57, y: 0.76 },
+  { x: 0.71, y: 0.76 },
+  { x: 0.85, y: 0.76 },
 ];
 
 export default function GrowthTree({
@@ -103,6 +105,12 @@ export default function GrowthTree({
   const treeLayoutRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const scaleAnims = useRef<Record<number, Animated.Value>>({});
 
+  // placedStickers 를 ref 로도 유지 — PanResponder 클로저에서 최신값 참조
+  const placedStickersRef = useRef(placedStickers);
+  const selectedMissionRef = useRef(selectedMission);
+  placedStickersRef.current = placedStickers;
+  selectedMissionRef.current = selectedMission;
+
   const getScaleAnim = (id: number) => {
     if (!scaleAnims.current[id]) {
       scaleAnims.current[id] = new Animated.Value(1);
@@ -113,13 +121,13 @@ export default function GrowthTree({
   const placedCount = Object.keys(placedStickers).length;
   const spots = SPOT_LAYOUT.slice(0, totalSpots);
 
-  // 페이지네이션 계산 로직
   const totalPages = Math.ceil(spots.length / STICKERS_PER_PAGE);
   const pagedIndices = Array.from({ length: spots.length })
     .map((_, i) => i)
     .slice(stickerPage * STICKERS_PER_PAGE, stickerPage * STICKERS_PER_PAGE + STICKERS_PER_PAGE);
 
-  const placeSticker = (spotId: number, mission: Mission) => {
+  // ── 스티커 부착 ──────────────────────────────────────────────────────────────
+  const placeSticker = useCallback((spotId: number, mission: Mission) => {
     const anim = getScaleAnim(spotId);
     anim.setValue(0);
     Animated.spring(anim, {
@@ -131,127 +139,149 @@ export default function GrowthTree({
 
     setPlacedStickers((prev) => ({
       ...prev,
-      [spotId]: {
-        placedAt: new Date(),
-        mission,
-      },
+      [spotId]: { placedAt: new Date(), mission },
     }));
-  };
+  }, []);
 
+  // ── 트리 레이아웃 측정 ────────────────────────────────────────────────────────
+  const measureTree = useCallback(() => {
+    treeWrapperRef.current?.measureInWindow((x, y, width, height) => {
+      treeLayoutRef.current = { x, y, width, height };
+    });
+  }, []);
+
+  // ── 가장 가까운 빈 스팟 탐색 ─────────────────────────────────────────────────
+  const getNearestEmptySpot = useCallback(
+    (absoluteX: number, absoluteY: number): number | null => {
+      const { x: treeX, y: treeY } = treeLayoutRef.current;
+      let nearestId: number | null = null;
+      let nearestDist = Infinity;
+
+      spots.forEach((pos, i) => {
+        const spotId = i + 1;
+        // 이미 스티커가 붙은 자리 제외
+        if (placedStickersRef.current[spotId]) return;
+
+        const cx = treeX + pos.x * TREE_WIDTH;
+        const cy = treeY + pos.y * TREE_HEIGHT;
+        const dist = Math.hypot(absoluteX - cx, absoluteY - cy);
+
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearestId = spotId;
+        }
+      });
+
+      return nearestDist <= DROP_RADIUS ? nearestId : null;
+    },
+    [spots],
+  );
+
+  // ── 드래그 핸들러 (스티커 인덱스별 메모이즈) ──────────────────────────────────
+  //    PanResponder 는 idx 가 달라질 때만 재생성 → 클로저 문제 없음
+  const panHandlersMap = useRef<Record<number, ReturnType<typeof PanResponder.create>['panHandlers']>>({});
+
+  const getPanHandlers = useCallback(
+    (idx: number) => {
+      if (!panHandlersMap.current[idx]) {
+        const responder = PanResponder.create({
+          onStartShouldSetPanResponder: () => true,
+          onMoveShouldSetPanResponder: () => true,
+          onPanResponderTerminationRequest: () => false,
+
+          onPanResponderGrant: (evt) => {
+            setDraggingStickerIdx(idx);
+            setDragPos({ x: evt.nativeEvent.pageX, y: evt.nativeEvent.pageY });
+          },
+
+          onPanResponderMove: (evt) => {
+            setDragPos({ x: evt.nativeEvent.pageX, y: evt.nativeEvent.pageY });
+          },
+
+          onPanResponderRelease: (evt) => {
+            const dropX = evt.nativeEvent.pageX;
+            const dropY = evt.nativeEvent.pageY;
+            const spotId = getNearestEmptySpot(dropX, dropY);
+
+            setDraggingStickerIdx(null);
+
+            if (spotId === null) return; // 유효 스팟 없음 → 취소
+
+            const mission = selectedMissionRef.current;
+            if (mission) {
+              placeSticker(spotId, mission);
+            } else {
+              setPendingDrop({ spotId });
+              setMissionModal(true);
+            }
+          },
+
+          onPanResponderTerminate: () => {
+            setDraggingStickerIdx(null);
+          },
+        });
+
+        panHandlersMap.current[idx] = responder.panHandlers;
+      }
+      return panHandlersMap.current[idx];
+    },
+    [getNearestEmptySpot, placeSticker],
+  );
+
+  // ── 스팟 터치 ────────────────────────────────────────────────────────────────
   const handleSpotPress = (id: number) => {
     if (placedStickers[id]) {
       setInfoModal({ visible: true, data: placedStickers[id] });
     }
   };
 
+  // ── 미션 선택 ────────────────────────────────────────────────────────────────
   const handleMissionSelect = (mission: Mission) => {
     setSelectedMission(mission);
-
     if (pendingDrop) {
       placeSticker(pendingDrop.spotId, mission);
       setPendingDrop(null);
     }
-
     setMissionModal(false);
   };
 
-  const getNearestEmptySpot = (absoluteX: number, absoluteY: number) => {
-    const { x: treeX, y: treeY } = treeLayoutRef.current;
+  // ── 스와이프 (화면 전환) ──────────────────────────────────────────────────────
+  const swipeResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, g) =>
+          Math.abs(g.dx) > 24 && Math.abs(g.dx) > Math.abs(g.dy) * 1.2,
+        onPanResponderRelease: (_, g) => {
+          if (g.dx <= -60) router.push('/MissionHome');
+        },
+      }),
+    [],
+  );
 
-    let nearestSpotId: number | null = null;
-    let nearestDistance = Infinity;
-
-    spots.forEach((pos, i) => {
-      const spotId = i + 1;
-      if (placedStickers[spotId]) return;
-
-      const spotCenterX = treeX + pos.x * TREE_WIDTH;
-      const spotCenterY = treeY + pos.y * TREE_HEIGHT;
-
-      const dx = absoluteX - spotCenterX;
-      const dy = absoluteY - spotCenterY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestSpotId = spotId;
-      }
-    });
-
-    if (nearestDistance <= 38) {
-      return nearestSpotId;
-    }
-
-    return null;
+  const handleScreenDotPress = (index: number) => {
+    if (index === 1) router.push('/MissionHome');
+    if (index === 2) router.push('/MemoryStorage');
   };
 
-  const startDrag = (idx: number) => {
-    const responder = PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: (evt) => {
-        setDraggingStickerIdx(idx);
-        setDragPos({
-          x: evt.nativeEvent.pageX,
-          y: evt.nativeEvent.pageY,
-        });
-      },
-      onPanResponderMove: (evt) => {
-        setDragPos({
-          x: evt.nativeEvent.pageX,
-          y: evt.nativeEvent.pageY,
-        });
-      },
-      onPanResponderRelease: (evt) => {
-        const dropX = evt.nativeEvent.pageX;
-        const dropY = evt.nativeEvent.pageY;
-        const spotId = getNearestEmptySpot(dropX, dropY);
-
-        if (spotId === null) {
-          setDraggingStickerIdx(null);
-          return;
-        }
-
-        if (selectedMission) {
-          placeSticker(spotId, selectedMission);
-        } else {
-          setPendingDrop({ spotId });
-          setMissionModal(true);
-        }
-
-        setDraggingStickerIdx(null);
-      },
-      onPanResponderTerminate: () => {
-        setDraggingStickerIdx(null);
-      },
-    });
-
-    return responder.panHandlers;
-  };
-
+  // ────────────────────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+    <SafeAreaView style={styles.container} {...swipeResponder.panHandlers}>
+      <View style={styles.content}>
+        {/* 상단 */}
         <View style={styles.topSection}>
           <Text style={styles.title}>{boardName}</Text>
-
           <View style={styles.rewardRow}>
             <Text style={styles.rewardLabel}>보상 :</Text>
             <Text style={styles.rewardValue}>{reward}</Text>
           </View>
         </View>
 
+        {/* 트리 영역 */}
         <View style={styles.treeSection}>
           <View
             ref={treeWrapperRef}
             style={styles.treeWrapper}
-            onLayout={() => {
-              treeWrapperRef.current?.measureInWindow((x, y, width, height) => {
-                treeLayoutRef.current = { x, y, width, height };
-              });
-            }}
+            onLayout={measureTree} // 레이아웃 확정 시 측정
           >
             <TreeSvg width={TREE_WIDTH} height={TREE_HEIGHT} style={styles.treeSvg} />
 
@@ -259,7 +289,6 @@ export default function GrowthTree({
               const spotId = i + 1;
               const placed = placedStickers[spotId];
               const scaleAnim = getScaleAnim(spotId);
-
               const left = pos.x * TREE_WIDTH - SPOT_SIZE / 2;
               const top = pos.y * TREE_HEIGHT - SPOT_SIZE / 2;
 
@@ -297,25 +326,26 @@ export default function GrowthTree({
           </Text>
         </View>
 
-        {/* 하단 화살표 + 스티커 4개씩 보여주는 영역 */}
+        {/* 하단 스티커 피커 */}
         <View style={styles.stickerPickerWrap}>
           <TouchableOpacity
             style={styles.arrowBtn}
             disabled={stickerPage === 0}
-            onPress={() => setStickerPage((prev) => Math.max(prev - 1, 0))}
+            onPress={() => setStickerPage((p) => Math.max(p - 1, 0))}
           >
             <Text style={[styles.arrowText, stickerPage === 0 && styles.arrowDisabled]}>‹</Text>
           </TouchableOpacity>
 
           <View style={styles.stickerPickerInner}>
             {pagedIndices.map((idx) => {
-              const isUsed = idx < placedCount; // 스티커를 사용했는지 여부
+              const isUsed = idx < placedCount;
               const isDraggingThis = draggingStickerIdx === idx;
 
               return (
                 <View key={idx} style={styles.bigStickerOption}>
                   {!isUsed ? (
-                    <View {...startDrag(idx)} style={styles.draggableArea}>
+                    // ✅ 메모이즈된 panHandlers 사용
+                    <View {...getPanHandlers(idx)} style={styles.draggableArea}>
                       <View
                         style={[
                           styles.stickerCircle,
@@ -329,8 +359,8 @@ export default function GrowthTree({
                 </View>
               );
             })}
-            
-            {/* 남는 칸이 있을 경우 공간 유지를 위해 더미 렌더링 */}
+
+            {/* 빈 칸 채우기 */}
             {Array.from({ length: STICKERS_PER_PAGE - pagedIndices.length }).map((_, i) => (
               <View key={`dummy-${i}`} style={styles.bigStickerOption} />
             ))}
@@ -339,29 +369,17 @@ export default function GrowthTree({
           <TouchableOpacity
             style={styles.arrowBtn}
             disabled={stickerPage === totalPages - 1}
-            onPress={() => setStickerPage((prev) => Math.min(prev + 1, totalPages - 1))}
+            onPress={() => setStickerPage((p) => Math.min(p + 1, totalPages - 1))}
           >
             <Text
-              style={[
-                styles.arrowText,
-                stickerPage === totalPages - 1 && styles.arrowDisabled,
-              ]}
+              style={[styles.arrowText, stickerPage === totalPages - 1 && styles.arrowDisabled]}
             >
               ›
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* 기존에 있던 페이지 네비게이션 점(Dot) */}
-        <View style={styles.pagination}>
-          {Array.from({ length: totalPages }).map((_, idx) => (
-            <View
-              key={idx}
-              style={[styles.pageDot, idx === stickerPage && styles.pageDotActive]}
-            />
-          ))}
-        </View>
-
+        {/* 스티커 조르기 버튼 */}
         <TouchableOpacity
           style={styles.requestButton}
           onPress={
@@ -372,18 +390,26 @@ export default function GrowthTree({
         >
           <Text style={styles.requestButtonText}>스티커 조르기</Text>
         </TouchableOpacity>
-      </ScrollView>
 
-      {/* 손가락을 따라다니는 스티커 (드래그 중일 때만 표시) */}
+        {/* 화면 전환 도트 */}
+        <View style={styles.screenDotContainer}>
+          {[0, 1, 2].map((index) => (
+            <TouchableOpacity
+              key={index}
+              style={[styles.screenDot, index === 0 && styles.screenDotActive]}
+              onPress={() => handleScreenDotPress(index)}
+            />
+          ))}
+        </View>
+      </View>
+
+      {/* 드래그 중 손가락 따라다니는 스티커 */}
       {draggingStickerIdx !== null && (
         <View
           pointerEvents="none"
           style={[
             styles.draggingSticker,
-            {
-              left: dragPos.x - 23, // 드래그 할 때 스티커 크기(46)의 절반
-              top: dragPos.y - 23,
-            },
+            { left: dragPos.x - 23, top: dragPos.y - 23 },
           ]}
         />
       )}
@@ -396,7 +422,6 @@ export default function GrowthTree({
 
             {missions.map((m) => {
               const isDone = Object.values(placedStickers).some((s) => s.mission.id === m.id);
-
               return (
                 <TouchableOpacity
                   key={m.id}
@@ -433,6 +458,7 @@ export default function GrowthTree({
           onPress={() => setInfoModal({ visible: false })}
         >
           <View style={styles.infoCard}>
+            {/* ✅ 모달 미리보기 원도 primary[900] 색상 */}
             <View style={styles.infoCirclePreview} />
             <Text style={styles.infoMission}>📌 {infoModal.data?.mission.title}</Text>
             <Text style={styles.infoDate}>
@@ -451,21 +477,16 @@ export default function GrowthTree({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: BG_COLOR,
-  },
-  scrollContent: {
+  container: { flex: 1, backgroundColor: BG_COLOR },
+  content: {
     paddingTop: 32,
     paddingBottom: 40,
     paddingHorizontal: 22,
     alignItems: 'center',
+    flex: 1,
   },
 
-  topSection: {
-    alignItems: 'center',
-    marginBottom: 14,
-  },
+  topSection: { alignItems: 'center', marginBottom: 14 },
   title: {
     fontSize: 35,
     fontFamily: fontFamily?.bold || 'System',
@@ -473,26 +494,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
     marginBottom: 10,
   },
-  rewardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  rewardLabel: {
-    fontSize: 16,
-    fontFamily: fontFamily?.bold || 'System',
-    color: BLUE_TEXT,
-  },
-  rewardValue: {
-    fontSize: 16,
-    fontFamily: fontFamily?.bold || 'System',
-    color: BLUE_TEXT,
-  },
+  rewardRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  rewardLabel: { fontSize: 16, fontFamily: fontFamily?.bold || 'System', color: BLUE_TEXT },
+  rewardValue: { fontSize: 16, fontFamily: fontFamily?.bold || 'System', color: BLUE_TEXT },
 
-  treeSection: {
-    alignItems: 'center',
-    marginTop: 4,
-  },
+  treeSection: { alignItems: 'center', marginTop: 4 },
   treeWrapper: {
     width: TREE_WIDTH,
     height: TREE_HEIGHT,
@@ -500,21 +506,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  treeSvg: {
-    position: 'absolute',
-  },
+  treeSvg: { position: 'absolute' },
 
-  spot: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  spot: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   emptySpot: {
     width: SPOT_SIZE,
     height: SPOT_SIZE,
     borderRadius: SPOT_SIZE / 2,
     backgroundColor: EMPTY_SPOT,
   },
+  // ✅ 부착된 스티커 색상 → colors.primary[900]
   placedStickerCircle: {
     width: SPOT_SIZE,
     height: SPOT_SIZE,
@@ -522,17 +523,9 @@ const styles = StyleSheet.create({
     backgroundColor: DOT_ACTIVE,
   },
 
-  progressText: {
-    marginTop: 8,
-    fontSize: 16,
-    fontFamily: fontFamily?.bold || 'System',
-    color: BLUE_TEXT,
-  },
-  progressHighlight: {
-    fontFamily: fontFamily?.bold || 'System',
-  },
+  progressText: { marginTop: 8, fontSize: 16, fontFamily: fontFamily?.bold || 'System', color: BLUE_TEXT },
+  progressHighlight: { fontFamily: fontFamily?.bold || 'System' },
 
-  // 하단 스티커 픽커 (화살표 포함)
   stickerPickerWrap: {
     width: '100%',
     flexDirection: 'row',
@@ -540,88 +533,48 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 26,
   },
-  arrowBtn: {
-    width: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  arrowText: {
-    fontSize: 28,
-    color: '#111',
-    fontWeight: '400',
-  },
-  arrowDisabled: {
-    color: '#CFCFCF',
-  },
-  stickerPickerInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    minHeight: 46,
-  },
-  bigStickerOption: {
-    width: 46,
-    height: 46,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  draggableArea: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  arrowBtn: { width: 24, alignItems: 'center', justifyContent: 'center' },
+  arrowText: { fontSize: 28, color: '#111', fontWeight: '400' },
+  arrowDisabled: { color: '#CFCFCF' },
+  stickerPickerInner: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 46 },
+  bigStickerOption: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
+  draggableArea: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   stickerCircle: {
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: DOT_ACTIVE, // 기존 이모지 배경으로 쓰던 둥근 회색을 스티커 색으로 변경
+    backgroundColor: DOT_ACTIVE,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
-  usedSlot: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: DOT_INACTIVE, // 사용한 자리는 연한 회색으로 표시
-  },
-
-  // 페이지 점(Dot)
-  pagination: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 28,
-    marginTop: 26,
-  },
-  pageDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: DOT_INACTIVE,
-  },
-  pageDotActive: {
-    backgroundColor: DOT_ACTIVE,
-  },
+  usedSlot: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.grayscale[100] },
 
   requestButton: {
-    marginTop: 32,
+    marginTop: 44,
     backgroundColor: '#E7DDCD',
     borderRadius: 999,
-    paddingHorizontal: 22,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 11,
     borderWidth: 1,
     borderColor: '#D7C9B2',
   },
-  requestButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#6C523C',
-  },
+  requestButtonText: { fontSize: 17, fontFamily: fontFamily.bold, color: '#6C523C' },
 
-  // 드래그 중인 스티커 스타일
+  screenDotContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 68,
+    marginTop: 77,
+    paddingBottom: 12,
+  },
+  screenDot: { width: 17, height: 17, borderRadius: 16, backgroundColor: '#D9D9D9' },
+  screenDotActive: { backgroundColor: '#FBBF4E' },
+
+  // 드래그 중 떠다니는 스티커도 하단 스티커와 같은 색상
   draggingSticker: {
     position: 'absolute',
     width: 46,
@@ -655,40 +608,13 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingBottom: 36,
   },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  modalMissionItem: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: '#F7F7F7',
-    marginBottom: 8,
-  },
-  modalMissionDone: {
-    backgroundColor: '#F1F1F1',
-    opacity: 0.5,
-  },
-  modalMissionText: {
-    fontSize: 15,
-    color: '#333',
-  },
-  modalMissionTextDone: {
-    color: '#AAA',
-  },
-  modalCancelBtn: {
-    marginTop: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  modalCancelText: {
-    fontSize: 15,
-    color: '#888',
-  },
+  modalTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A1A', marginBottom: 16, textAlign: 'center' },
+  modalMissionItem: { paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, backgroundColor: '#F7F7F7', marginBottom: 8 },
+  modalMissionDone: { backgroundColor: '#F1F1F1', opacity: 0.5 },
+  modalMissionText: { fontSize: 15, color: '#333' },
+  modalMissionTextDone: { color: '#AAA' },
+  modalCancelBtn: { marginTop: 8, paddingVertical: 12, alignItems: 'center' },
+  modalCancelText: { fontSize: 15, color: '#888' },
 
   infoCard: {
     width: SCREEN_WIDTH * 0.76,
@@ -697,27 +623,15 @@ const styles = StyleSheet.create({
     padding: 28,
     alignItems: 'center',
   },
+  // ✅ 모달 미리보기 원도 primary[900]
   infoCirclePreview: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: DOT_ACTIVE,
     marginBottom: 16,
+    backgroundColor: colors.grayscale[300],
   },
-  infoMission: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#222',
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  infoDate: {
-    fontSize: 13,
-    color: '#888',
-    marginBottom: 14,
-  },
-  infoClose: {
-    fontSize: 12,
-    color: '#AAA',
-  },
+  infoMission: { fontSize: 16, fontWeight: '600', color: '#222', marginBottom: 6, textAlign: 'center' },
+  infoDate: { fontSize: 13, color: '#888', marginBottom: 14 },
+  infoClose: { fontSize: 12, color: '#AAA' },
 });
