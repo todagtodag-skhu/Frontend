@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
   SafeAreaView,
   PanResponder,
@@ -22,17 +21,6 @@ const MissionListScreen: React.FC = () => {
   const { stickerBoards } = useGrowth();
   const activeBoard = stickerBoards[0];
   const [likedMissionIds, setLikedMissionIds] = useState<string[]>([]);
-
-  const handleDotPress = (index: number) => {
-    if (index === 0) {
-      router.push('/tree');
-      return;
-    }
-
-    if (index === 2) {
-      router.push('/MemoryStorage');
-    }
-  };
 
   const swipeResponder = useMemo(
     () =>
@@ -102,17 +90,6 @@ const MissionListScreen: React.FC = () => {
             성장나무 완성까지 {likedMissionIds.length}/{PROGRESS_TOTAL} 개
           </Text>
         </View>
-
-        {/* 하단 네비게이션 도트 */}
-        <View style={styles.dotContainer}>
-          {[0, 1, 2].map((index) => (
-            <TouchableOpacity
-              key={index}
-              style={[styles.dot, index === 1 && styles.dotActive]}
-              onPress={() => handleDotPress(index)}
-            />
-          ))}
-        </View>
       </View>
     </SafeAreaView>
   );
@@ -181,25 +158,5 @@ const styles = StyleSheet.create({
   progressHighlight: {
     color: '#4DA8E0',
     fontFamily: fontFamily.bold,
-  },
-  // ── 페이지 인디케이터 도트
-  dotContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingBottom: 30,
-    gap: 70,
-  },
-  dot: {
-    width: 16,
-    height: 16,
-    borderRadius: 16,
-    backgroundColor: '#D9D9D9',
-  },
-  dotActive: {
-    backgroundColor: '#FBBF4E',
-    width: 16,
-    height: 16,
-    borderRadius: 16,
   },
 });

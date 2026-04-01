@@ -41,6 +41,10 @@ export default function OnboardingScreen() {
     router.replace('/tree');
   };
 
+  const handleSelectRole = (role: 'todagi' | 'growth') => {
+    setSelectedRole(role);
+  };
+
   const handleShareInviteCode = async () => {
     if (!inviteCode) {
       return;
@@ -138,7 +142,7 @@ export default function OnboardingScreen() {
         {step === 0 ? (
           <RoleSelectStep
             selectedRole={selectedRole}
-            onSelectRole={setSelectedRole}
+            onSelectRole={handleSelectRole}
           />
         ) : step === 1 ? (
           isGrowth ? (

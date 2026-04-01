@@ -3,6 +3,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   Modal,
   Dimensions,
@@ -12,7 +13,9 @@ import {
   PanResponder,
 } from 'react-native';
 import { router } from 'expo-router';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
+import { StickerInfoCard } from '@/components/growth/StickerInfoCard';
 import TreeSvg from '../../../assets/tree.svg';
 import { fontFamily } from '@/constants/fonts';
 import { colors } from '@/constants/colors';
@@ -59,6 +62,10 @@ const SPOT_SIZE = 28;
 const STICKERS_PER_PAGE = 4;
 // 드롭 인식 반경 (px) — 기존 38보다 넓혀서 스냅 성공률 향상
 const DROP_RADIUS = 48;
+const STICKER_ICON_COLOR = '#FF3B30';
+const STICKER_ICON_NAME = 'food-apple';
+const STICKER_ICON_SIZE = 36;
+const STICKER_ICON_OUTLINE_SIZE = 42;
 
 const SPOT_LAYOUT: { x: number; y: number }[] = [
   { x: 0.50, y: 0.08 },
@@ -83,6 +90,24 @@ const SPOT_LAYOUT: { x: number; y: number }[] = [
   { x: 0.85, y: 0.76 },
 ];
 
+function StickerIcon() {
+  return (
+    <View style={styles.stickerIconWrap}>
+      <MaterialCommunityIcons
+        name={STICKER_ICON_NAME}
+        size={STICKER_ICON_OUTLINE_SIZE}
+        color="#FFFFFF"
+        style={styles.stickerIconOutline}
+      /> 
+      <MaterialCommunityIcons
+        name={STICKER_ICON_NAME}
+        size={STICKER_ICON_SIZE}
+        color={STICKER_ICON_COLOR}
+      />
+    </View>
+  );
+}
+
 export default function GrowthTree({
   boardName = '유진이의 성장나무',
   reward = '닌텐도 DS 1시간 사용',
@@ -106,7 +131,7 @@ export default function GrowthTree({
   const [placedStickers, setPlacedStickers] = useState<Record<number, StickerInfo>>({});
   const [pendingDrop, setPendingDrop] = useState<{ spotId: number } | null>(null);
   const [missionModal, setMissionModal] = useState(false);
-  const [infoModal, setInfoModal] = useState<{ visible: boolean; data?: StickerInfo }>({
+  const [infoModal, setInfoModal] = useState<{ visible: boolean; spotId?: number; data?: StickerInfo }>({
     visible: false,
   });
 
@@ -238,8 +263,23 @@ export default function GrowthTree({
   // ── 스팟 터치 ────────────────────────────────────────────────────────────────
   const handleSpotPress = (id: number) => {
     if (placedStickers[id]) {
-      setInfoModal({ visible: true, data: placedStickers[id] });
+      setInfoModal({ visible: true, spotId: id, data: placedStickers[id] });
     }
+  };
+
+  const handleDeleteSticker = () => {
+    const spotId = infoModal.spotId;
+
+    if (typeof spotId !== 'number') {
+      return;
+    }
+
+    setPlacedStickers((prev) => {
+      const next = { ...prev };
+      delete next[spotId];
+      return next;
+    });
+    setInfoModal({ visible: false });
   };
 
   // ── 미션 선택 ────────────────────────────────────────────────────────────────
@@ -263,11 +303,6 @@ export default function GrowthTree({
       }),
     [],
   );
-
-  const handleScreenDotPress = (index: number) => {
-    if (index === 1) router.push('/MissionHome');
-    if (index === 2) router.push('/MemoryStorage');
-  };
 
   // ────────────────────────────────────────────────────────────────────────────
   return (
@@ -314,7 +349,9 @@ export default function GrowthTree({
                         styles.placedStickerCircle,
                         { transform: [{ scale: scaleAnim }] },
                       ]}
-                    />
+                    >
+                      <StickerIcon />
+                    </Animated.View>
                   ) : (
                     <View style={styles.emptySpot} />
                   )}
@@ -357,7 +394,9 @@ export default function GrowthTree({
                           styles.stickerCircle,
                           isDraggingThis && { opacity: 0 },
                         ]}
-                      />
+                      >
+                        <StickerIcon />
+                      </View>
                     </View>
                   ) : (
                     <View style={styles.usedSlot} />
@@ -385,6 +424,20 @@ export default function GrowthTree({
           </TouchableOpacity>
         </View>
 
+        {totalPages > 1 ? (
+          <View style={styles.stickerPageDotContainer}>
+            {Array.from({ length: totalPages }).map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.stickerPageDot,
+                  index === stickerPage && styles.stickerPageDotActive,
+                ]}
+              />
+            ))}
+          </View>
+        ) : null}
+
         {/* 스티커 조르기 버튼 */}
         <TouchableOpacity
           style={styles.requestButton}
@@ -396,17 +449,6 @@ export default function GrowthTree({
         >
           <Text style={styles.requestButtonText}>스티커 조르기</Text>
         </TouchableOpacity>
-
-        {/* 화면 전환 도트 */}
-        <View style={styles.screenDotContainer}>
-          {[0, 1, 2].map((index) => (
-            <TouchableOpacity
-              key={index}
-              style={[styles.screenDot, index === 0 && styles.screenDotActive]}
-              onPress={() => handleScreenDotPress(index)}
-            />
-          ))}
-        </View>
       </View>
 
       {/* 드래그 중 손가락 따라다니는 스티커 */}
@@ -415,9 +457,11 @@ export default function GrowthTree({
           pointerEvents="none"
           style={[
             styles.draggingSticker,
-            { left: dragPos.x - 23, top: dragPos.y - 23 },
+            { left: dragPos.x - 27, top: dragPos.y - 27 },
           ]}
-        />
+        >
+          <StickerIcon />
+        </View>
       )}
 
       {/* 미션 선택 모달 */}
@@ -458,25 +502,24 @@ export default function GrowthTree({
 
       {/* 스티커 상세 정보 모달 */}
       <Modal visible={infoModal.visible} transparent animationType="fade">
-        <TouchableOpacity
-          activeOpacity={1}
+        <Pressable
           style={styles.modalOverlayCenter}
           onPress={() => setInfoModal({ visible: false })}
         >
-          <View style={styles.infoCard}>
-            {/* ✅ 모달 미리보기 원도 primary[900] 색상 */}
-            <View style={styles.infoCirclePreview} />
-            <Text style={styles.infoMission}>📌 {infoModal.data?.mission.title}</Text>
-            <Text style={styles.infoDate}>
-              {infoModal.data?.placedAt.toLocaleDateString('ko-KR', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </Text>
-            <Text style={styles.infoClose}>탭해서 닫기</Text>
-          </View>
-        </TouchableOpacity>
+          <Pressable onPress={(event) => event.stopPropagation()} style={styles.infoCardWrap}>
+            <StickerInfoCard
+              missionTitle={infoModal.data?.mission.title ?? ''}
+              placedAtLabel={
+                infoModal.data?.placedAt.toLocaleDateString('ko-KR', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                }) ?? ''
+              }
+              onDelete={handleDeleteSticker}
+            />
+          </Pressable>
+        </Pressable>
       </Modal>
     </SafeAreaView>
   );
@@ -526,7 +569,9 @@ const styles = StyleSheet.create({
     width: SPOT_SIZE,
     height: SPOT_SIZE,
     borderRadius: SPOT_SIZE / 2,
-    backgroundColor: DOT_ACTIVE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
   },
 
   progressText: { marginTop: 8, fontSize: 16, fontFamily: fontFamily?.bold || 'System', color: BLUE_TEXT },
@@ -539,24 +584,41 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 26,
   },
+  stickerPageDotContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 14,
+  },
+  stickerPageDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: DOT_INACTIVE,
+  },
+  stickerPageDotActive: {
+    backgroundColor: DOT_ACTIVE,
+  },
   arrowBtn: { width: 24, alignItems: 'center', justifyContent: 'center' },
   arrowText: { fontSize: 28, color: '#111', fontWeight: '400' },
   arrowDisabled: { color: '#CFCFCF' },
-  stickerPickerInner: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 46 },
-  bigStickerOption: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
+  stickerPickerInner: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 54 },
+  bigStickerOption: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
   draggableArea: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   stickerCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: DOT_ACTIVE,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
-  usedSlot: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.grayscale[100] },
+  usedSlot: { width: 46, height: 46, borderRadius: 27, backgroundColor: colors.grayscale[100], borderWidth: 1, borderColor: colors.primary[800] },
 
   requestButton: {
     marginTop: 44,
@@ -569,30 +631,29 @@ const styles = StyleSheet.create({
   },
   requestButtonText: { fontSize: 17, fontFamily: fontFamily.bold, color: '#6C523C' },
 
-  screenDotContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 68,
-    marginTop: 77,
-    paddingBottom: 12,
-  },
-  screenDot: { width: 17, height: 17, borderRadius: 16, backgroundColor: '#D9D9D9' },
-  screenDotActive: { backgroundColor: '#FBBF4E' },
-
   // 드래그 중 떠다니는 스티커도 하단 스티커와 같은 색상
   draggingSticker: {
     position: 'absolute',
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: DOT_ACTIVE,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 5,
     elevation: 6,
     zIndex: 999,
+  },
+  stickerIconWrap: {
+    width: STICKER_ICON_OUTLINE_SIZE,
+    height: STICKER_ICON_OUTLINE_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stickerIconOutline: {
+    position: 'absolute',
   },
 
   modalOverlay: {
@@ -622,22 +683,7 @@ const styles = StyleSheet.create({
   modalCancelBtn: { marginTop: 8, paddingVertical: 12, alignItems: 'center' },
   modalCancelText: { fontSize: 15, color: '#888' },
 
-  infoCard: {
-    width: SCREEN_WIDTH * 0.76,
-    backgroundColor: '#fff',
-    borderRadius: 22,
-    padding: 28,
-    alignItems: 'center',
+  infoCardWrap: {
+    width: '76%',
   },
-  // ✅ 모달 미리보기 원도 primary[900]
-  infoCirclePreview: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginBottom: 16,
-    backgroundColor: colors.grayscale[300],
-  },
-  infoMission: { fontSize: 16, fontWeight: '600', color: '#222', marginBottom: 6, textAlign: 'center' },
-  infoDate: { fontSize: 13, color: '#888', marginBottom: 14 },
-  infoClose: { fontSize: 12, color: '#AAA' },
 });
