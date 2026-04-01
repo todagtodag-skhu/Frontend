@@ -11,7 +11,7 @@ type StickerInfoCardProps = {
 
 const STICKER_ICON_COLOR = '#FF3B30';
 const STICKER_ICON_NAME = 'food-apple';
-const STICKER_ICON_SIZE = 40;
+const STICKER_ICON_SIZE = 44;
 const STICKER_ICON_OUTLINE_SIZE = 44;
 
 function StickerIcon() {

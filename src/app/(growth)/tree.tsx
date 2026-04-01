@@ -32,6 +32,7 @@ interface Mission {
 interface StickerInfo {
   placedAt: Date;
   mission: Mission;
+  stickerIdx: number;
 }
 
 interface TreeProps {
@@ -93,15 +94,13 @@ const SPOT_LAYOUT: { x: number; y: number }[] = [
 function StickerIcon() {
   return (
     <View style={styles.stickerIconWrap}>
+      {/* 배경 원 */}
+      <View style={styles.iconBackground} />
+
+      {/* 실제 아이콘 */}
       <MaterialCommunityIcons
         name={STICKER_ICON_NAME}
-        size={STICKER_ICON_OUTLINE_SIZE}
-        color="#FFFFFF"
-        style={styles.stickerIconOutline}
-      /> 
-      <MaterialCommunityIcons
-        name={STICKER_ICON_NAME}
-        size={STICKER_ICON_SIZE}
+        size={29}
         color={STICKER_ICON_COLOR}
       />
     </View>
@@ -129,7 +128,8 @@ export default function GrowthTree({
     : missions;
 
   const [placedStickers, setPlacedStickers] = useState<Record<number, StickerInfo>>({});
-  const [pendingDrop, setPendingDrop] = useState<{ spotId: number } | null>(null);
+  const [usedStickerIndices, setUsedStickerIndices] = useState<number[]>([]);
+  const [pendingDrop, setPendingDrop] = useState<{ spotId: number; stickerIdx: number } | null>(null);
   const [missionModal, setMissionModal] = useState(false);
   const [infoModal, setInfoModal] = useState<{ visible: boolean; spotId?: number; data?: StickerInfo }>({
     visible: false,
@@ -163,7 +163,7 @@ export default function GrowthTree({
     .slice(stickerPage * STICKERS_PER_PAGE, stickerPage * STICKERS_PER_PAGE + STICKERS_PER_PAGE);
 
   // ── 스티커 부착 ──────────────────────────────────────────────────────────────
-  const placeSticker = useCallback((spotId: number, mission: Mission) => {
+  const placeSticker = useCallback((spotId: number, mission: Mission, stickerIdx: number) => {
     const anim = getScaleAnim(spotId);
     anim.setValue(0);
     Animated.spring(anim, {
@@ -175,7 +175,7 @@ export default function GrowthTree({
 
     setPlacedStickers((prev) => ({
       ...prev,
-      [spotId]: { placedAt: new Date(), mission },
+      [spotId]: { placedAt: new Date(), mission, stickerIdx },
     }));
   }, []);
 
@@ -244,7 +244,7 @@ export default function GrowthTree({
 
             if (spotId === null) return; // 유효 스팟 없음 → 취소
 
-            setPendingDrop({ spotId });
+            setPendingDrop({ spotId, stickerIdx: idx });
             setMissionModal(true);
           },
 
@@ -274,18 +274,26 @@ export default function GrowthTree({
       return;
     }
 
+    const stickerToDelete = placedStickers[spotId];
+
     setPlacedStickers((prev) => {
       const next = { ...prev };
       delete next[spotId];
       return next;
     });
+    if (stickerToDelete) {
+      setUsedStickerIndices((prev) => prev.filter((idx) => idx !== stickerToDelete.stickerIdx));
+    }
     setInfoModal({ visible: false });
   };
 
   // ── 미션 선택 ────────────────────────────────────────────────────────────────
   const handleMissionSelect = (mission: Mission) => {
     if (pendingDrop) {
-      placeSticker(pendingDrop.spotId, mission);
+      placeSticker(pendingDrop.spotId, mission, pendingDrop.stickerIdx);
+      setUsedStickerIndices((prev) =>
+        prev.includes(pendingDrop.stickerIdx) ? prev : [...prev, pendingDrop.stickerIdx],
+      );
       setPendingDrop(null);
     }
     setMissionModal(false);
@@ -381,7 +389,9 @@ export default function GrowthTree({
 
           <View style={styles.stickerPickerInner}>
             {pagedIndices.map((idx) => {
-              const isUsed = idx < placedCount;
+              const isUsed =
+                pendingDrop?.stickerIdx === idx ||
+                usedStickerIndices.includes(idx);
               const isDraggingThis = draggingStickerIdx === idx;
 
               return (
@@ -603,7 +613,7 @@ const styles = StyleSheet.create({
   arrowBtn: { width: 24, alignItems: 'center', justifyContent: 'center' },
   arrowText: { fontSize: 28, color: '#111', fontWeight: '400' },
   arrowDisabled: { color: '#CFCFCF' },
-  stickerPickerInner: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 54 },
+  stickerPickerInner: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 54 },
   bigStickerOption: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
   draggableArea: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   stickerCircle: {
@@ -618,7 +628,14 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  usedSlot: { width: 46, height: 46, borderRadius: 27, backgroundColor: colors.grayscale[100], borderWidth: 1, borderColor: colors.primary[800] },
+  usedSlot: {
+    width: 42,
+    height: 42,
+    borderRadius: 23,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F1E6D3',
+  },
 
   requestButton: {
     marginTop: 44,
@@ -646,12 +663,30 @@ const styles = StyleSheet.create({
     elevation: 6,
     zIndex: 999,
   },
+  
   stickerIconWrap: {
-    width: STICKER_ICON_OUTLINE_SIZE,
-    height: STICKER_ICON_OUTLINE_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  width: STICKER_ICON_OUTLINE_SIZE,
+  height: STICKER_ICON_OUTLINE_SIZE,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+iconBackground: {
+  position: 'absolute',
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  backgroundColor: '#FFFFFF',
+
+  // iOS shadow
+  shadowColor: '#000',
+  shadowOpacity: 0.15,
+  shadowRadius: 1,
+  shadowOffset: { width: 0, height: 1 },
+
+  // Android shadow
+  elevation: 1,
+},
   stickerIconOutline: {
     position: 'absolute',
   },
