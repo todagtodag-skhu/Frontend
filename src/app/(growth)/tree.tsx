@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import TreeSvg from '../../../assets/tree.svg';
 import { fontFamily } from '@/constants/fonts';
 import { colors } from '@/constants/colors';
+import { useGrowth } from '@/contexts/GrowthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -89,8 +90,20 @@ export default function GrowthTree({
   missions = DEFAULT_MISSIONS,
   onRequestSticker,
 }: TreeProps) {
+  const { getBoardById } = useGrowth();
+  const activeBoard = getBoardById('board-1');
+  const resolvedBoardName = activeBoard?.title ?? boardName;
+  const resolvedReward = activeBoard?.rewardText ?? reward;
+  const resolvedTotalSpots = Number.parseInt(activeBoard?.stickerCount ?? '', 10) || totalSpots;
+  const resolvedMissions = activeBoard
+    ? activeBoard.missions.map((mission) => ({
+        id: mission.id,
+        title: mission.title,
+        completed: false,
+      }))
+    : missions;
+
   const [placedStickers, setPlacedStickers] = useState<Record<number, StickerInfo>>({});
-  const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [pendingDrop, setPendingDrop] = useState<{ spotId: number } | null>(null);
   const [missionModal, setMissionModal] = useState(false);
   const [infoModal, setInfoModal] = useState<{ visible: boolean; data?: StickerInfo }>({
@@ -107,9 +120,7 @@ export default function GrowthTree({
 
   // placedStickers 를 ref 로도 유지 — PanResponder 클로저에서 최신값 참조
   const placedStickersRef = useRef(placedStickers);
-  const selectedMissionRef = useRef(selectedMission);
   placedStickersRef.current = placedStickers;
-  selectedMissionRef.current = selectedMission;
 
   const getScaleAnim = (id: number) => {
     if (!scaleAnims.current[id]) {
@@ -119,7 +130,7 @@ export default function GrowthTree({
   };
 
   const placedCount = Object.keys(placedStickers).length;
-  const spots = SPOT_LAYOUT.slice(0, totalSpots);
+  const spots = SPOT_LAYOUT.slice(0, resolvedTotalSpots);
 
   const totalPages = Math.ceil(spots.length / STICKERS_PER_PAGE);
   const pagedIndices = Array.from({ length: spots.length })
@@ -153,7 +164,7 @@ export default function GrowthTree({
   // ── 가장 가까운 빈 스팟 탐색 ─────────────────────────────────────────────────
   const getNearestEmptySpot = useCallback(
     (absoluteX: number, absoluteY: number): number | null => {
-      const { x: treeX, y: treeY } = treeLayoutRef.current;
+      const { x: treeX, y: treeY, width: treeWidth, height: treeHeight } = treeLayoutRef.current;
       let nearestId: number | null = null;
       let nearestDist = Infinity;
 
@@ -162,8 +173,8 @@ export default function GrowthTree({
         // 이미 스티커가 붙은 자리 제외
         if (placedStickersRef.current[spotId]) return;
 
-        const cx = treeX + pos.x * TREE_WIDTH;
-        const cy = treeY + pos.y * TREE_HEIGHT;
+        const cx = treeX + pos.x * treeWidth;
+        const cy = treeY + pos.y * treeHeight;
         const dist = Math.hypot(absoluteX - cx, absoluteY - cy);
 
         if (dist < nearestDist) {
@@ -190,6 +201,7 @@ export default function GrowthTree({
           onPanResponderTerminationRequest: () => false,
 
           onPanResponderGrant: (evt) => {
+            measureTree();
             setDraggingStickerIdx(idx);
             setDragPos({ x: evt.nativeEvent.pageX, y: evt.nativeEvent.pageY });
           },
@@ -207,13 +219,8 @@ export default function GrowthTree({
 
             if (spotId === null) return; // 유효 스팟 없음 → 취소
 
-            const mission = selectedMissionRef.current;
-            if (mission) {
-              placeSticker(spotId, mission);
-            } else {
-              setPendingDrop({ spotId });
-              setMissionModal(true);
-            }
+            setPendingDrop({ spotId });
+            setMissionModal(true);
           },
 
           onPanResponderTerminate: () => {
@@ -225,7 +232,7 @@ export default function GrowthTree({
       }
       return panHandlersMap.current[idx];
     },
-    [getNearestEmptySpot, placeSticker],
+    [getNearestEmptySpot, measureTree, placeSticker],
   );
 
   // ── 스팟 터치 ────────────────────────────────────────────────────────────────
@@ -237,7 +244,6 @@ export default function GrowthTree({
 
   // ── 미션 선택 ────────────────────────────────────────────────────────────────
   const handleMissionSelect = (mission: Mission) => {
-    setSelectedMission(mission);
     if (pendingDrop) {
       placeSticker(pendingDrop.spotId, mission);
       setPendingDrop(null);
@@ -269,10 +275,10 @@ export default function GrowthTree({
       <View style={styles.content}>
         {/* 상단 */}
         <View style={styles.topSection}>
-          <Text style={styles.title}>{boardName}</Text>
+          <Text style={styles.title}>{resolvedBoardName}</Text>
           <View style={styles.rewardRow}>
             <Text style={styles.rewardLabel}>보상 :</Text>
-            <Text style={styles.rewardValue}>{reward}</Text>
+            <Text style={styles.rewardValue}>{resolvedReward}</Text>
           </View>
         </View>
 
@@ -420,7 +426,7 @@ export default function GrowthTree({
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>어떤 미션을 완료했나요?</Text>
 
-            {missions.map((m) => {
+            {resolvedMissions.map((m) => {
               const isDone = Object.values(placedStickers).some((s) => s.mission.id === m.id);
               return (
                 <TouchableOpacity
@@ -430,7 +436,7 @@ export default function GrowthTree({
                   onPress={() => handleMissionSelect(m)}
                 >
                   <Text style={[styles.modalMissionText, isDone && styles.modalMissionTextDone]}>
-                    {isDone ? '(완료됨) ' : ''}
+                    {isDone ? '(완료) ' : ''}
                     {m.title}
                   </Text>
                 </TouchableOpacity>

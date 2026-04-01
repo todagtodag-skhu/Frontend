@@ -13,41 +13,14 @@ import MissionCard from '@/components/growth/Missionlist';
 import { fontFamily } from '@/constants/fonts';
 import { colors } from '@/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
-
-// ── 타입 ──────────────────────────────────────────────────────────────────────
-interface Mission {
-  id: string;
-  title: string;
-  frequency: string;
-  reward: string;
-}
-
-interface Page {
-  id: string;
-  missions: Mission[];
-}
-
-// ── 더미 데이터 ───────────────────────────────────────────────────────────────
-const PAGES: Page[] = [
-  {
-    id: 'page-1',
-    missions: [
-      { id: '1', title: '엄마한테 사랑한다고 말하기', frequency: '주 1회', reward: '스티커 1개' },
-      { id: '2', title: '엄마한테 사랑한다고 말하기', frequency: '주 1회', reward: '스티커 1개' },
-      { id: '3', title: '엄마한테 사랑한다고 말하기', frequency: '주 1회', reward: '스티커 1개' },
-      { id: '4', title: '엄마한테 사랑한다고 말하기', frequency: '주 1회', reward: '스티커 1개' },
-      { id: '5', title: '엄마한테 사랑한다고 말하기', frequency: '주 1회', reward: '스티커 1개' },
-      { id: '6', title: '하루 30분 독서하기', frequency: '매일', reward: '스티커 2개' },
-      { id: '7', title: '방 청소하기', frequency: '주 2회', reward: '스티커 1개' },
-    ],
-  },
-];
+import { useGrowth } from '@/contexts/GrowthContext';
 
 const PROGRESS_TOTAL = 20;
 
 // ── 컴포넌트 ──────────────────────────────────────────────────────────────────
 const MissionListScreen: React.FC = () => {
-  const item = PAGES[0];
+  const { stickerBoards } = useGrowth();
+  const activeBoard = stickerBoards[0];
   const [likedMissionIds, setLikedMissionIds] = useState<string[]>([]);
 
   const handleDotPress = (index: number) => {
@@ -92,38 +65,42 @@ const MissionListScreen: React.FC = () => {
     <SafeAreaView style={styles.safe} {...swipeResponder.panHandlers}>
       <View style={styles.container}>
         {/* 헤더 */}
-        <Text style={styles.header}>유진이의 미션 목록</Text>
+        <Text style={styles.header}>
+          {activeBoard ? `${activeBoard.title} 미션 목록` : '유진이의 미션 목록'}
+        </Text>
 
         <View style={styles.page}>
-      {/* 페이지 상단 대표 카드 */}
-      <View style={styles.heroCard} >
-        <Ionicons name="heart" size={24} color="red" style={styles.heroEmoji} />
-        <View style={{ flex: 1 }} />
-        <Ionicons name="heart" size={24} color="red" style={styles.heroEmoji} />  
-      </View>
+          {/* 페이지 상단 대표 카드 */}
+          <View style={styles.heroCard}>
+            <Ionicons name="heart" size={24} color="red" style={styles.heroEmoji} />
+            <View style={{ flex: 1 }} />
+            <Ionicons name="heart" size={24} color="red" style={styles.heroEmoji} />
+          </View>
 
-      {/* 미션 카드 목록 */}
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.missionList}
-      >
-        {item.missions.map((mission) => (
-          <MissionCard
-            key={mission.id}
-            title={mission.title}
-            frequency={mission.frequency}
-            reward={mission.reward}
-            isHeartFilled={likedMissionIds.includes(mission.id)}
-            onHeartPress={() => toggleMissionHeart(mission.id)}
-          />
-        ))}
-      </ScrollView>
+          {/* 미션 카드 목록 */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.missionList}
+          >
+            {activeBoard?.missions.map((mission) => (
+              <MissionCard
+                key={mission.id}
+                title={mission.title}
+                frequency={mission.frequency}
+                reward={activeBoard.rewardText || '스티커 1개'}
+                isHeartFilled={likedMissionIds.includes(mission.id)}
+                onHeartPress={() => toggleMissionHeart(mission.id)}
+              />
+            ))}
+            {!activeBoard?.missions.length ? (
+              <Text style={styles.emptyText}>등록된 미션이 아직 없어요.</Text>
+            ) : null}
+          </ScrollView>
 
-      {/* 성장 진행 텍스트 */}
-      <Text style={styles.progressText}>
-        성장나무 완성까지{' '}
-          {likedMissionIds.length}/{PROGRESS_TOTAL} 개
-      </Text>
+          {/* 성장 진행 텍스트 */}
+          <Text style={styles.progressText}>
+            성장나무 완성까지 {likedMissionIds.length}/{PROGRESS_TOTAL} 개
+          </Text>
         </View>
 
         {/* 하단 네비게이션 도트 */}
@@ -184,6 +161,13 @@ const styles = StyleSheet.create({
   // ── 미션 리스트
   missionList: {
     paddingBottom: 8,
+  },
+  emptyText: {
+    textAlign: 'center',
+    fontSize: 16,
+    fontFamily: fontFamily.bold,
+    color: colors.grayscale[600],
+    marginTop: 24,
   },
   // ── 진행 텍스트
   progressText: {
