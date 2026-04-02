@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   SafeAreaView,
-  TouchableOpacity,
   ScrollView,
   PanResponder,
 } from 'react-native';
@@ -80,17 +79,6 @@ const TOTAL_COMPLETED = 12;
 const MemoryStorageScreen: React.FC = () => {
   const item = PAGES[0];
 
-  const handleDotPress = (index: number) => {
-    if (index === 0) {
-      router.push('/tree');
-      return;
-    }
-
-    if (index === 1) {
-      router.push('/MissionHome');
-    }
-  };
-
   const swipeResponder = useMemo(
     () =>
       PanResponder.create({
@@ -150,17 +138,6 @@ const MemoryStorageScreen: React.FC = () => {
         {item.gifts.length % 2 !== 0 && <View style={{ flex: 1 }} />}
       </View>
     </ScrollView>
-
-      {/* 하단 네비게이션 도트 */}
-      <View style={styles.dotContainer}>
-        {[0, 1, 2].map((index) => (
-          <TouchableOpacity
-            key={index}
-            style={[styles.dot, index === 2 && styles.dotActive]}
-            onPress={() => handleDotPress(index)}
-          />
-        ))}
-      </View>
     </SafeAreaView>
   );
 };
@@ -226,26 +203,5 @@ const styles = StyleSheet.create({
   giftRow: {
     flexDirection: 'row',
     gap: 12,
-  },
-  // ── 페이지 인디케이터
-  dotContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingBottom: 30,
-    paddingTop: 8,
-    gap: 70,
-  },
-  dot: {
-    width: 16,
-    height: 16,
-    borderRadius: 16,
-    backgroundColor: '#D9D9D9',
-  },
-  dotActive: {
-    width: 16,
-    height: 16,
-    borderRadius: 16,
-    backgroundColor: '#FBBF4E',
   },
 });
