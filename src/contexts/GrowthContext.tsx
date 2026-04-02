@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useMemo, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 
 import { Mission, StickerBoard, ChildProfile } from '@/components/todagi/types';
 
@@ -68,6 +68,20 @@ const initialStickerBoards: StickerBoard[] = [
         days: '월,화,수,목,금',
         frequency: '하루 2회',
       },
+      {
+        id: 'mission-1-1',
+        emoji: '🪥',
+        title: '밥먹기',
+        days: '월,화,수,목,금',
+        frequency: '하루 2회',
+      },
+      {
+        id: 'mission-1-2',
+        emoji: '🪥',
+        title: '청소하기',
+        days: '월,화,수,목,금',
+        frequency: '하루 2회',
+      },
     ],
   },
   {
@@ -106,11 +120,27 @@ const initialStickerBoards: StickerBoard[] = [
   },
 ];
 
+const BOARD_1_DEFAULT_MISSIONS: Mission[] =
+  initialStickerBoards.find((board) => board.id === 'board-1')?.missions ?? [];
+
 const GrowthContext = createContext<GrowthContextValue | null>(null);
 
 export function GrowthProvider({ children }: { children: ReactNode }) {
   const [childProfiles, setChildProfiles] = useState<ChildProfile[]>(initialChildren);
   const [boards, setBoards] = useState<StickerBoard[]>(initialStickerBoards);
+
+  useEffect(() => {
+    setBoards((prev) =>
+      prev.map((board) =>
+        board.id === 'board-1' && board.missions.length < BOARD_1_DEFAULT_MISSIONS.length
+          ? {
+              ...board,
+              missions: BOARD_1_DEFAULT_MISSIONS,
+            }
+          : board
+      )
+    );
+  }, []);
 
   const value = useMemo<GrowthContextValue>(() => ({
     children: childProfiles,
