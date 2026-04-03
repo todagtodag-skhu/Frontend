@@ -6,13 +6,17 @@ import {
   StyleSheet,
   SafeAreaView,
   PanResponder,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { router } from 'expo-router';
 import MissionCard from '@/components/growth/Missionlist';
+import { StickerRequestButton } from '@/components/growth/StickerRequestButton';
 import { fontFamily } from '@/constants/fonts';
 import { colors } from '@/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useGrowth } from '@/contexts/GrowthContext';
+import { Mission } from '@/components/todagi/types';
 
 const PROGRESS_TOTAL = 20;
 
@@ -21,6 +25,7 @@ const MissionListScreen: React.FC = () => {
   const { stickerBoards } = useGrowth();
   const activeBoard = stickerBoards[0];
   const [likedMissionIds, setLikedMissionIds] = useState<string[]>([]);
+  const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
 
   const swipeResponder = useMemo(
     () =>
@@ -47,6 +52,14 @@ const MissionListScreen: React.FC = () => {
         ? prev.filter((id) => id !== missionId)
         : [...prev, missionId],
     );
+  };
+
+  const handleManageOpen = (mission: Mission) => {
+    setSelectedMission(mission);
+  };
+
+  const handleManageClose = () => {
+    setSelectedMission(null);
   };
 
   return (
@@ -78,6 +91,7 @@ const MissionListScreen: React.FC = () => {
                 reward={activeBoard.rewardText || '스티커 1개'}
                 isHeartFilled={likedMissionIds.includes(mission.id)}
                 onHeartPress={() => toggleMissionHeart(mission.id)}
+                onManagePress={() => handleManageOpen(mission)}
               />
             ))}
             {!activeBoard?.missions.length ? (
@@ -91,6 +105,14 @@ const MissionListScreen: React.FC = () => {
           </Text>
         </View>
       </View>
+
+      <Modal visible={selectedMission !== null} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={handleManageClose}>
+          <Pressable onPress={(event) => event.stopPropagation()} style={styles.modalCardWrap}>
+            {selectedMission ? <StickerRequestButton onClose={handleManageClose} /> : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -158,5 +180,16 @@ const styles = StyleSheet.create({
   progressHighlight: {
     color: '#4DA8E0',
     fontFamily: fontFamily.bold,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  modalCardWrap: {
+    width: '76%',
+    alignItems: 'center',
   },
 });

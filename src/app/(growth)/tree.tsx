@@ -13,7 +13,6 @@ import {
   PanResponder,
 } from 'react-native';
 import { router } from 'expo-router';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { StickerInfoCard } from '@/components/growth/StickerInfoCard';
 import TreeSvg from '../../../assets/tree.svg';
@@ -63,9 +62,6 @@ const SPOT_SIZE = 28;
 const STICKERS_PER_PAGE = 4;
 // 드롭 인식 반경 (px) — 기존 38보다 넓혀서 스냅 성공률 향상
 const DROP_RADIUS = 48;
-const STICKER_ICON_COLOR = '#FF3B30';
-const STICKER_ICON_NAME = 'food-apple';
-const STICKER_ICON_SIZE = 36;
 const STICKER_ICON_OUTLINE_SIZE = 42;
 
 const SPOT_LAYOUT: { x: number; y: number }[] = [
@@ -94,15 +90,7 @@ const SPOT_LAYOUT: { x: number; y: number }[] = [
 function StickerIcon() {
   return (
     <View style={styles.stickerIconWrap}>
-      {/* 배경 원 */}
       <View style={styles.iconBackground} />
-
-      {/* 실제 아이콘 */}
-      <MaterialCommunityIcons
-        name={STICKER_ICON_NAME}
-        size={29}
-        color={STICKER_ICON_COLOR}
-      />
     </View>
   );
 }
@@ -449,7 +437,7 @@ export default function GrowthTree({
         ) : null}
 
         {/* 스티커 조르기 버튼 */}
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.requestButton}
           onPress={
             onRequestSticker ??
@@ -458,7 +446,7 @@ export default function GrowthTree({
           activeOpacity={0.9}
         >
           <Text style={styles.requestButtonText}>스티커 조르기</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       {/* 드래그 중 손가락 따라다니는 스티커 */}
@@ -592,7 +580,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 26,
+    marginTop: 6,
   },
   stickerPageDotContainer: {
     flexDirection: 'row',
