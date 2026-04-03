@@ -24,6 +24,20 @@ interface SocialLoginResponse {
   message?: string;
 }
 
+function isSocialLoginData(value: unknown): value is SocialLoginData {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Partial<SocialLoginData>;
+
+  return (
+    typeof candidate.isNewUser === 'boolean' &&
+    typeof candidate.accessToken === 'string' &&
+    typeof candidate.role === 'string'
+  );
+}
+
 function getApiBaseUrl() {
   if (!API_BASE_URL) {
     throw new Error('EXPO_PUBLIC_API_URL is not configured.');
@@ -66,13 +80,17 @@ async function socialLogin(provider: LoginProvider, payload: SocialLoginRequest)
     throw new Error(errorMessage || `로그인에 실패했습니다. (${response.status})`);
   }
 
-  const result = parsedBody as SocialLoginResponse | null;
-
-  if (!result?.success || !result.data) {
-    throw new Error(result?.message || '로그인에 실패했습니다. 다시 시도해주세요.');
+  if (isSocialLoginData(parsedBody)) {
+    return parsedBody;
   }
 
-  return result.data;
+  const result = parsedBody as SocialLoginResponse | null;
+
+  if (result?.success && isSocialLoginData(result.data)) {
+    return result.data;
+  }
+
+  throw new Error(result?.message || '로그인에 실패했습니다. 다시 시도해주세요.');
 }
 
 export async function signInWithApple(token: string) {
