@@ -23,7 +23,6 @@ const PROGRESS_TOTAL = 20;
 const MissionListScreen: React.FC = () => {
   const { activeStickerBoard } = useGrowth();
   const activeBoard = activeStickerBoard;
-  const [likedMissionIds, setLikedMissionIds] = useState<string[]>([]);
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
 
   const swipeResponder = useMemo(
@@ -44,14 +43,6 @@ const MissionListScreen: React.FC = () => {
       }),
     [],
   );
-
-  const toggleMissionHeart = (missionId: string) => {
-    setLikedMissionIds((prev) =>
-      prev.includes(missionId)
-        ? prev.filter((id) => id !== missionId)
-        : [...prev, missionId],
-    );
-  };
 
   const handleManageOpen = (mission: Mission) => {
     setSelectedMission(mission);
@@ -82,11 +73,10 @@ const MissionListScreen: React.FC = () => {
             {activeBoard?.missions.map((mission) => (
               <MissionCard
                 key={mission.id}
+                emoji={mission.emoji}
                 title={mission.title}
                 frequency={mission.frequency}
                 reward={activeBoard.rewardText || '스티커 1개'}
-                isHeartFilled={likedMissionIds.includes(mission.id)}
-                onHeartPress={() => toggleMissionHeart(mission.id)}
                 onManagePress={() => handleManageOpen(mission)}
               />
             ))}
@@ -96,7 +86,7 @@ const MissionListScreen: React.FC = () => {
           </ScrollView>
 
           <Text style={styles.progressText}>
-            성장나무 완성까지 {likedMissionIds.length}/{PROGRESS_TOTAL} 개
+            성장나무 완성까지 0/{PROGRESS_TOTAL} 개
           </Text>
         </View>
       </View>

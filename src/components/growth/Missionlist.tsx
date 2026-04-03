@@ -7,39 +7,29 @@ import {
 } from 'react-native';
 import { fontFamily } from '@/constants/fonts';
 import { colors } from '@/constants/colors';
-import { Ionicons } from '@expo/vector-icons';
 import { MaterialIcons } from '@expo/vector-icons';
 
 interface MissionCardProps {
+  emoji: string;
   title: string;
   frequency: string;   // e.g. '주 1회'
   reward: string;      // e.g. '스티커 1개'
-  isHeartFilled?: boolean;
-  onHeartPress?: () => void;
   onManagePress?: () => void;
 }
 
 const MissionCard: React.FC<MissionCardProps> = ({
+  emoji,
   title,
   frequency,
   reward,
-  isHeartFilled = false,
-  onHeartPress,
   onManagePress,
 }) => {
   return (
     <View style={styles.card}>
-      {/* 왼쪽 하트 */}
-      <TouchableOpacity style={styles.heartButton} onPress={onHeartPress} activeOpacity={0.7}>
-        <Ionicons
-          name={isHeartFilled ? 'heart' : 'heart-outline'}
-          size={24}
-          color="red"
-          style={styles.leftEmoji}
-        />
-      </TouchableOpacity>
+      <View style={styles.emojiBox}>
+        <Text style={styles.emojiText}>{emoji}</Text>
+      </View>
 
-      {/* 텍스트 영역 */}
       <View style={styles.textArea}>
         <Text style={styles.title} numberOfLines={1}>
           {title}
@@ -77,8 +67,18 @@ const styles = StyleSheet.create({
     borderColor: colors.grayscale[300],
     borderWidth: 1,
   },
-  leftEmoji: {
+  emojiBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.grayscale[100],
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
+  },
+  emojiText: {
+    fontSize: 24,
+    lineHeight: 28,
   },
   textArea: {
     flex: 1,

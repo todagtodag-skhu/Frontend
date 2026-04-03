@@ -84,6 +84,15 @@ const SPOT_LAYOUT: { x: number; y: number }[] = [
   { x: 0.85, y: 0.76 },
 ];
 
+function FloatingStickerIcon({ emoji }: { emoji?: string }) {
+  return (
+    <View style={styles.floatingStickerIconWrap}>
+      <View style={styles.floatingStickerBackground} />
+      {emoji ? <Text style={styles.floatingStickerEmoji}>{emoji}</Text> : null}
+    </View>
+  );
+}
+
 export default function GrowthTree({
   boardName = '유진이의 성장나무',
   reward = '닌텐도 DS 1시간 사용',
@@ -107,8 +116,6 @@ export default function GrowthTree({
 
   const [placedStickers, setPlacedStickers] = useState<Record<number, StickerInfo>>({});
   const [usedStickerIndices, setUsedStickerIndices] = useState<number[]>([]);
-  const [pendingDrop, setPendingDrop] = useState<{ spotId: number; stickerIdx: number } | null>(null);
-  const [missionModal, setMissionModal] = useState(false);
   const [infoModal, setInfoModal] = useState<{ visible: boolean; spotId?: number; data?: StickerInfo }>({
     visible: false,
   });
@@ -210,13 +217,16 @@ export default function GrowthTree({
             const dropX = evt.nativeEvent.pageX;
             const dropY = evt.nativeEvent.pageY;
             const spotId = getNearestEmptySpot(dropX, dropY);
+            const mission = resolvedMissions[idx];
 
             setDraggingStickerIdx(null);
 
-            if (spotId === null) return;
+            if (spotId === null || !mission) return;
 
-            setPendingDrop({ spotId, stickerIdx: idx });
-            setMissionModal(true);
+            placeSticker(spotId, mission, idx);
+            setUsedStickerIndices((prev) =>
+              prev.includes(idx) ? prev : [...prev, idx],
+            );
           },
 
           onPanResponderTerminate: () => {
@@ -228,7 +238,7 @@ export default function GrowthTree({
       }
       return panHandlersMap.current[idx];
     },
-    [getNearestEmptySpot, measureTree, placeSticker],
+    [getNearestEmptySpot, measureTree, placeSticker, resolvedMissions],
   );
 
   const handleSpotPress = (id: number) => {
@@ -255,17 +265,6 @@ export default function GrowthTree({
       setUsedStickerIndices((prev) => prev.filter((idx) => idx !== stickerToDelete.stickerIdx));
     }
     setInfoModal({ visible: false });
-  };
-
-  const handleMissionSelect = (mission: Mission) => {
-    if (pendingDrop) {
-      placeSticker(pendingDrop.spotId, mission, pendingDrop.stickerIdx);
-      setUsedStickerIndices((prev) =>
-        prev.includes(pendingDrop.stickerIdx) ? prev : [...prev, pendingDrop.stickerIdx],
-      );
-      setPendingDrop(null);
-    }
-    setMissionModal(false);
   };
 
   const swipeResponder = useMemo(
@@ -325,9 +324,7 @@ export default function GrowthTree({
 
           <View style={styles.stickerPickerInner}>
             {pagedIndices.map((idx) => {
-              const isUsed =
-                pendingDrop?.stickerIdx === idx ||
-                usedStickerIndices.includes(idx);
+              const isUsed = usedStickerIndices.includes(idx);
               const isDraggingThis = draggingStickerIdx === idx;
 
               return (
@@ -340,7 +337,7 @@ export default function GrowthTree({
                           isDraggingThis && { opacity: 0 },
                         ]}
                       >
-                        <Text style={styles.stickerPickerEmoji}>{resolvedMissions[idx]?.emoji}</Text>
+                        <FloatingStickerIcon emoji={resolvedMissions[idx]?.emoji} />
                       </View>
                     </View>
                   ) : (
@@ -403,44 +400,9 @@ export default function GrowthTree({
             { left: dragPos.x - 27, top: dragPos.y - 27 },
           ]}
         >
-          <Text style={styles.draggingStickerEmoji}>{resolvedMissions[draggingStickerIdx]?.emoji}</Text>
+          <FloatingStickerIcon emoji={resolvedMissions[draggingStickerIdx]?.emoji} />
         </View>
       )}
-
-      <Modal visible={missionModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>어떤 미션을 완료했나요?</Text>
-
-            {resolvedMissions.map((m) => {
-              const isDone = Object.values(placedStickers).some((s) => s.mission.id === m.id);
-              return (
-                <TouchableOpacity
-                  key={m.id}
-                  style={[styles.modalMissionItem, isDone && styles.modalMissionDone]}
-                  disabled={isDone}
-                  onPress={() => handleMissionSelect(m)}
-                >
-                  <Text style={[styles.modalMissionText, isDone && styles.modalMissionTextDone]}>
-                    {isDone ? '(완료) ' : ''}
-                    {m.title}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-
-            <TouchableOpacity
-              style={styles.modalCancelBtn}
-              onPress={() => {
-                setPendingDrop(null);
-                setMissionModal(false);
-              }}
-            >
-              <Text style={styles.modalCancelText}>취소</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
       {/* 스티커 상세 정보 모달 */}
       <Modal visible={infoModal.visible} transparent animationType="fade">
@@ -536,9 +498,27 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  stickerPickerEmoji: {
-    fontSize: 24,
-    lineHeight: 28,
+  floatingStickerIconWrap: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  floatingStickerBackground: {
+    position: 'absolute',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 1,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  floatingStickerEmoji: {
+    fontSize: 22,
+    lineHeight: 24,
   },
   usedSlot: {
     width: 42,
@@ -574,16 +554,6 @@ const styles = StyleSheet.create({
     elevation: 6,
     zIndex: 999,
   },
-  draggingStickerEmoji: {
-    fontSize: 24,
-    lineHeight: 28,
-  },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'flex-end',
-  },
   modalOverlayCenter: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.35)',
@@ -591,21 +561,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
   },
-  modalSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    paddingBottom: 36,
-  },
-  modalTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A1A', marginBottom: 16, textAlign: 'center' },
-  modalMissionItem: { paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, backgroundColor: '#F7F7F7', marginBottom: 8 },
-  modalMissionDone: { backgroundColor: '#F1F1F1', opacity: 0.5 },
-  modalMissionText: { fontSize: 15, color: '#333' },
-  modalMissionTextDone: { color: '#AAA' },
-  modalCancelBtn: { marginTop: 8, paddingVertical: 12, alignItems: 'center' },
-  modalCancelText: { fontSize: 15, color: '#888' },
-
   infoCardWrap: {
     width: '76%',
   },
