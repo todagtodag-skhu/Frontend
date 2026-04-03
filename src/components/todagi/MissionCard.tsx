@@ -7,12 +7,13 @@ import { Mission } from './types';
 
 type MissionCardProps = {
   mission: Mission;
+  onPress?: () => void;
   onLongPress: () => void;
 };
 
-export function MissionCard({ mission, onLongPress }: MissionCardProps) {
+export function MissionCard({ mission, onPress, onLongPress }: MissionCardProps) {
   return (
-    <Pressable style={todagiStyles.card} onLongPress={onLongPress}>
+    <Pressable style={todagiStyles.card} onPress={onPress} onLongPress={onLongPress}>
       <View style={todagiStyles.row}>
         <View style={todagiStyles.emojiBox}>
           <Text style={todagiStyles.emojiText}>{mission.emoji}</Text>

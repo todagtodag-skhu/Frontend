@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/common/Button';
 import { TextInput } from '@/components/common/TextInput';
+import { AppScreen } from '@/components/layout/AppScreen';
 import { CalendarModal } from '@/components/todagi/CalendarModal';
 import { Section } from '@/components/todagi/Section';
 import { todagiStyles } from '@/components/todagi/styles';
@@ -13,11 +14,11 @@ import { useGrowth } from '@/contexts/GrowthContext';
 export default function ChildDetailScreen() {
   const router = useRouter();
   const { childId } = useLocalSearchParams<{ childId?: string }>();
-  const { getBoardsByChildId, getChildById, deleteStickerBoard, updateChild, deleteChild } =
+  const { getBoardByChildId, getChildById, deleteStickerBoard, updateChild, deleteChild } =
     useGrowth();
 
   const child = getChildById(childId);
-  const stickerBoards = getBoardsByChildId(childId);
+  const activeBoard = getBoardByChildId(childId);
   const resolvedChildName = child?.name ?? '성장이';
   const [isEditing, setIsEditing] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
@@ -82,15 +83,12 @@ export default function ChildDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={todagiStyles.safeArea}>
-      <ScrollView
-        contentContainerStyle={[todagiStyles.scrollView, styles.scrollView]}
-        showsVerticalScrollIndicator={false}
+    <>
+      <AppScreen
+        title={`${resolvedChildName} 스티커판`}
+        bodyStyle={todagiStyles.scrollView}
+        contentContainerStyle={styles.scrollView}
       >
-        <Text weight="bold" style={todagiStyles.title}>
-          {resolvedChildName} 스티커판
-        </Text>
-
         <Section title="성장이 정보">
           <View style={styles.list}>
             <View style={todagiStyles.card}>
@@ -141,7 +139,7 @@ export default function ChildDetailScreen() {
                   </Text>
                   <Text style={styles.itemSub}>초대코드 {child?.inviteCode ?? '-'}</Text>
                   <Text style={styles.itemSub}>생일 {child?.birthday ?? '-'}</Text>
-                  <Text style={styles.itemSub}>연결된 스티커판 {stickerBoards.length}개</Text>
+                  <Text style={styles.itemSub}>현재 스티커판 {activeBoard ? '생성됨' : '없음'}</Text>
                   <View style={styles.actionRow}>
                     <Pressable style={styles.actionChip} onPress={() => setIsEditing(true)}>
                       <Text style={styles.actionChipText}>수정</Text>
@@ -159,67 +157,67 @@ export default function ChildDetailScreen() {
           </View>
         </Section>
 
-        <Section title="연결된 스티커판">
+        <Section title="현재 스티커판">
           <View style={styles.list}>
-            {stickerBoards.length > 0 ? (
-              stickerBoards.map((board) => (
-                <Pressable key={board.id} style={todagiStyles.card}>
-                  <Text weight="bold" style={styles.itemTitle}>
-                    {board.title}
-                  </Text>
-                  <Text style={styles.itemSub}>
-                    {board.boardDesign} · {board.stickerCount}
-                  </Text>
-                  <Text style={styles.itemSub}>미션 {board.missions.length}개</Text>
-                  <View style={styles.actionRow}>
-                    <Pressable
-                      style={styles.actionChip}
-                      onPress={() =>
-                        router.push({
-                          pathname: '/create-sticker',
-                          params: { childId, boardId: board.id },
-                        })
-                      }
-                    >
-                      <Text style={styles.actionChipText}>수정</Text>
-                    </Pressable>
-                    <Pressable
-                      style={[styles.actionChip, styles.deleteChip]}
-                      onPress={() =>
-                        Alert.alert('스티커판 삭제', `"${board.title}"을 삭제할까요?`, [
-                          { text: '취소', style: 'cancel' },
-                          {
-                            text: '삭제',
-                            style: 'destructive',
-                            onPress: () => deleteStickerBoard(board.id),
-                          },
-                        ])
-                      }
-                    >
-                      <Text style={[styles.actionChipText, styles.deleteChipText]}>삭제</Text>
-                    </Pressable>
-                  </View>
-                </Pressable>
-              ))
+            {activeBoard ? (
+              <Pressable style={todagiStyles.card}>
+                <Text weight="bold" style={styles.itemTitle}>
+                  {activeBoard.title}
+                </Text>
+                <Text style={styles.itemSub}>
+                  {activeBoard.boardDesign} · {activeBoard.stickerCount}
+                </Text>
+                <Text style={styles.itemSub}>미션 {activeBoard.missions.length}개</Text>
+                <View style={styles.actionRow}>
+                  <Pressable
+                    style={styles.actionChip}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/create-sticker',
+                        params: { childId, boardId: activeBoard.id, returnTo: 'child-detail' },
+                      })
+                    }
+                  >
+                    <Text style={styles.actionChipText}>수정</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.actionChip, styles.deleteChip]}
+                    onPress={() =>
+                      Alert.alert('스티커판 삭제', `"${activeBoard.title}"을 삭제할까요?`, [
+                        { text: '취소', style: 'cancel' },
+                        {
+                          text: '삭제',
+                          style: 'destructive',
+                          onPress: () => deleteStickerBoard(activeBoard.id),
+                        },
+                      ])
+                    }
+                  >
+                    <Text style={[styles.actionChipText, styles.deleteChipText]}>삭제</Text>
+                  </Pressable>
+                </View>
+              </Pressable>
             ) : (
               <View style={todagiStyles.card}>
-                <Text style={styles.emptyText}>아직 생성된 스티커판이 없습니다.</Text>
+                <Text style={styles.emptyText}>아직 활성 스티커판이 없습니다.</Text>
               </View>
             )}
           </View>
         </Section>
 
-        <Button
-          title="새 스티커판 만들기"
-          onPress={() =>
-            router.push({
-              pathname: '/create-sticker',
-              params: { childId },
-            })
-          }
-          style={styles.createButton}
-        />
-      </ScrollView>
+        {!activeBoard ? (
+          <Button
+            title="스티커판 만들기"
+            onPress={() =>
+              router.push({
+                pathname: '/create-sticker',
+                params: { childId, returnTo: 'child-detail' },
+              })
+            }
+            style={styles.createButton}
+          />
+        ) : null}
+      </AppScreen>
 
       <CalendarModal
         visible={birthdayModalVisible}
@@ -228,7 +226,7 @@ export default function ChildDetailScreen() {
         onConfirm={setBirthday}
         onClose={() => setBirthdayModalVisible(false)}
       />
-    </SafeAreaView>
+    </>
   );
 }
 

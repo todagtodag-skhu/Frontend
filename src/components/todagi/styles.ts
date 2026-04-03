@@ -206,4 +206,10 @@ export const todagiStyles = StyleSheet.create({
     backgroundColor: colors.primary[800],
     marginTop: 0,
   },
+  editingCaption: {
+    fontSize: 14,
+    color: colors.grayscale[700],
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
 });

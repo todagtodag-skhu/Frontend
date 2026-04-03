@@ -31,7 +31,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="children"
         options={{
-          title: '성장이 관리',
+          title: '스티커판 관리',
         }}
       />
       <Tabs.Screen

@@ -28,6 +28,7 @@ type GrowthContextValue = {
   deleteStickerBoard: (boardId: string) => void;
   getChildById: (childId?: string) => ChildProfile | undefined;
   getBoardById: (boardId?: string) => StickerBoard | undefined;
+  getBoardByChildId: (childId?: string) => StickerBoard | undefined;
   getBoardsByChildId: (childId?: string) => StickerBoard[];
 };
 
@@ -81,23 +82,6 @@ const initialStickerBoards: StickerBoard[] = [
         title: '청소하기',
         days: '월,화,수,목,금',
         frequency: '하루 2회',
-      },
-    ],
-  },
-  {
-    id: 'board-2',
-    childId: 'child-1',
-    title: '유지니유진의 책 읽기판',
-    stickerCount: '30개',
-    boardDesign: '우주 탐험',
-    rewardText: '새 그림책 고르기',
-    missions: [
-      {
-        id: 'mission-2',
-        emoji: '📚',
-        title: '책 읽기',
-        days: '월,수,금',
-        frequency: '하루 1회',
       },
     ],
   },
@@ -210,6 +194,7 @@ export function GrowthProvider({ children }: { children: ReactNode }) {
     },
     getChildById: (childId) => childProfiles.find((child) => child.id === childId),
     getBoardById: (boardId) => boards.find((board) => board.id === boardId),
+    getBoardByChildId: (childId) => boards.find((board) => board.childId === childId),
     getBoardsByChildId: (childId) => boards.filter((board) => board.childId === childId),
   }), [boards, childProfiles]);
 

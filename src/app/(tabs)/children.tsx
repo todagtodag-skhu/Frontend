@@ -1,9 +1,14 @@
+import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable } from 'react-native';
 
-import { Button } from '@/components/common/Button';
-import { Section } from '@/components/todagi/Section';
-import { todagiStyles } from '@/components/todagi/styles';
+import { ChildrenEmptyState } from '@/components/children/ChildrenEmptyState';
+import { ChildSelectorRow } from '@/components/children/ChildSelectorRow';
+import { MissionAssignmentList } from '@/components/children/MissionAssignmentList';
+import { NoActiveBoardState } from '@/components/children/NoActiveBoardState';
+import { StickerBoardSummaryCard } from '@/components/children/StickerBoardSummaryCard';
+import { childrenStyles as styles } from '@/components/children/styles';
+import { AppScreen } from '@/components/layout/AppScreen';
 import { Text } from '@/components/ui/Text';
 import { useGrowth } from '@/contexts/GrowthContext';
 
@@ -11,105 +16,118 @@ export default function ChildrenScreen() {
   const router = useRouter();
   const { focusChildId } = useLocalSearchParams<{ focusChildId?: string }>();
   const { children, getBoardsByChildId } = useGrowth();
-  const focusedChild = children.find((child) => child.id === focusChildId);
+
+  const [selectedChildId, setSelectedChildId] = useState<string | undefined>(focusChildId);
+
+  useEffect(() => {
+    if (focusChildId) {
+      setSelectedChildId(focusChildId);
+      return;
+    }
+
+    setSelectedChildId((prev) => prev ?? children[0]?.id);
+  }, [children, focusChildId]);
+
+  const selectedChild = useMemo(
+    () => children.find((child) => child.id === selectedChildId) ?? children[0],
+    [children, selectedChildId],
+  );
+
+  const selectedBoards = useMemo(
+    () => getBoardsByChildId(selectedChild?.id),
+    [getBoardsByChildId, selectedChild?.id],
+  );
+
+  const activeBoard = selectedBoards[0];
+  const totalStickerCount = Number.parseInt(activeBoard?.stickerCount ?? '0', 10) || 0;
+  const currentStickerCount = activeBoard ? Math.min(activeBoard.missions.length, totalStickerCount) : 0;
+  const showNotification = selectedChild?.id === focusChildId;
+
+  const handlePressAddChild = () => {
+    router.push('/register-child');
+  };
+
+  const handlePressMission = () => {
+    if (!selectedChild || !activeBoard) {
+      return;
+    }
+
+    router.push({
+      pathname: '/create-sticker',
+      params: { childId: selectedChild.id, boardId: activeBoard.id, returnTo: 'children' },
+    });
+  };
+
+  const handlePressPrimaryAction = () => {
+    if (!selectedChild) {
+      return;
+    }
+
+    router.push({
+      pathname: '/create-sticker',
+      params: {
+        childId: selectedChild.id,
+        returnTo: 'children',
+        ...(activeBoard ? { boardId: activeBoard.id } : {}),
+      },
+    });
+  };
+
+  const handlePressChildDetail = () => {
+    if (!selectedChild) {
+      return;
+    }
+
+    router.push({
+      pathname: '/child-detail',
+      params: { childId: selectedChild.id },
+    });
+  };
 
   return (
-    <SafeAreaView style={todagiStyles.safeArea}>
-      <ScrollView
-        contentContainerStyle={[todagiStyles.scrollView, styles.scrollView]}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text weight="bold" style={todagiStyles.title}>
-          성장이 관리
-        </Text>
+    <AppScreen title="스티커판 관리" bodyStyle={styles.content}>
+      <ChildSelectorRow
+        children={children}
+        selectedChildId={selectedChild?.id}
+        onSelectChild={setSelectedChildId}
+        onPressAddChild={handlePressAddChild}
+      />
 
-        {focusedChild ? (
-          <Section title="방금 연결된 성장이">
-            <View style={styles.list}>
-              <View style={todagiStyles.card}>
-                <Text weight="bold" style={styles.summaryTitle}>
-                  {focusedChild.name}
-                </Text>
-                <Text style={styles.summaryText}>생일 {focusedChild.birthday}</Text>
-                <Text style={styles.summaryText}>
-                  연결된 스티커판 {getBoardsByChildId(focusedChild.id).length}개
-                </Text>
-              </View>
-              <Button
-                title="상세 보기"
-                onPress={() =>
-                  router.push({
-                    pathname: '/child-detail',
-                    params: { childId: focusedChild.id },
-                  })
-                }
-                style={styles.addButton}
+      {selectedChild ? (
+        <>
+          {activeBoard ? (
+            <>
+              <StickerBoardSummaryCard
+                childName={selectedChild.name}
+                board={activeBoard}
+                currentStickerCount={currentStickerCount}
+                totalStickerCount={totalStickerCount}
+                showNotification={showNotification}
               />
-              <Button
-                title="바로 스티커판 만들기"
-                onPress={() =>
-                  router.push({
-                    pathname: '/create-sticker',
-                    params: { childId: focusedChild.id },
-                  })
-                }
-                style={styles.addButton}
+
+              <MissionAssignmentList
+                missions={activeBoard.missions}
+                emptyText="등록된 미션이 아직 없어요."
+                onPressMission={handlePressMission}
               />
-            </View>
-          </Section>
-        ) : null}
+            </>
+          ) : (
+            <NoActiveBoardState />
+          )}
 
-        <Section title="연동된 성장이">
-          <View style={styles.list}>
-            {children.map((child) => (
-              <Pressable
-                key={child.id}
-                style={todagiStyles.card}
-                onPress={() =>
-                  router.push({
-                    pathname: '/child-detail',
-                    params: { childId: child.id },
-                  })
-                }
-              >
-                <Text weight="bold" style={styles.summaryTitle}>
-                  {child.name}
-                </Text>
-                <Text style={styles.summaryText}>
-                  연결된 스티커판 {getBoardsByChildId(child.id).length}개
-                </Text>
-                <Text style={styles.summaryText}>생일 {child.birthday}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </Section>
+          <Pressable style={styles.primaryButton} onPress={handlePressPrimaryAction}>
+            <Text weight="bold" style={styles.primaryButtonText}>
+              {activeBoard ? '미션 추가하기' : '스티커판 생성하기'}
+            </Text>
+          </Pressable>
 
-        <Button
-          title="새 성장이 연결하기"
-          onPress={() => router.push('/register-child')}
-          style={styles.addButton}
-        />
-      </ScrollView>
-    </SafeAreaView>
+          <Pressable onPress={handlePressChildDetail}>
+            <Text style={styles.editLink}>현재 성장이 정보 수정하기</Text>
+          </Pressable>
+        </>
+      ) : (
+        <ChildrenEmptyState onPressAddChild={handlePressAddChild} />
+      )}
+    </AppScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  scrollView: {
-    paddingBottom: 36,
-  },
-  list: {
-    gap: 10,
-  },
-  summaryTitle: {
-    fontSize: 20,
-  },
-  summaryText: {
-    fontSize: 13,
-    color: '#888888',
-  },
-  addButton: {
-    width: '100%',
-    marginTop: 0,
-  },
-});

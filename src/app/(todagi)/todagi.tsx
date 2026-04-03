@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Alert, SafeAreaView, ScrollView, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 
 import { Button } from '@/components/common/Button';
+import { AppScreen } from '@/components/layout/AppScreen';
 import {
   BOARD_DESIGN_OPTIONS,
   DEFAULT_MISSION_EMOJI,
@@ -25,12 +26,24 @@ import { useGrowth } from '@/contexts/GrowthContext';
 
 export default function TodagiScreen() {
   const router = useRouter();
-  const { childId, boardId } = useLocalSearchParams<{ childId?: string; boardId?: string }>();
-  const { addStickerBoard, updateStickerBoard, getChildById, getBoardById, children } = useGrowth();
+  const { childId, boardId, returnTo } = useLocalSearchParams<{
+    childId?: string;
+    boardId?: string;
+    returnTo?: string;
+  }>();
+  const {
+    addStickerBoard,
+    updateStickerBoard,
+    getChildById,
+    getBoardById,
+    getBoardByChildId,
+    children,
+  } = useGrowth();
 
   const resolvedChildId = useMemo(() => childId ?? children[0]?.id, [childId, children]);
   const child = getChildById(resolvedChildId);
   const board = getBoardById(boardId);
+  const existingBoard = getBoardByChildId(resolvedChildId);
   const isEditMode = typeof boardId === 'string' && !!board;
 
   const [boardTitle, setBoardTitle] = useState('');
@@ -42,6 +55,7 @@ export default function TodagiScreen() {
   const [selectedDays, setSelectedDays] = useState<string[]>(DEFAULT_SELECTED_DAYS);
   const [missionFrequency, setMissionFrequency] = useState('하루 1회');
   const [rewardText, setRewardText] = useState('');
+  const [editingMissionId, setEditingMissionId] = useState<string | null>(null);
   const [stickerModal, setStickerModal] = useState(false);
   const [designModal, setDesignModal] = useState(false);
   const [emojiModal, setEmojiModal] = useState(false);
@@ -68,6 +82,14 @@ export default function TodagiScreen() {
     setMissions(board.missions);
   }, [board]);
 
+  const resetMissionForm = () => {
+    setMissionEmoji(DEFAULT_MISSION_EMOJI);
+    setMissionTitle('');
+    setSelectedDays(DEFAULT_SELECTED_DAYS);
+    setMissionFrequency('하루 1회');
+    setEditingMissionId(null);
+  };
+
   const handleAddMission = () => {
     if (!missionTitle.trim()) {
       Alert.alert('알림', '미션 이름을 입력해주세요.');
@@ -78,17 +100,28 @@ export default function TodagiScreen() {
       return;
     }
     const newMission: Mission = {
-      id: Date.now().toString(),
+      id: editingMissionId ?? Date.now().toString(),
       emoji: missionEmoji,
       title: missionTitle.trim(),
       days: selectedDays.join(','),
       frequency: missionFrequency,
     };
-    setMissions((prev) => [...prev, newMission]);
-    setMissionEmoji(DEFAULT_MISSION_EMOJI);
-    setMissionTitle('');
-    setSelectedDays(DEFAULT_SELECTED_DAYS);
-    setMissionFrequency('하루 1회');
+
+    setMissions((prev) =>
+      editingMissionId
+        ? prev.map((mission) => (mission.id === editingMissionId ? newMission : mission))
+        : [...prev, newMission]
+    );
+
+    resetMissionForm();
+  };
+
+  const handleEditMission = (mission: Mission) => {
+    setEditingMissionId(mission.id);
+    setMissionEmoji(mission.emoji);
+    setMissionTitle(mission.title);
+    setSelectedDays(mission.days.split(',').filter(Boolean));
+    setMissionFrequency(mission.frequency);
   };
 
   const handleDeleteMission = (id: string) => {
@@ -97,7 +130,13 @@ export default function TodagiScreen() {
       {
         text: '삭제',
         style: 'destructive',
-        onPress: () => setMissions((prev) => prev.filter((mission) => mission.id !== id)),
+        onPress: () => {
+          setMissions((prev) => prev.filter((mission) => mission.id !== id));
+
+          if (editingMissionId === id) {
+            resetMissionForm();
+          }
+        },
       },
     ]);
   };
@@ -119,6 +158,10 @@ export default function TodagiScreen() {
       Alert.alert('알림', '최종 보상을 입력해주세요.');
       return;
     }
+    if (!isEditMode && existingBoard) {
+      Alert.alert('알림', '현재 활성 스티커판이 있어요. 스티커판은 한 번에 하나만 만들 수 있어요.');
+      return;
+    }
 
     const boardInput = {
       childId: resolvedChildId,
@@ -138,24 +181,37 @@ export default function TodagiScreen() {
     Alert.alert('완료', `"${child.name}"의 스티커 판이 ${isEditMode ? '수정' : '발행'}되었습니다!`, [
       {
         text: '확인',
-        onPress: () =>
+        onPress: () => {
+          if (returnTo === 'child-detail') {
+            router.replace({
+              pathname: '/child-detail',
+              params: { childId: resolvedChildId },
+            });
+            return;
+          }
+
           router.replace({
-            pathname: '/child-detail',
-            params: { childId: resolvedChildId },
-          }),
+            pathname: '/children',
+            params: resolvedChildId ? { focusChildId: resolvedChildId } : undefined,
+          });
+        },
       },
     ]);
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+    <>
+      <AppScreen
+        title={isEditMode ? '스티커 판 수정하기' : '새 스티커 판 만들기'}
+        bodyStyle={styles.scrollView}
+        footer={
+          <Button
+            title={isEditMode ? '스티커 판 수정하기' : '스티커 판 발행하기'}
+            onPress={handlePublish}
+            style={styles.footerButton}
+          />
+        }
       >
-        <Text style={styles.title}>{isEditMode ? '스티커 판 수정하기' : '새 스티커 판 만들기'}</Text>
-
         {child ? (
           <Section title="연결된 성장이">
             <View style={styles.card}>
@@ -190,6 +246,7 @@ export default function TodagiScreen() {
             <MissionCard
               key={mission.id}
               mission={mission}
+              onPress={() => handleEditMission(mission)}
               onLongPress={() => handleDeleteMission(mission.id)}
             />
           ))}
@@ -203,7 +260,16 @@ export default function TodagiScreen() {
             onPressDaySelect={() => setDayModal(true)}
             onPressFrequencySelect={() => setFrequencyModal(true)}
           />
-          <Button title="+" onPress={handleAddMission} style={styles.addMissionButton} />
+          {editingMissionId ? (
+            <Pressable onPress={resetMissionForm}>
+              <Text style={styles.editingCaption}>수정 중인 미션 취소하기</Text>
+            </Pressable>
+          ) : null}
+          <Button
+            title={editingMissionId ? '미션 수정하기' : '+'}
+            onPress={handleAddMission}
+            style={styles.addMissionButton}
+          />
         </Section>
 
         <Section title="최종 보상 설정">
@@ -213,15 +279,7 @@ export default function TodagiScreen() {
             onChangeText={setRewardText}
           />
         </Section>
-      </ScrollView>
-
-      <View style={styles.footer}>
-        <Button
-          title={isEditMode ? '스티커 판 수정하기' : '스티커 판 발행하기'}
-          onPress={handlePublish}
-          style={styles.footerButton}
-        />
-      </View>
+      </AppScreen>
 
       <SelectModal
         visible={stickerModal}
@@ -256,6 +314,6 @@ export default function TodagiScreen() {
         onSelect={setMissionFrequency}
         onClose={() => setFrequencyModal(false)}
       />
-    </SafeAreaView>
+    </>
   );
 }

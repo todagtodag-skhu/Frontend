@@ -48,7 +48,10 @@ export default function RootLayout() {
           name="create-sticker"
           options={({ route }) => ({
             headerShown: true,
-            title: '새 스티커판 만들기',
+            title:
+              route.params && 'boardId' in route.params && typeof route.params.boardId === 'string'
+                ? '스티커판 수정하기'
+                : '스티커판 만들기',
             headerLeft: () => (
               <Pressable
                 onPress={() => {
@@ -56,8 +59,12 @@ export default function RootLayout() {
                     route.params && 'childId' in route.params
                       ? route.params.childId
                       : undefined;
+                  const returnTo =
+                    route.params && 'returnTo' in route.params
+                      ? route.params.returnTo
+                      : undefined;
 
-                  if (typeof childId === 'string' && childId.length > 0) {
+                  if (returnTo === 'child-detail' && typeof childId === 'string' && childId.length > 0) {
                     router.replace({
                       pathname: '/child-detail',
                       params: { childId },
