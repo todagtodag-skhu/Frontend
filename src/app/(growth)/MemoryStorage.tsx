@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   PanResponder,
 } from 'react-native';
@@ -13,8 +12,8 @@ import GiftCard from '@/components/growth/GiftCard';
 import { fontFamily } from '@/constants/fonts';
 import { colors } from '@/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-// ── 타입 ──────────────────────────────────────────────────────────────────────
 interface StickerBoard {
   id: string;
   date: string;
@@ -36,7 +35,6 @@ interface Page {
   gifts: Gift[];
 }
 
-// ── 더미 데이터 ───────────────────────────────────────────────────────────────
 const PAGES: Page[] = [
   {
     id: 'page-1',
@@ -75,7 +73,6 @@ const PAGES: Page[] = [
 
 const TOTAL_COMPLETED = 12;
 
-// ── 컴포넌트 ──────────────────────────────────────────────────────────────────
 const MemoryStorageScreen: React.FC = () => {
   const item = PAGES[0];
 
@@ -144,13 +141,11 @@ const MemoryStorageScreen: React.FC = () => {
 
 export default MemoryStorageScreen;
 
-// ── 스타일 ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: '#FFF9EE',
   },
-  // ── 헤더
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -184,7 +179,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: fontFamily.bold,
   },
-  // ── 페이지
   page: {
     flex: 1,
   },
@@ -192,14 +186,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
-  // ── 섹션 타이틀
   sectionTitle: {
     fontSize: 15,
     fontFamily: fontFamily.bold,
     color: '#555555',
     marginBottom: 24,
   },
-  // ── 선물 행
   giftRow: {
     flexDirection: 'row',
     gap: 12,

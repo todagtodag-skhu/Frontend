@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
   PanResponder,
   Modal,
   Pressable,
@@ -17,13 +16,13 @@ import { colors } from '@/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useGrowth } from '@/contexts/GrowthContext';
 import { Mission } from '@/components/todagi/types';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PROGRESS_TOTAL = 20;
 
-// ── 컴포넌트 ──────────────────────────────────────────────────────────────────
 const MissionListScreen: React.FC = () => {
-  const { stickerBoards } = useGrowth();
-  const activeBoard = stickerBoards[0];
+  const { activeStickerBoard } = useGrowth();
+  const activeBoard = activeStickerBoard;
   const [likedMissionIds, setLikedMissionIds] = useState<string[]>([]);
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
 
@@ -65,20 +64,17 @@ const MissionListScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.safe} {...swipeResponder.panHandlers}>
       <View style={styles.container}>
-        {/* 헤더 */}
         <Text style={styles.header}>
           {activeBoard ? `${activeBoard.title} 미션 목록` : '유진이의 미션 목록'}
         </Text>
 
         <View style={styles.page}>
-          {/* 페이지 상단 대표 카드 */}
           <View style={styles.heroCard}>
             <Ionicons name="heart" size={24} color="red" style={styles.heroEmoji} />
             <View style={{ flex: 1 }} />
             <Ionicons name="heart" size={24} color="red" style={styles.heroEmoji} />
           </View>
 
-          {/* 미션 카드 목록 */}
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.missionList}
@@ -99,7 +95,6 @@ const MissionListScreen: React.FC = () => {
             ) : null}
           </ScrollView>
 
-          {/* 성장 진행 텍스트 */}
           <Text style={styles.progressText}>
             성장나무 완성까지 {likedMissionIds.length}/{PROGRESS_TOTAL} 개
           </Text>
@@ -119,7 +114,6 @@ const MissionListScreen: React.FC = () => {
 
 export default MissionListScreen;
 
-// ── 스타일 ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
@@ -128,7 +122,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  // ── 헤더
   header: {
     fontSize: 30,
     fontFamily: fontFamily.bold,
@@ -137,12 +130,10 @@ const styles = StyleSheet.create({
     paddingTop: 36,
     paddingBottom: 32,
   },
-  // ── 페이지 단위
   page: {
     paddingHorizontal: 20,
     flex: 1,
   },
-  // ── 대표 히어로 카드
   heroCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -157,7 +148,6 @@ const styles = StyleSheet.create({
   heroEmoji: {
     marginHorizontal: 2,
   },
-  // ── 미션 리스트
   missionList: {
     paddingBottom: 8,
   },
@@ -168,7 +158,6 @@ const styles = StyleSheet.create({
     color: colors.grayscale[600],
     marginTop: 24,
   },
-  // ── 진행 텍스트
   progressText: {
     textAlign: 'center',
     fontSize: 16,

@@ -8,22 +8,21 @@ import {
   Modal,
   Dimensions,
   Animated,
-  Alert,
-  SafeAreaView,
   PanResponder,
 } from 'react-native';
 import { router } from 'expo-router';
 
 import { StickerInfoCard } from '@/components/growth/StickerInfoCard';
-import TreeSvg from '../../../assets/tree.svg';
+import { TreeBoard } from '@/components/growth/TreeBoard';
 import { fontFamily } from '@/constants/fonts';
-import { colors } from '@/constants/colors';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGrowth } from '@/contexts/GrowthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface Mission {
   id: string;
+  emoji: string;
   title: string;
   completed: boolean;
 }
@@ -43,11 +42,11 @@ interface TreeProps {
 }
 
 const DEFAULT_MISSIONS: Mission[] = [
-  { id: 'm1', title: '방 청소하기', completed: false },
-  { id: 'm2', title: '숙제 스스로 하기', completed: false },
-  { id: 'm3', title: '일찍 일어나기', completed: false },
-  { id: 'm4', title: '채소 다 먹기', completed: false },
-  { id: 'm5', title: '동생이랑 사이좋게 지내기', completed: false },
+  { id: 'm1', emoji: '🧹', title: '방 청소하기', completed: false },
+  { id: 'm2', emoji: '✏️', title: '숙제 스스로 하기', completed: false },
+  { id: 'm3', emoji: '⏰', title: '일찍 일어나기', completed: false },
+  { id: 'm4', emoji: '🥦', title: '채소 다 먹기', completed: false },
+  { id: 'm5', emoji: '🤝', title: '동생이랑 사이좋게 지내기', completed: false },
 ];
 
 const BG_COLOR = '#FFF9EE';
@@ -60,9 +59,7 @@ const TREE_WIDTH = Math.min(SCREEN_WIDTH - 44, 320);
 const TREE_HEIGHT = TREE_WIDTH * 1.08;
 const SPOT_SIZE = 28;
 const STICKERS_PER_PAGE = 4;
-// 드롭 인식 반경 (px) — 기존 38보다 넓혀서 스냅 성공률 향상
 const DROP_RADIUS = 48;
-const STICKER_ICON_OUTLINE_SIZE = 42;
 
 const SPOT_LAYOUT: { x: number; y: number }[] = [
   { x: 0.50, y: 0.08 },
@@ -87,14 +84,6 @@ const SPOT_LAYOUT: { x: number; y: number }[] = [
   { x: 0.85, y: 0.76 },
 ];
 
-function StickerIcon() {
-  return (
-    <View style={styles.stickerIconWrap}>
-      <View style={styles.iconBackground} />
-    </View>
-  );
-}
-
 export default function GrowthTree({
   boardName = '유진이의 성장나무',
   reward = '닌텐도 DS 1시간 사용',
@@ -102,14 +91,15 @@ export default function GrowthTree({
   missions = DEFAULT_MISSIONS,
   onRequestSticker,
 }: TreeProps) {
-  const { getBoardById } = useGrowth();
-  const activeBoard = getBoardById('board-1');
+  const { activeStickerBoard } = useGrowth();
+  const activeBoard = activeStickerBoard;
   const resolvedBoardName = activeBoard?.title ?? boardName;
   const resolvedReward = activeBoard?.rewardText ?? reward;
   const resolvedTotalSpots = Number.parseInt(activeBoard?.stickerCount ?? '', 10) || totalSpots;
   const resolvedMissions = activeBoard
     ? activeBoard.missions.map((mission) => ({
         id: mission.id,
+        emoji: mission.emoji,
         title: mission.title,
         completed: false,
       }))
@@ -131,7 +121,6 @@ export default function GrowthTree({
   const treeLayoutRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const scaleAnims = useRef<Record<number, Animated.Value>>({});
 
-  // placedStickers 를 ref 로도 유지 — PanResponder 클로저에서 최신값 참조
   const placedStickersRef = useRef(placedStickers);
   placedStickersRef.current = placedStickers;
 
@@ -150,7 +139,6 @@ export default function GrowthTree({
     .map((_, i) => i)
     .slice(stickerPage * STICKERS_PER_PAGE, stickerPage * STICKERS_PER_PAGE + STICKERS_PER_PAGE);
 
-  // ── 스티커 부착 ──────────────────────────────────────────────────────────────
   const placeSticker = useCallback((spotId: number, mission: Mission, stickerIdx: number) => {
     const anim = getScaleAnim(spotId);
     anim.setValue(0);
@@ -167,14 +155,12 @@ export default function GrowthTree({
     }));
   }, []);
 
-  // ── 트리 레이아웃 측정 ────────────────────────────────────────────────────────
   const measureTree = useCallback(() => {
     treeWrapperRef.current?.measureInWindow((x, y, width, height) => {
       treeLayoutRef.current = { x, y, width, height };
     });
   }, []);
 
-  // ── 가장 가까운 빈 스팟 탐색 ─────────────────────────────────────────────────
   const getNearestEmptySpot = useCallback(
     (absoluteX: number, absoluteY: number): number | null => {
       const { x: treeX, y: treeY, width: treeWidth, height: treeHeight } = treeLayoutRef.current;
@@ -183,7 +169,6 @@ export default function GrowthTree({
 
       spots.forEach((pos, i) => {
         const spotId = i + 1;
-        // 이미 스티커가 붙은 자리 제외
         if (placedStickersRef.current[spotId]) return;
 
         const cx = treeX + pos.x * treeWidth;
@@ -201,8 +186,6 @@ export default function GrowthTree({
     [spots],
   );
 
-  // ── 드래그 핸들러 (스티커 인덱스별 메모이즈) ──────────────────────────────────
-  //    PanResponder 는 idx 가 달라질 때만 재생성 → 클로저 문제 없음
   const panHandlersMap = useRef<Record<number, ReturnType<typeof PanResponder.create>['panHandlers']>>({});
 
   const getPanHandlers = useCallback(
@@ -230,7 +213,7 @@ export default function GrowthTree({
 
             setDraggingStickerIdx(null);
 
-            if (spotId === null) return; // 유효 스팟 없음 → 취소
+            if (spotId === null) return;
 
             setPendingDrop({ spotId, stickerIdx: idx });
             setMissionModal(true);
@@ -248,7 +231,6 @@ export default function GrowthTree({
     [getNearestEmptySpot, measureTree, placeSticker],
   );
 
-  // ── 스팟 터치 ────────────────────────────────────────────────────────────────
   const handleSpotPress = (id: number) => {
     if (placedStickers[id]) {
       setInfoModal({ visible: true, spotId: id, data: placedStickers[id] });
@@ -275,7 +257,6 @@ export default function GrowthTree({
     setInfoModal({ visible: false });
   };
 
-  // ── 미션 선택 ────────────────────────────────────────────────────────────────
   const handleMissionSelect = (mission: Mission) => {
     if (pendingDrop) {
       placeSticker(pendingDrop.spotId, mission, pendingDrop.stickerIdx);
@@ -287,7 +268,6 @@ export default function GrowthTree({
     setMissionModal(false);
   };
 
-  // ── 스와이프 (화면 전환) ──────────────────────────────────────────────────────
   const swipeResponder = useMemo(
     () =>
       PanResponder.create({
@@ -300,7 +280,6 @@ export default function GrowthTree({
     [],
   );
 
-  // ────────────────────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container} {...swipeResponder.panHandlers}>
       <View style={styles.content}>
@@ -313,48 +292,18 @@ export default function GrowthTree({
           </View>
         </View>
 
-        {/* 트리 영역 */}
         <View style={styles.treeSection}>
-          <View
+          <TreeBoard
             ref={treeWrapperRef}
-            style={styles.treeWrapper}
-            onLayout={measureTree} // 레이아웃 확정 시 측정
-          >
-            <TreeSvg width={TREE_WIDTH} height={TREE_HEIGHT} style={styles.treeSvg} />
-
-            {spots.map((pos, i) => {
-              const spotId = i + 1;
-              const placed = placedStickers[spotId];
-              const scaleAnim = getScaleAnim(spotId);
-              const left = pos.x * TREE_WIDTH - SPOT_SIZE / 2;
-              const top = pos.y * TREE_HEIGHT - SPOT_SIZE / 2;
-
-              return (
-                <TouchableOpacity
-                  key={spotId}
-                  activeOpacity={0.8}
-                  onPress={() => handleSpotPress(spotId)}
-                  style={[
-                    styles.spot,
-                    { left, top, width: SPOT_SIZE, height: SPOT_SIZE, borderRadius: SPOT_SIZE / 2 },
-                  ]}
-                >
-                  {placed ? (
-                    <Animated.View
-                      style={[
-                        styles.placedStickerCircle,
-                        { transform: [{ scale: scaleAnim }] },
-                      ]}
-                    >
-                      <StickerIcon />
-                    </Animated.View>
-                  ) : (
-                    <View style={styles.emptySpot} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+            width={TREE_WIDTH}
+            height={TREE_HEIGHT}
+            spotSize={SPOT_SIZE}
+            spots={spots}
+            placedStickers={placedStickers}
+            getScaleAnim={getScaleAnim}
+            onSpotPress={handleSpotPress}
+            onLayout={measureTree}
+          />
 
           <Text style={styles.progressText}>
             성장나무 완성까지{' '}
@@ -365,7 +314,6 @@ export default function GrowthTree({
           </Text>
         </View>
 
-        {/* 하단 스티커 피커 */}
         <View style={styles.stickerPickerWrap}>
           <TouchableOpacity
             style={styles.arrowBtn}
@@ -385,7 +333,6 @@ export default function GrowthTree({
               return (
                 <View key={idx} style={styles.bigStickerOption}>
                   {!isUsed ? (
-                    // ✅ 메모이즈된 panHandlers 사용
                     <View {...getPanHandlers(idx)} style={styles.draggableArea}>
                       <View
                         style={[
@@ -393,7 +340,7 @@ export default function GrowthTree({
                           isDraggingThis && { opacity: 0 },
                         ]}
                       >
-                        <StickerIcon />
+                        <Text style={styles.stickerPickerEmoji}>{resolvedMissions[idx]?.emoji}</Text>
                       </View>
                     </View>
                   ) : (
@@ -403,7 +350,6 @@ export default function GrowthTree({
               );
             })}
 
-            {/* 빈 칸 채우기 */}
             {Array.from({ length: STICKERS_PER_PAGE - pagedIndices.length }).map((_, i) => (
               <View key={`dummy-${i}`} style={styles.bigStickerOption} />
             ))}
@@ -449,7 +395,6 @@ export default function GrowthTree({
         </TouchableOpacity> */}
       </View>
 
-      {/* 드래그 중 손가락 따라다니는 스티커 */}
       {draggingStickerIdx !== null && (
         <View
           pointerEvents="none"
@@ -458,11 +403,10 @@ export default function GrowthTree({
             { left: dragPos.x - 27, top: dragPos.y - 27 },
           ]}
         >
-          <StickerIcon />
+          <Text style={styles.draggingStickerEmoji}>{resolvedMissions[draggingStickerIdx]?.emoji}</Text>
         </View>
       )}
 
-      {/* 미션 선택 모달 */}
       <Modal visible={missionModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
@@ -506,6 +450,7 @@ export default function GrowthTree({
         >
           <Pressable onPress={(event) => event.stopPropagation()} style={styles.infoCardWrap}>
             <StickerInfoCard
+              missionEmoji={infoModal.data?.mission.emoji ?? ''}
               missionTitle={infoModal.data?.mission.title ?? ''}
               placedAtLabel={
                 infoModal.data?.placedAt.toLocaleDateString('ko-KR', {
@@ -546,31 +491,6 @@ const styles = StyleSheet.create({
   rewardValue: { fontSize: 16, fontFamily: fontFamily?.bold || 'System', color: BLUE_TEXT },
 
   treeSection: { alignItems: 'center', marginTop: 4 },
-  treeWrapper: {
-    width: TREE_WIDTH,
-    height: TREE_HEIGHT,
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  treeSvg: { position: 'absolute' },
-
-  spot: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
-  emptySpot: {
-    width: SPOT_SIZE,
-    height: SPOT_SIZE,
-    borderRadius: SPOT_SIZE / 2,
-    backgroundColor: EMPTY_SPOT,
-  },
-  // ✅ 부착된 스티커 색상 → colors.primary[900]
-  placedStickerCircle: {
-    width: SPOT_SIZE,
-    height: SPOT_SIZE,
-    borderRadius: SPOT_SIZE / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'visible',
-  },
 
   progressText: { marginTop: 8, fontSize: 16, fontFamily: fontFamily?.bold || 'System', color: BLUE_TEXT },
   progressHighlight: { fontFamily: fontFamily?.bold || 'System' },
@@ -616,6 +536,10 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+  stickerPickerEmoji: {
+    fontSize: 24,
+    lineHeight: 28,
+  },
   usedSlot: {
     width: 42,
     height: 42,
@@ -636,7 +560,6 @@ const styles = StyleSheet.create({
   },
   requestButtonText: { fontSize: 17, fontFamily: fontFamily.bold, color: '#6C523C' },
 
-  // 드래그 중 떠다니는 스티커도 하단 스티커와 같은 색상
   draggingSticker: {
     position: 'absolute',
     width: 54,
@@ -651,32 +574,9 @@ const styles = StyleSheet.create({
     elevation: 6,
     zIndex: 999,
   },
-  
-  stickerIconWrap: {
-  width: STICKER_ICON_OUTLINE_SIZE,
-  height: STICKER_ICON_OUTLINE_SIZE,
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-
-iconBackground: {
-  position: 'absolute',
-  width: 32,
-  height: 32,
-  borderRadius: 16,
-  backgroundColor: '#FFFFFF',
-
-  // iOS shadow
-  shadowColor: '#000',
-  shadowOpacity: 0.15,
-  shadowRadius: 1,
-  shadowOffset: { width: 0, height: 1 },
-
-  // Android shadow
-  elevation: 1,
-},
-  stickerIconOutline: {
-    position: 'absolute',
+  draggingStickerEmoji: {
+    fontSize: 24,
+    lineHeight: 28,
   },
 
   modalOverlay: {

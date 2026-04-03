@@ -1,38 +1,27 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { fontFamily } from '@/constants/fonts';
 
 type StickerInfoCardProps = {
+  missionEmoji: string;
   missionTitle: string;
   placedAtLabel: string;
   onDelete: () => void;
 };
 
-const STICKER_ICON_COLOR = '#FF3B30';
-const STICKER_ICON_NAME = 'food-apple';
-const STICKER_ICON_SIZE = 44;
 const STICKER_ICON_OUTLINE_SIZE = 44;
 
-function StickerIcon() {
+function StickerIcon({ emoji }: { emoji?: string }) {
   return (
     <View style={styles.stickerIconWrap}>
-      <MaterialCommunityIcons
-        name={STICKER_ICON_NAME}
-        size={STICKER_ICON_OUTLINE_SIZE}
-        color="#FFFFFF"
-        style={styles.stickerIconOutline}
-      />
-      <MaterialCommunityIcons
-        name={STICKER_ICON_NAME}
-        size={STICKER_ICON_SIZE}
-        color={STICKER_ICON_COLOR}
-      />
+      <View style={styles.iconBackground} />
+      {emoji ? <Text style={styles.stickerEmoji}>{emoji}</Text> : null}
     </View>
   );
 }
 
 export function StickerInfoCard({
+  missionEmoji,
   missionTitle,
   placedAtLabel,
   onDelete,
@@ -44,7 +33,7 @@ export function StickerInfoCard({
       </Pressable>
 
       <View style={styles.iconWrap}>
-        <StickerIcon />
+        <StickerIcon emoji={missionEmoji} />
       </View>
       <Text style={styles.mission}>{missionTitle}</Text>
       <Text style={styles.date}>{placedAtLabel}</Text>
@@ -96,8 +85,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stickerIconOutline: {
-    position: 'absolute',
+  iconBackground: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 1,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  stickerEmoji: {
+    fontSize: 22,
+    lineHeight: 24,
   },
   mission: {
     fontSize: 18,

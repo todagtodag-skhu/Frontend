@@ -65,7 +65,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  // 상단
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -91,7 +90,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  // 중앙
   centerArea: {
     alignItems: 'center',
     marginBottom: 32,
@@ -107,13 +105,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: fontFamily.bold,
   },
-  // 구분선
   divider: {
     height: 1,
     backgroundColor: '#F0F0F0',
     marginBottom: 14,
   },
-  // 다시보기
   reviewButton: {
     flexDirection: 'row',
     justifyContent: 'center',

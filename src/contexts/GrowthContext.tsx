@@ -20,12 +20,15 @@ type AddStickerBoardInput = {
 type GrowthContextValue = {
   children: ChildProfile[];
   stickerBoards: StickerBoard[];
+  activeBoardId?: string;
+  activeStickerBoard?: StickerBoard;
   addChild: (input: AddChildInput) => string;
   updateChild: (childId: string, input: AddChildInput) => void;
   deleteChild: (childId: string) => void;
   addStickerBoard: (input: AddStickerBoardInput) => void;
   updateStickerBoard: (boardId: string, input: AddStickerBoardInput) => void;
   deleteStickerBoard: (boardId: string) => void;
+  setActiveBoardId: (boardId?: string) => void;
   getChildById: (childId?: string) => ChildProfile | undefined;
   getBoardById: (boardId?: string) => StickerBoard | undefined;
   getBoardsByChildId: (childId?: string) => StickerBoard[];
@@ -128,6 +131,7 @@ const GrowthContext = createContext<GrowthContextValue | null>(null);
 export function GrowthProvider({ children }: { children: ReactNode }) {
   const [childProfiles, setChildProfiles] = useState<ChildProfile[]>(initialChildren);
   const [boards, setBoards] = useState<StickerBoard[]>(initialStickerBoards);
+  const [activeBoardId, setActiveBoardId] = useState<string | undefined>(initialStickerBoards[0]?.id);
 
   useEffect(() => {
     setBoards((prev) =>
@@ -145,6 +149,8 @@ export function GrowthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<GrowthContextValue>(() => ({
     children: childProfiles,
     stickerBoards: boards,
+    activeBoardId,
+    activeStickerBoard: boards.find((board) => board.id === activeBoardId) ?? boards[0],
     addChild: (input) => {
       const childId = `child-${Date.now()}`;
       const nextChild: ChildProfile = {
@@ -187,6 +193,7 @@ export function GrowthProvider({ children }: { children: ReactNode }) {
       };
 
       setBoards((prev) => [...prev, nextBoard]);
+      setActiveBoardId(nextBoard.id);
     },
     updateStickerBoard: (boardId, input) => {
       setBoards((prev) =>
@@ -204,14 +211,24 @@ export function GrowthProvider({ children }: { children: ReactNode }) {
             : board
         )
       );
+      setActiveBoardId(boardId);
     },
     deleteStickerBoard: (boardId) => {
-      setBoards((prev) => prev.filter((board) => board.id !== boardId));
+      setBoards((prev) => {
+        const nextBoards = prev.filter((board) => board.id !== boardId);
+
+        if (activeBoardId === boardId) {
+          setActiveBoardId(nextBoards[0]?.id);
+        }
+
+        return nextBoards;
+      });
     },
+    setActiveBoardId,
     getChildById: (childId) => childProfiles.find((child) => child.id === childId),
     getBoardById: (boardId) => boards.find((board) => board.id === boardId),
     getBoardsByChildId: (childId) => boards.filter((board) => board.childId === childId),
-  }), [boards, childProfiles]);
+  }), [activeBoardId, boards, childProfiles]);
 
   return <GrowthContext.Provider value={value}>{children}</GrowthContext.Provider>;
 }

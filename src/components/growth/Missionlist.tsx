@@ -8,6 +8,7 @@ import {
 import { fontFamily } from '@/constants/fonts';
 import { colors } from '@/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 
 interface MissionCardProps {
   title: string;
@@ -15,6 +16,7 @@ interface MissionCardProps {
   reward: string;      // e.g. '스티커 1개'
   isHeartFilled?: boolean;
   onHeartPress?: () => void;
+  onManagePress?: () => void;
 }
 
 const MissionCard: React.FC<MissionCardProps> = ({
@@ -23,11 +25,19 @@ const MissionCard: React.FC<MissionCardProps> = ({
   reward,
   isHeartFilled = false,
   onHeartPress,
+  onManagePress,
 }) => {
   return (
     <View style={styles.card}>
       {/* 왼쪽 하트 */}
-      <Ionicons name="heart" size={24} color="red" style={styles.leftEmoji} />
+      <TouchableOpacity style={styles.heartButton} onPress={onHeartPress} activeOpacity={0.7}>
+        <Ionicons
+          name={isHeartFilled ? 'heart' : 'heart-outline'}
+          size={24}
+          color="red"
+          style={styles.leftEmoji}
+        />
+      </TouchableOpacity>
 
       {/* 텍스트 영역 */}
       <View style={styles.textArea}>
@@ -39,14 +49,8 @@ const MissionCard: React.FC<MissionCardProps> = ({
         </Text>
       </View>
 
-      {/* 오른쪽 하트 버튼 */}
-      <TouchableOpacity style={styles.heartButton} onPress={onHeartPress} activeOpacity={0.7}>
-        <Ionicons
-          name={isHeartFilled ? 'heart' : 'heart-outline'}
-          size={24}
-          color="red"
-          style={styles.heartButtonEmoji}
-        />
+      <TouchableOpacity style={styles.heartButton} onPress={onManagePress} activeOpacity={0.7}>
+        <MaterialIcons name="keyboard-double-arrow-right" size={27} color={colors.grayscale[700]} />
       </TouchableOpacity>
     </View>
   );
@@ -60,7 +64,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.grayscale[100],
     borderRadius: 16,
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     marginBottom: 10,
     // 그림자 (iOS)
@@ -97,7 +101,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.grayscale[100],
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 20,
+    marginLeft: 0,
   },
   heartButtonEmoji: {
     marginTop: 1,
