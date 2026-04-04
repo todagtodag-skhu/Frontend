@@ -14,6 +14,8 @@ interface MissionCardProps {
   title: string;
   frequency: string;   // e.g. '주 1회'
   reward: string;      // e.g. '스티커 1개'
+  isSelected?: boolean;
+  onPress?: () => void;
   onManagePress?: () => void;
 }
 
@@ -22,10 +24,19 @@ const MissionCard: React.FC<MissionCardProps> = ({
   title,
   frequency,
   reward,
+  isSelected = false,
+  onPress,
   onManagePress,
 }) => {
   return (
-    <View style={styles.card}>
+    <TouchableOpacity
+      style={[
+        styles.card,
+        isSelected && styles.cardSelected,
+      ]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
       <View style={styles.emojiBox}>
         <Text style={styles.emojiText}>{emoji}</Text>
       </View>
@@ -42,7 +53,7 @@ const MissionCard: React.FC<MissionCardProps> = ({
       <TouchableOpacity style={styles.heartButton} onPress={onManagePress} activeOpacity={0.7}>
         <MaterialIcons name="keyboard-double-arrow-right" size={27} color={colors.grayscale[700]} />
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -54,7 +65,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.grayscale[100],
     borderRadius: 16,
-    paddingVertical: 8,
+    paddingVertical: 7,
     paddingHorizontal: 16,
     marginBottom: 10,
     // 그림자 (iOS)
@@ -66,6 +77,11 @@ const styles = StyleSheet.create({
     elevation: 2,
     borderColor: colors.grayscale[300],
     borderWidth: 1,
+  },
+  cardSelected: {
+    backgroundColor: '#FFF1D4',
+    borderColor: '#FF954D',
+    borderWidth: 1.5,
   },
   emojiBox: {
     width: 40,

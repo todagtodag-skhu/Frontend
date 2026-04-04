@@ -26,7 +26,6 @@ interface Gift {
   id: string;
   label: string;
   status: string;
-  isUnlocked: boolean;
 }
 
 interface Page {
@@ -42,8 +41,7 @@ const PAGES: Page[] = [
       { id: 'sb-1', date: '2025.01', title: '유진이의 스티커 판', filled: 30, total: 30 },
     ],
     gifts: [
-      { id: 'g-1', label: '베스킨라빈스', status: '열기전', isUnlocked: true },
-      { id: 'g-2', label: '베스킨라빈스', status: '열기전', isUnlocked: false },
+      { id: 'g-1', label: '베스킨라빈스', status: '열기전' },
     ],
   },
   /*
@@ -75,6 +73,7 @@ const TOTAL_COMPLETED = 12;
 
 const MemoryStorageScreen: React.FC = () => {
   const item = PAGES[0];
+  const totalCompletedBoards = item.stickerBoards.length;
 
   const swipeResponder = useMemo(
     () =>
@@ -92,49 +91,51 @@ const MemoryStorageScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safe} {...swipeResponder.panHandlers}>
-      {/* 헤더 */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>추억 저장소</Text>
         <View style={styles.badge}>
-          <Ionicons name="trophy" size={14} color={colors.grayscale[100]} style={styles.badgeIcon} />
-          <Text style={styles.badgeText}>완료 {TOTAL_COMPLETED}개</Text>
+          <Ionicons name="trophy" size={12} color={colors.grayscale[100]} style={styles.badgeIcon} />
+          <Text style={styles.badgeText}>완료한 판 : {totalCompletedBoards}개</Text>
         </View>
       </View>
 
-    <ScrollView
-      style={styles.page}
-      contentContainerStyle={styles.pageContent}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* 완성된 스티커 판 섹션 */}
-      <Text style={styles.sectionTitle}>완성된 스티커 판</Text>
-      {item.stickerBoards.map((board) => (
-        <CompletedStickerCard
-          key={board.id}
-          date={board.date}
-          title={board.title}
-          filled={board.filled}
-          total={board.total}
-          onReview={() => router.push('/tree')}
-        />
-      ))}
+      <ScrollView
+        style={styles.page}
+        contentContainerStyle={styles.pageContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.sectionTitle}>완성된 스티커 판</Text>
+        <View style={styles.completedCardList}>
+          {item.stickerBoards.map((board) => (
+            <CompletedStickerCard
+              key={board.id}
+              date={board.date}
+              title={board.title}
+              filled={board.filled}
+              total={board.total}
+              onReview={() => router.push('/tree')}
+            />
+          ))}
+        </View>
 
-      {/* 선물 보관함 섹션 */}
-      <Text style={[styles.sectionTitle, { marginTop: 40 }]}>선물 보관함</Text>
-      <View style={styles.giftRow}>
-        {item.gifts.map((gift) => (
-          <GiftCard
-            key={gift.id}
-            label={gift.label}
-            status={gift.status}
-            isUnlocked={gift.isUnlocked}
-            onPress={() => console.log('open gift:', gift.id)}
-          />
-        ))}
-        {/* gifts가 1개일 경우 빈 공간 채우기 */}
-        {item.gifts.length % 2 !== 0 && <View style={{ flex: 1 }} />}
+        <Text style={[styles.sectionTitle, styles.giftSectionTitle]}>스티커판 완료 보상 내용</Text>
+        <View style={styles.giftColumn}>
+          {item.gifts.map((gift) => (
+            <GiftCard
+              key={gift.id}
+              label={gift.label}
+              status={gift.status}
+              onPress={() => console.log('open gift:', gift.id)}
+            />
+          ))}
+        </View>
+      </ScrollView>
+
+      <View style={styles.pagination}>
+        <View style={styles.paginationDot} />
+        <View style={[styles.paginationDot, styles.paginationDotActive]} />
+        <View style={styles.paginationDot} />
       </View>
-    </ScrollView>
     </SafeAreaView>
   );
 };
@@ -144,35 +145,32 @@ export default MemoryStorageScreen;
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FFF9EE',
+    backgroundColor: '#FFF8EA',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 24,
-    fontSize: 30,
-    fontFamily: fontFamily.bold,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 22,
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#1A1A1A',
+    fontSize: 19,
+    color: '#5C564E',
     fontFamily: fontFamily.bold,
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5994E',
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    backgroundColor: '#F8C05C',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
     gap: 4,
   },
   badgeIcon: {
-    marginTop: 1,
+    marginTop: 0,
   },
   badgeText: {
     color: '#FFFFFF',
@@ -183,17 +181,41 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   pageContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingHorizontal: 24,
+    paddingBottom: 120,
   },
   sectionTitle: {
     fontSize: 15,
     fontFamily: fontFamily.bold,
-    color: '#555555',
-    marginBottom: 24,
+    color: '#6D655E',
+    marginBottom: 16,
   },
-  giftRow: {
-    flexDirection: 'row',
+  completedCardList: {
+    gap: 14,
+  },
+  giftSectionTitle: {
+    marginTop: 36,
+  },
+  giftColumn: {
     gap: 12,
+  },
+  pagination: {
+    position: 'absolute',
+    bottom: 30,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 24,
+  },
+  paginationDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 999,
+    backgroundColor: '#ECE7DF',
+  },
+  paginationDotActive: {
+    backgroundColor: '#F8D48C',
   },
 });

@@ -26,7 +26,6 @@ const CompletedStickerCard: React.FC<CompletedStickerCardProps> = ({
 }) => {
   return (
     <View style={styles.card}>
-      {/* 상단: 날짜 + 완료 체크 */}
       <View style={styles.topRow}>
         <Text style={styles.date}>{date}</Text>
         <View style={styles.checkCircle}>
@@ -34,16 +33,13 @@ const CompletedStickerCard: React.FC<CompletedStickerCardProps> = ({
         </View>
       </View>
 
-      {/* 중앙: 제목 + 부제목 */}
       <View style={styles.centerArea}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.subtitle}>스티커 {filled}/{total} 채움</Text>
       </View>
 
-      {/* 구분선 */}
       <View style={styles.divider} />
 
-      {/* 다시보기 버튼 */}
       <TouchableOpacity style={styles.reviewButton} onPress={onReview} activeOpacity={0.7}>
         <Ionicons name="eye" size={16} color={colors.primary[1000]} style={styles.reviewIcon} />
         <Text style={styles.reviewText}>다시보기</Text>
@@ -57,72 +53,67 @@ export default CompletedStickerCard;
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.grayscale[100],
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: colors.grayscale[900],
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 22,
+    paddingBottom: 18,
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 34,
   },
   date: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: fontFamily.bold,
-    color: '#AAAAAA',
-    fontWeight: '500',
+    color: '#797979',
   },
   checkCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#4CD964',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#64CB60',
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkIcon: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
   },
   centerArea: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 30,
   },
   title: {
-    fontSize: 22,
+    fontSize: 21,
     fontFamily: fontFamily.bold,
-    color: colors.grayscale[900],
-    marginBottom: 6,
+    color: '#404040',
+    marginBottom: 4,
   },
   subtitle: {
-    color: colors.grayscale[500],
-    fontSize: 16,
+    color: '#A7B9D9',
+    fontSize: 15,
     fontFamily: fontFamily.bold,
   },
   divider: {
     height: 1,
-    backgroundColor: '#F0F0F0',
-    marginBottom: 14,
+    backgroundColor: '#E6E1D8',
+    marginBottom: 16,
   },
   reviewButton: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 6,
-    color: colors.primary[1000],
   },
   reviewIcon: {
-    fontSize: 16,
-    paddingTop: 2,
+    fontSize: 15,
+    paddingTop: 1,
   },
   reviewText: {
-    fontSize: 15,
+    fontSize: 16,
     color: colors.primary[1000],
     fontFamily: fontFamily.bold,
   },

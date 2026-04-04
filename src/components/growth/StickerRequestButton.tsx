@@ -1,70 +1,76 @@
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, Alert, Pressable, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
 import { fontFamily } from '@/constants/fonts';
 
-interface StickerRequestButtonProps {
-  onPress?: () => void;
-  onClose?: () => void;
-}
+type StickerRequestButtonProps = {
+  missionTitle?: string;
+  onConfirm?: () => void;
+  onCancel?: () => void;
+};
 
-export const StickerRequestButton = ({ onPress, onClose }: StickerRequestButtonProps) => {
-  const handlePress =
-    onPress ??
-    (() => Alert.alert('스티커 요청!', '부모님께 미션 완료 알림을 보냈어요!'));
-
+export function StickerRequestButton({
+  missionTitle = '엄마한테 사랑한다고 말하기',
+  onConfirm,
+  onCancel,
+}: StickerRequestButtonProps) {
   return (
     <View style={styles.card}>
-        <Pressable style={styles.closeButton} onPress={onClose} hitSlop={10}>
-        <Text style={styles.closeButtonText}>x</Text>
-      </Pressable>
-      <TouchableOpacity
-        style={styles.requestButton}
-        onPress={handlePress}
-        activeOpacity={0.9}
-      >
-        <Text style={styles.requestButtonText}>스티커 조르기</Text>
-      </TouchableOpacity>
+      <Text style={styles.messageText}>
+        {missionTitle}
+        {'\n'}미션에 대해서
+        {'\n'}스티커를 요청할까요?
+      </Text>
+
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={styles.actionButton} onPress={onCancel} activeOpacity={0.85}>
+          <Text style={styles.actionButtonText}>취소</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionButton} onPress={onConfirm} activeOpacity={0.85}>
+          <Text style={styles.actionButtonText}>네</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   card: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingTop: 14,
-    paddingRight: 16,
-    paddingBottom: 30,
-    paddingLeft: 16,
+    width: '108%',
+    backgroundColor: '#E9DFC8',
+    borderRadius: 13,
+    borderWidth: 2,
+    borderColor: '#FFD89A',
+    paddingTop: 36,
+    paddingRight: 22,
+    paddingBottom: 16,
+    paddingLeft: 22,
+    alignItems: 'center',
   },
-  closeButton: {
-    alignSelf: 'flex-end',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  messageText: {
+    fontSize: 22,
+    lineHeight: 26,
+    color: '#2B2118',
+    fontFamily: fontFamily.bold,
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 8,
+    width: '100%',
+  },
+  actionButton: {
+    flex: 1,
+    backgroundColor: '#F3F3F3',
+    borderRadius: 9,
+    paddingVertical: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
   },
-  closeButtonText: {
-    fontSize: 30,
-    lineHeight: 20,
-    color: '#8F7B63',
-    fontFamily: fontFamily.bold,
-  },
-  requestButton: {
-    backgroundColor: '#E7DDCD',
-    borderRadius: 16,
-    paddingHorizontal: 2,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: '#D7C9B2',
-    alignItems: 'center',
-  },
-  requestButtonText: {
-    fontSize: 21,
-    color: '#6C523C',
+  actionButtonText: {
+    fontSize: 20,
+    color: '#111111',
     fontFamily: fontFamily.bold,
   },
 });
