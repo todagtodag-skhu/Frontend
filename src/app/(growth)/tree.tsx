@@ -9,11 +9,10 @@ import {
   Dimensions,
   Animated,
   PanResponder,
-  ImageBackground,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 
+import { StickerGridBoard, type GridCell } from '@/components/growth/StickerGridBoard';
 import { StickerInfoCard } from '@/components/growth/StickerInfoCard';
 import { fontFamily } from '@/constants/fonts';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -41,14 +40,6 @@ interface TreeProps {
   onRequestSticker?: () => void;
 }
 
-interface GridCell {
-  id: number;
-  row: number;
-  col: number;
-  x: number;
-  y: number;
-}
-
 const DEFAULT_MISSIONS: Mission[] = [
   { id: 'm1', emoji: '🧹', title: '방 청소하기', completed: false },
   { id: 'm2', emoji: '✏️', title: '숙제 스스로 하기', completed: false },
@@ -70,115 +61,14 @@ const BOARD_WIDTH = Math.min(SCREEN_WIDTH - 44, 320);
 const BOARD_HEIGHT = BOARD_WIDTH * 1.08;
 const STICKERS_PER_PAGE = 4;
 
-const GRID_ROWS = 3;
-const GRID_COLS = 3;
+const GRID_ROWS = 4;
+const GRID_COLS = 5;
 
 function FloatingStickerIcon({ emoji }: { emoji?: string }) {
   return (
     <View style={styles.floatingStickerIconWrap}>
       <View style={styles.floatingStickerBackground} />
       {emoji ? <Text style={styles.floatingStickerEmoji}>{emoji}</Text> : null}
-    </View>
-  );
-}
-
-interface StickerGridBoardProps {
-  imageUri: string | null;
-  width: number;
-  height: number;
-  cells: GridCell[];
-  placedStickers: Record<number, StickerInfo>;
-  getScaleAnim: (id: number) => Animated.Value;
-  onCellPress: (id: number) => void;
-  onLayoutBoard: () => void;
-  showGrid?: boolean;
-}
-
-function StickerGridBoard({
-  imageUri,
-  width,
-  height,
-  cells,
-  placedStickers,
-  getScaleAnim,
-  onCellPress,
-  onLayoutBoard,
-  showGrid = true,
-}: StickerGridBoardProps) {
-  const boardContent = (
-    <>
-      {/* 그리드 선 */}
-      {showGrid &&
-        cells.map((cell) => (
-          <View
-            key={`grid-${cell.id}`}
-            pointerEvents="none"
-            style={[
-              styles.gridCell,
-              {
-                width: `${100 / GRID_COLS}%`,
-                height: `${100 / GRID_ROWS}%`,
-                left: `${(cell.col * 100) / GRID_COLS}%`,
-                top: `${(cell.row * 100) / GRID_ROWS}%`,
-              },
-            ]}
-          />
-        ))}
-
-      {/* 셀 위 스티커 */}
-      {cells.map((cell) => {
-        const sticker = placedStickers[cell.id];
-        const left = cell.x * width;
-        const top = cell.y * height;
-
-        return (
-          <Pressable
-            key={cell.id}
-            onPress={() => onCellPress(cell.id)}
-            style={[
-              styles.cellPressable,
-              {
-                left: left - 22,
-                top: top - 22,
-              },
-            ]}
-          >
-            {sticker ? (
-              <Animated.View
-                style={[
-                  styles.placedSticker,
-                  {
-                    transform: [{ scale: getScaleAnim(cell.id) }],
-                  },
-                ]}
-              >
-                <Text style={styles.placedStickerEmoji}>{sticker.mission.emoji}</Text>
-              </Animated.View>
-            ) : (
-              <View style={styles.emptyCellHint} />
-            )}
-          </Pressable>
-        );
-      })}
-    </>
-  );
-
-  return (
-    <View style={styles.boardOutline}>
-    <View style={[styles.boardWrap, { width, height }]} onLayout={onLayoutBoard}>
-      {imageUri ? (
-      <ImageBackground
-        source={{ uri: imageUri }}
-        resizeMode="cover"
-        style={styles.boardImage}
-        imageStyle={styles.boardImageInner}
-      >
-        {boardContent}
-      </ImageBackground>
-      ) : (
-        <View style={[styles.boardImage, styles.boardImageFallback]}>{boardContent}</View>
-      )}
-    </View>
     </View>
   );
 }
@@ -201,26 +91,27 @@ export default function GrowthTree({
         completed: false,
       }))
     : missions;
+  const totalSpots = Number.parseInt(activeBoard?.stickerCount ?? '', 10) || 20;
 
   const gridCells: GridCell[] = useMemo(() => {
     const cells: GridCell[] = [];
 
-    for (let row = 0; row < GRID_ROWS; row++) {
-      for (let col = 0; col < GRID_COLS; col++) {
-        cells.push({
-          id: row * GRID_COLS + col + 1,
-          row,
-          col,
-          x: (col + 0.5) / GRID_COLS,
-          y: (row + 0.5) / GRID_ROWS,
-        });
-      }
+    for (let index = 0; index < totalSpots; index++) {
+      const row = Math.floor(index / GRID_COLS);
+      const col = index % GRID_COLS;
+
+      cells.push({
+        id: index + 1,
+        row,
+        col,
+        x: (col + 0.5) / GRID_COLS,
+        y: (row + 0.5) / GRID_ROWS,
+      });
     }
 
     return cells;
-  }, []);
+  }, [totalSpots]);
 
-  const [imageUri, setImageUri] = useState<string | null>(null);
   const [placedStickers, setPlacedStickers] = useState<Record<number, StickerInfo>>({});
   const [usedStickerIndices, setUsedStickerIndices] = useState<number[]>([]);
   const [stickerPage, setStickerPage] = useState(0);
@@ -244,7 +135,6 @@ export default function GrowthTree({
   };
 
   const placedCount = Object.keys(placedStickers).length;
-  const totalSpots = gridCells.length;
 
   const totalPages = Math.ceil(resolvedMissions.length / STICKERS_PER_PAGE);
   const pagedIndices = Array.from({ length: resolvedMissions.length })
@@ -300,21 +190,6 @@ export default function GrowthTree({
 
     return cellId;
   }, []);
-
-  const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return;
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 1,
-      allowsEditing: true,
-    });
-
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
-    }
-  };
 
   const panHandlersMap = useRef<Record<number, ReturnType<typeof PanResponder.create>['panHandlers']>>({});
 
@@ -415,15 +290,14 @@ export default function GrowthTree({
           </View>
         </View>
 
-        <TouchableOpacity style={styles.pickImageButton} onPress={pickImage} activeOpacity={0.85}>
-          <Text style={styles.pickImageButtonText}>
-            {imageUri ? '배경 이미지 다시 선택' : '배경 이미지 선택'}
-          </Text>
-        </TouchableOpacity>
+        <View style={{ marginBottom: 10, alignItems: 'center' }}>
+          <Text style={styles.progressText}>
+          스티커판 완성까지 <Text style={styles.progressHighlight}>{placedCount}/{totalSpots}</Text> 개
+        </Text>
+        </View>
 
         <View ref={boardRef} collapsable={false}>
           <StickerGridBoard
-            imageUri={imageUri}
             width={BOARD_WIDTH}
             height={BOARD_HEIGHT}
             cells={gridCells}
@@ -431,13 +305,8 @@ export default function GrowthTree({
             getScaleAnim={getScaleAnim}
             onCellPress={handleCellPress}
             onLayoutBoard={measureBoard}
-            showGrid
           />
         </View>
-
-        <Text style={styles.progressText}>
-          스티커판 완성까지 <Text style={styles.progressHighlight}>{placedCount}/{totalSpots}</Text> 개
-        </Text>
 
         <View style={styles.stickerPickerWrap}>
           <TouchableOpacity
@@ -554,19 +423,20 @@ const styles = StyleSheet.create({
 
   topSection: {
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 10,
   },
   title: {
     fontSize: 32,
     fontFamily: fontFamily?.bold || 'System',
     color: '#1B1B1B',
     letterSpacing: -0.4,
-    marginBottom: 10,
+    marginBottom: 16,
   },
   rewardRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    marginBottom: 4,
   },
   rewardLabel: {
     fontSize: 16,
@@ -578,96 +448,11 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily?.bold || 'System',
     color: BLUE_TEXT,
   },
-
-  pickImageButton: {
-    marginBottom: 24,
-    marginTop: 10,
-    backgroundColor: '#E7DDCD',
-    borderRadius: 999,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: '#D7C9B2',
-  },
-  pickImageButtonText: {
-    fontSize: 15,
-    fontFamily: fontFamily?.bold || 'System',
-    color: '#6C523C',
-  },
-
-  boardWrap: {
-    overflow: 'hidden',
-    borderRadius: 20,
-    backgroundColor: '#EFE7DA',
-  },
-  boardOutline: {
-    padding: 3,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
-  },
-  boardImage: {
-    flex: 1,
-  },
-  boardImageFallback: {
-    flex: 1,
-    backgroundColor: '#F6EFE2',
-  },
-  boardImageInner: {
-    borderRadius: 20,
-  },
-
-  gridCell: {
-    position: 'absolute',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.7)',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-
-  cellPressable: {
-    position: 'absolute',
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  emptyCellHint: {
-    width: 18,
-    height: 18,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.45)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.85)',
-  },
-
-  placedSticker: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.16,
-    shadowRadius: 2,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
-  },
-  placedStickerEmoji: {
-    fontSize: 22,
-    lineHeight: 24,
-  },
-
   progressText: {
-    marginTop: 27,
     fontSize: 16,
     fontFamily: fontFamily?.bold || 'System',
     color: BLUE_TEXT,
+    textAlign: 'center',
   },
   progressHighlight: {
     fontFamily: fontFamily?.bold || 'System',
@@ -678,7 +463,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 14,
+    marginTop: 18,
   },
   stickerPageDotContainer: {
     flexDirection: 'row',
@@ -714,12 +499,12 @@ const styles = StyleSheet.create({
   stickerPickerInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 10,
     minHeight: 54,
   },
   bigStickerOption: {
-    width: 54,
-    height: 54,
+    width: 62,
+    height: 62,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -730,30 +515,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stickerCircle: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   floatingStickerIconWrap: {
-    width: 42,
-    height: 42,
+    width: 58,
+    height: 58,
     alignItems: 'center',
     justifyContent: 'center',
   },
   floatingStickerBackground: {
     position: 'absolute',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 1,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#D9D9D9',
   },
   floatingStickerEmoji: {
     fontSize: 22,
@@ -761,12 +541,11 @@ const styles = StyleSheet.create({
   },
 
   usedSlot: {
-    width: 42,
-    height: 42,
-    borderRadius: 23,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#F1E6D3',
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#D9D9D9',
+    opacity: 0.35,
   },
 
   draggingSticker: {
