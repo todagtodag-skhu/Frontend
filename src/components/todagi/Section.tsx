@@ -13,7 +13,7 @@ type SectionProps = {
 export function Section({ title, children }: SectionProps) {
   return (
     <View style={todagiStyles.section}>
-      <Text style={todagiStyles.sectionTitle}>{title}</Text>
+      {title ? <Text style={todagiStyles.sectionTitle}>{title}</Text> : null}
       {children}
     </View>
   );
