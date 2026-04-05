@@ -242,12 +242,6 @@ export default function TodagiScreen() {
     ]);
   };
 
-  const screenTitle = isMissionsMode
-    ? undefined
-    : isEditMode
-    ? '스티커 판 수정하기'
-    : '새 스티커 판 만들기';
-
   const footerTitle = isMissionsMode
     ? `미션 ${missions.length}개 저장하기`
     : isEditMode
@@ -257,7 +251,6 @@ export default function TodagiScreen() {
   return (
     <>
       <AppScreen
-        title={screenTitle}
         bodyStyle={styles.scrollView}
         footer={
           <Button

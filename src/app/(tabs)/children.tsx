@@ -99,7 +99,7 @@ export default function ChildrenScreen() {
 
   return (
     <>
-      <AppScreen title="스티커판 관리" bodyStyle={styles.content}>
+      <AppScreen bodyStyle={styles.content}>
         <ChildSelectorRow
           children={children}
           selectedChildId={selectedChild?.id}

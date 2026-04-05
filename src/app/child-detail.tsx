@@ -85,7 +85,6 @@ export default function ChildDetailScreen() {
   return (
     <>
       <AppScreen
-        title={`${resolvedChildName} 스티커판`}
         bodyStyle={todagiStyles.scrollView}
         contentContainerStyle={styles.scrollView}
       >

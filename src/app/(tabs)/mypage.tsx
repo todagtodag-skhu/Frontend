@@ -14,7 +14,7 @@ const settingsItems = [
 
 export default function MyPageScreen() {
   return (
-    <AppScreen title="마이페이지" bodyStyle={todagiStyles.scrollView} contentContainerStyle={styles.scrollView}>
+    <AppScreen bodyStyle={todagiStyles.scrollView} contentContainerStyle={styles.scrollView}>
         <Section title="일반 설정">
           <View style={styles.list}>
             {settingsItems.map((item) => (

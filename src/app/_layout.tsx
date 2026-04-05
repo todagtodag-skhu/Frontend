@@ -3,9 +3,10 @@ import { Pressable } from 'react-native';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 
+import { Text } from '@/components/ui/Text';
+import { colors } from '@/constants/colors';
 import { fontFamily } from '@/constants/fonts';
 import { GrowthProvider } from '@/contexts/GrowthContext';
-import { Text } from '@/components/ui/Text';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -24,6 +25,9 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
+          headerStyle: {
+            backgroundColor: colors.grayscale[100],
+          },
           headerTitleStyle: {
             fontFamily: fontFamily.bold,
           },
