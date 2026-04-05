@@ -28,7 +28,6 @@ const GiftCard: React.FC<GiftCardProps> = ({
       onPress={isUnlocked ? onPress : undefined}
       activeOpacity={isUnlocked ? 0.8 : 1}
     >
-      {/* 아이콘 */}
       <Ionicons
         name={isUnlocked ? 'gift' : 'image'}
         size={36}
@@ -36,12 +35,10 @@ const GiftCard: React.FC<GiftCardProps> = ({
         style={[styles.icon, !isUnlocked && styles.iconLocked]}
       />
 
-      {/* 레이블 */}
       <Text style={[styles.label, !isUnlocked && styles.textLocked]}>
         {label}
       </Text>
 
-      {/* 상태 텍스트 */}
       <Text style={[styles.status, !isUnlocked && styles.textLocked]}>
         {status}
       </Text>

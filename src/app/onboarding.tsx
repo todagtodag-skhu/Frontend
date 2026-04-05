@@ -55,7 +55,7 @@ export default function OnboardingScreen() {
     });
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (step === 0) {
       if (!selectedRole) {
         Alert.alert('알림', '역할을 선택해주세요.');
@@ -64,7 +64,7 @@ export default function OnboardingScreen() {
 
       if (isGrowth) {
         const nextInviteCode = generateInviteCode();
-        const childId = addChild({
+        const childId = await addChild({
           inviteCode: nextInviteCode,
           name: '성장이',
           birthday: '-',
@@ -117,7 +117,7 @@ export default function OnboardingScreen() {
       return;
     }
 
-    const childId = addChild({
+    const childId = await addChild({
       inviteCode: inviteCode.trim(),
       name: childName.trim(),
       birthday: birthday.trim(),

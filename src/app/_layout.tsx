@@ -3,9 +3,10 @@ import { Pressable } from 'react-native';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 
+import { Text } from '@/components/ui/Text';
+import { colors } from '@/constants/colors';
 import { fontFamily } from '@/constants/fonts';
 import { GrowthProvider } from '@/contexts/GrowthContext';
-import { Text } from '@/components/ui/Text';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -24,6 +25,9 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
+          headerStyle: {
+            backgroundColor: colors.grayscale[100],
+          },
           headerTitleStyle: {
             fontFamily: fontFamily.bold,
           },
@@ -46,33 +50,40 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="create-sticker"
-          options={({ route }) => ({
-            headerShown: true,
-            title: '새 스티커판 만들기',
-            headerLeft: () => (
-              <Pressable
-                onPress={() => {
-                  const childId =
-                    route.params && 'childId' in route.params
-                      ? route.params.childId
-                      : undefined;
+          options={({ route }) => {
+            const params = route.params as Record<string, string> | undefined;
+            const isMissionsMode = params?.mode === 'missions';
+            const hasBoardId = typeof params?.boardId === 'string' && params.boardId.length > 0;
 
-                  if (typeof childId === 'string' && childId.length > 0) {
-                    router.replace({
-                      pathname: '/child-detail',
-                      params: { childId },
-                    });
-                    return;
-                  }
+            const title = isMissionsMode
+              ? '미션 관리하기'
+              : hasBoardId
+              ? '스티커판 수정하기'
+              : '스티커판 만들기';
 
-                  router.replace('/children');
-                }}
-                style={{ paddingHorizontal: 16 }}
-              >
-                <Text>뒤로</Text>
-              </Pressable>
-            ),
-          })}
+            return {
+              headerShown: true,
+              title,
+              headerLeft: () => (
+                <Pressable
+                  onPress={() => {
+                    const returnTo = params?.returnTo;
+                    const childId = params?.childId;
+
+                    if (returnTo === 'child-detail' && typeof childId === 'string' && childId.length > 0) {
+                      router.replace({ pathname: '/child-detail', params: { childId } });
+                      return;
+                    }
+
+                    router.replace('/children');
+                  }}
+                  style={{ paddingHorizontal: 16 }}
+                >
+                  <Text>{isMissionsMode ? '취소' : '뒤로'}</Text>
+                </Pressable>
+              ),
+            };
+          }}
         />
       </Stack>
     </GrowthProvider>
