@@ -63,6 +63,8 @@ const STICKERS_PER_PAGE = 4;
 
 const GRID_ROWS = 4;
 const GRID_COLS = 5;
+const BOARD_VERTICAL_EDGE_INSET = 53;
+const TAP_MOVE_THRESHOLD = 8;
 
 function FloatingStickerIcon({ emoji }: { emoji?: string }) {
   return (
@@ -116,12 +118,12 @@ export default function GrowthTree({
   const [usedStickerIndices, setUsedStickerIndices] = useState<number[]>([]);
   const [stickerPage, setStickerPage] = useState(0);
   const [draggingStickerIdx, setDraggingStickerIdx] = useState<number | null>(null);
-  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
+  const [boardScrollOffsetY, setBoardScrollOffsetY] = useState(0);
   const [infoModal, setInfoModal] = useState<{ visible: boolean; spotId?: number; data?: StickerInfo }>({
     visible: false,
   });
 
-  const boardRef = useRef<View>(null);
   const boardLayoutRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const scaleAnims = useRef<Record<number, Animated.Value>>({});
   const placedStickersRef = useRef(placedStickers);
@@ -141,10 +143,8 @@ export default function GrowthTree({
     .map((_, i) => i)
     .slice(stickerPage * STICKERS_PER_PAGE, stickerPage * STICKERS_PER_PAGE + STICKERS_PER_PAGE);
 
-  const measureBoard = useCallback(() => {
-    boardRef.current?.measureInWindow((x, y, width, height) => {
-      boardLayoutRef.current = { x, y, width, height };
-    });
+  const measureBoard = useCallback((layout: { x: number; y: number; width: number; height: number }) => {
+    boardLayoutRef.current = layout;
   }, []);
 
   const placeSticker = useCallback((cellId: number, mission: Mission, stickerIdx: number) => {
@@ -167,20 +167,42 @@ export default function GrowthTree({
     }));
   }, []);
 
+  const getFirstAvailableCellId = useCallback(() => {
+    for (const cell of gridCells) {
+      if (!placedStickersRef.current[cell.id]) {
+        return cell.id;
+      }
+    }
+
+    return null;
+  }, [gridCells]);
+
   const getGridCellFromPoint = useCallback((absoluteX: number, absoluteY: number): number | null => {
     const { x, y, width, height } = boardLayoutRef.current;
 
-    const relativeX = absoluteX - x;
-    const relativeY = absoluteY - y;
+    if (width <= 0 || height <= 0) {
+      return null;
+    }
 
-    if (relativeX < 0 || relativeY < 0 || relativeX > width || relativeY > height) {
+    const totalRows = Math.max(...gridCells.map((cell) => cell.row)) + 1;
+    const visibleRows = Math.min(totalRows, GRID_ROWS);
+    const rowGap =
+      visibleRows === 1 ? 0 : (height - BOARD_VERTICAL_EDGE_INSET * 2) / (visibleRows - 1);
+
+    const relativeX = absoluteX - x;
+    const relativeY = absoluteY - y + boardScrollOffsetY;
+
+    if (relativeX < 0 || absoluteY - y < 0 || relativeX > width || absoluteY - y > height) {
       return null;
     }
 
     const col = Math.floor((relativeX / width) * GRID_COLS);
-    const row = Math.floor((relativeY / height) * GRID_ROWS);
+    const row =
+      totalRows === 1
+        ? 0
+        : Math.round((relativeY - BOARD_VERTICAL_EDGE_INSET) / rowGap);
 
-    if (row < 0 || row >= GRID_ROWS || col < 0 || col >= GRID_COLS) {
+    if (row < 0 || row >= totalRows || col < 0 || col >= GRID_COLS) {
       return null;
     }
 
@@ -189,7 +211,7 @@ export default function GrowthTree({
     if (placedStickersRef.current[cellId]) return null;
 
     return cellId;
-  }, []);
+  }, [boardScrollOffsetY, gridCells]);
 
   const panHandlersMap = useRef<Record<number, ReturnType<typeof PanResponder.create>['panHandlers']>>({});
 
@@ -202,24 +224,51 @@ export default function GrowthTree({
           onPanResponderTerminationRequest: () => false,
 
           onPanResponderGrant: (evt) => {
-            measureBoard();
+            const pageX = evt?.nativeEvent?.pageX;
+            const pageY = evt?.nativeEvent?.pageY;
+
             setDraggingStickerIdx(idx);
-            setDragPos({ x: evt.nativeEvent.pageX, y: evt.nativeEvent.pageY });
+
+            if (typeof pageX === 'number' && typeof pageY === 'number') {
+              setDragPos({ x: pageX, y: pageY });
+            }
           },
 
           onPanResponderMove: (evt) => {
-            setDragPos({ x: evt.nativeEvent.pageX, y: evt.nativeEvent.pageY });
+            const pageX = evt?.nativeEvent?.pageX;
+            const pageY = evt?.nativeEvent?.pageY;
+
+            if (typeof pageX === 'number' && typeof pageY === 'number') {
+              setDragPos({ x: pageX, y: pageY });
+            }
           },
 
-          onPanResponderRelease: (evt) => {
-            const dropX = evt.nativeEvent.pageX;
-            const dropY = evt.nativeEvent.pageY;
-            const cellId = getGridCellFromPoint(dropX, dropY);
+          onPanResponderRelease: (evt, gestureState) => {
+            const dropX = evt?.nativeEvent?.pageX;
+            const dropY = evt?.nativeEvent?.pageY;
             const mission = resolvedMissions[idx];
+            const moveX = Math.abs(gestureState.dx);
+            const moveY = Math.abs(gestureState.dy);
+            const isTapLike = moveX < TAP_MOVE_THRESHOLD && moveY < TAP_MOVE_THRESHOLD;
 
             setDraggingStickerIdx(null);
+            setDragPos(null);
 
-            if (cellId === null || !mission) return;
+            if (typeof dropX !== 'number' || typeof dropY !== 'number' || !mission) return;
+
+            if (isTapLike) {
+              const firstCellId = getFirstAvailableCellId();
+
+              if (firstCellId === null) return;
+
+              placeSticker(firstCellId, mission, idx);
+              setUsedStickerIndices((prev) => (prev.includes(idx) ? prev : [...prev, idx]));
+              return;
+            }
+
+            const cellId = getGridCellFromPoint(dropX, dropY);
+
+            if (cellId === null) return;
 
             placeSticker(cellId, mission, idx);
             setUsedStickerIndices((prev) => (prev.includes(idx) ? prev : [...prev, idx]));
@@ -227,6 +276,7 @@ export default function GrowthTree({
 
           onPanResponderTerminate: () => {
             setDraggingStickerIdx(null);
+            setDragPos(null);
           },
         });
 
@@ -235,7 +285,7 @@ export default function GrowthTree({
 
       return panHandlersMap.current[idx];
     },
-    [getGridCellFromPoint, measureBoard, placeSticker, resolvedMissions],
+    [getFirstAvailableCellId, getGridCellFromPoint, measureBoard, placeSticker, resolvedMissions],
   );
 
   const handleCellPress = (id: number) => {
@@ -292,21 +342,20 @@ export default function GrowthTree({
 
         <View style={{ marginBottom: 10, alignItems: 'center' }}>
           <Text style={styles.progressText}>
-          스티커판 완성까지 <Text style={styles.progressHighlight}>{placedCount}/{totalSpots}</Text> 개
+          완성까지 <Text style={styles.progressHighlight}>{placedCount}/{totalSpots}</Text> 개
         </Text>
         </View>
 
-        <View ref={boardRef} collapsable={false}>
-          <StickerGridBoard
-            width={BOARD_WIDTH}
-            height={BOARD_HEIGHT}
-            cells={gridCells}
-            placedStickers={placedStickers}
-            getScaleAnim={getScaleAnim}
-            onCellPress={handleCellPress}
-            onLayoutBoard={measureBoard}
-          />
-        </View>
+        <StickerGridBoard
+          width={BOARD_WIDTH}
+          height={BOARD_HEIGHT}
+          cells={gridCells}
+          placedStickers={placedStickers}
+          getScaleAnim={getScaleAnim}
+          onCellPress={handleCellPress}
+          onLayoutBoard={measureBoard}
+          onScrollOffsetChange={setBoardScrollOffsetY}
+        />
 
         <View style={styles.stickerPickerWrap}>
           <TouchableOpacity
@@ -325,11 +374,11 @@ export default function GrowthTree({
               return (
                 <View key={idx} style={styles.bigStickerOption}>
                   {!isUsed ? (
-                    <View {...getPanHandlers(idx)} style={styles.draggableArea}>
+                    <Pressable {...getPanHandlers(idx)} style={styles.draggableArea}>
                       <View style={[styles.stickerCircle, isDraggingThis && { opacity: 0 }]}>
                         <FloatingStickerIcon emoji={resolvedMissions[idx]?.emoji} />
                       </View>
-                    </View>
+                    </Pressable>
                   ) : (
                     <View style={styles.usedSlot} />
                   )}
@@ -353,6 +402,10 @@ export default function GrowthTree({
           </TouchableOpacity>
         </View>
 
+        <Text style={styles.stickerCountText}>
+          붙일 수 있는 스티커를 {placedCount}개 가지고 있어요!
+        </Text>
+
         {totalPages > 1 ? (
           <View style={styles.stickerPageDotContainer}>
             {Array.from({ length: totalPages }).map((_, index) => (
@@ -368,7 +421,7 @@ export default function GrowthTree({
         ) : null}
       </View>
 
-      {draggingStickerIdx !== null && (
+      {draggingStickerIdx !== null && dragPos && (
         <View
           pointerEvents="none"
           style={[
@@ -436,7 +489,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginBottom: 4,
+    marginBottom: -5,
   },
   rewardLabel: {
     fontSize: 16,
@@ -453,6 +506,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily?.bold || 'System',
     color: BLUE_TEXT,
     textAlign: 'center',
+    marginBottom: 5,
   },
   progressHighlight: {
     fontFamily: fontFamily?.bold || 'System',
@@ -471,6 +525,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     marginTop: 14,
+  },
+  stickerCountText: {
+    marginTop: 10,
+    textAlign: 'center',
+    fontSize: 16,
+    color: BLUE_TEXT,
+    fontFamily: fontFamily?.bold || 'System',
   },
   stickerPageDot: {
     width: 10,

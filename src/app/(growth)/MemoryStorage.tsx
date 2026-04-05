@@ -130,12 +130,6 @@ const MemoryStorageScreen: React.FC = () => {
           ))}
         </View>
       </ScrollView>
-
-      <View style={styles.pagination}>
-        <View style={styles.paginationDot} />
-        <View style={[styles.paginationDot, styles.paginationDotActive]} />
-        <View style={styles.paginationDot} />
-      </View>
     </SafeAreaView>
   );
 };
@@ -198,24 +192,5 @@ const styles = StyleSheet.create({
   },
   giftColumn: {
     gap: 12,
-  },
-  pagination: {
-    position: 'absolute',
-    bottom: 30,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 24,
-  },
-  paginationDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 999,
-    backgroundColor: '#ECE7DF',
-  },
-  paginationDotActive: {
-    backgroundColor: '#F8D48C',
   },
 });

@@ -1,8 +1,10 @@
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useRef } from 'react';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { fontFamily } from '@/constants/fonts';
 import { colors } from '@/constants/colors';
+import FoxImage from '../../../assets/foxImage.svg';
 
-const VERTICAL_SPACING_SCALE = 0.89;
+const VERTICAL_EDGE_INSET = 53;
 
 type Mission = {
   id: string;
@@ -32,7 +34,8 @@ type StickerGridBoardProps = {
   placedStickers: Record<number, StickerInfo>;
   getScaleAnim: (id: number) => Animated.Value;
   onCellPress: (id: number) => void;
-  onLayoutBoard: () => void;
+  onLayoutBoard: (layout: { x: number; y: number; width: number; height: number }) => void;
+  onScrollOffsetChange?: (offsetY: number) => void;
 };
 
 export function StickerGridBoard({
@@ -43,46 +46,79 @@ export function StickerGridBoard({
   getScaleAnim,
   onCellPress,
   onLayoutBoard,
+  onScrollOffsetChange,
 }: StickerGridBoardProps) {
+  const boardWrapRef = useRef<View>(null);
+  const totalRows = Math.max(...cells.map((cell) => cell.row)) + 1;
+  const visibleRows = Math.min(totalRows, 4);
+  const rowGap =
+    visibleRows === 1 ? 0 : (height - VERTICAL_EDGE_INSET * 2) / (visibleRows - 1);
+  const contentHeight =
+    totalRows === 1 ? height : VERTICAL_EDGE_INSET * 2 + rowGap * (totalRows - 1);
+  const handleMeasureBoard = useCallback(() => {
+    boardWrapRef.current?.measureInWindow((x, y, measuredWidth, measuredHeight) => {
+      onLayoutBoard({
+        x,
+        y,
+        width: measuredWidth,
+        height: measuredHeight,
+      });
+    });
+  }, [onLayoutBoard]);
+
   return (
     <View style={styles.boardOutline}>
-      <View style={[styles.boardWrap, { width, height }]} onLayout={onLayoutBoard}>
-        {cells.map((cell) => {
-          const sticker = placedStickers[cell.id];
-          const left = cell.x * width;
-          const top = cell.y * height * VERTICAL_SPACING_SCALE + height * (1 - VERTICAL_SPACING_SCALE) * 0.5;
+      <View style={styles.mascotWrap}>
+        <FoxImage width={190} height={96} />
+      </View>
 
-          return (
-            <Pressable
-              key={cell.id}
-              onPress={() => onCellPress(cell.id)}
-              style={[
-                styles.cellPressable,
-                {
-                  left: left - 28,
-                  top: top - 28,
-                },
-              ]}
-            >
-              {sticker ? (
-                <Animated.View
-                  style={[
-                    styles.placedSticker,
-                    {
-                      transform: [{ scale: getScaleAnim(cell.id) }],
-                    },
-                  ]}
-                >
-                  <Text style={styles.placedStickerEmoji}>{sticker.mission.emoji}</Text>
-                </Animated.View>
-              ) : (
-                <View style={styles.emptyCellHint}>
-                  <Text style={styles.emptyCellNumber}>{cell.id}</Text>
-                </View>
-              )}
-            </Pressable>
-          );
-        })}
+      <View ref={boardWrapRef} style={[styles.boardWrap, { width, height }]} onLayout={handleMeasureBoard}>
+        <ScrollView
+          bounces={false}
+          nestedScrollEnabled
+          showsVerticalScrollIndicator={contentHeight > height}
+          scrollEventThrottle={16}
+          onScroll={(event) => onScrollOffsetChange?.(event.nativeEvent.contentOffset.y)}
+          onContentSizeChange={handleMeasureBoard}
+          contentContainerStyle={{ width, height: contentHeight }}
+        >
+          {cells.map((cell) => {
+            const sticker = placedStickers[cell.id];
+            const left = cell.x * width;
+            const centerY = totalRows === 1 ? height / 2 : VERTICAL_EDGE_INSET + cell.row * rowGap;
+
+            return (
+              <Pressable
+                key={cell.id}
+                onPress={() => onCellPress(cell.id)}
+                style={[
+                  styles.cellPressable,
+                  {
+                    left: left - 28,
+                    top: centerY - 28,
+                  },
+                ]}
+              >
+                {sticker ? (
+                  <Animated.View
+                    style={[
+                      styles.placedSticker,
+                      {
+                        transform: [{ scale: getScaleAnim(cell.id) }],
+                      },
+                    ]}
+                  >
+                    <Text style={styles.placedStickerEmoji}>{sticker.mission.emoji}</Text>
+                  </Animated.View>
+                ) : (
+                  <View style={styles.emptyCellHint}>
+                    <Text style={styles.emptyCellNumber}>{cell.id}</Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       </View>
     </View>
   );
@@ -95,9 +131,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary[800],
   },
   boardOutline: {
-    padding: 8,
+    paddingTop: 85,
+    paddingRight: 8,
+    paddingBottom: 8,
+    paddingLeft: 8,
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
+    overflow: 'visible',
+  },
+  mascotWrap: {
+    position: 'absolute',
+    top: -12,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 2,
   },
   cellPressable: {
     position: 'absolute',

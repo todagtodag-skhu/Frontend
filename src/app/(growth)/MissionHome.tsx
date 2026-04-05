@@ -57,7 +57,7 @@ const MissionListScreen: React.FC = () => {
   };
 
   const handleMissionPress = (missionId: string) => {
-    setSelectedMissionId(missionId);
+    setSelectedMissionId((prev) => (prev === missionId ? null : missionId));
   };
 
   const handleStickerRequestConfirm = () => {
@@ -87,6 +87,8 @@ const MissionListScreen: React.FC = () => {
     setSelectedMission(missionToOpen);
   };
 
+  const hasMissions = Boolean(activeBoard?.missions.length);
+
   return (
     <SafeAreaView style={styles.safe} {...swipeResponder.panHandlers}>
       <View style={styles.container}>
@@ -94,41 +96,53 @@ const MissionListScreen: React.FC = () => {
           {activeBoard ? `${activeBoard.title} 미션 목록` : '유진이의 미션 목록'}
         </Text>
 
+        <Text style={styles.headerGuide}>
+          아래 미션을 하고, 칭찬 스티커를 열심히 모아요!
+        </Text>
+
+        <Text style={styles.progressText}>
+          완성까지 0/{PROGRESS_TOTAL} 개
+        </Text>
+
         <View style={styles.page}>
+          {hasMissions ? (
+            <>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.missionList}
+              >
+                {activeBoard?.missions.map((mission) => (
+                  <MissionCard
+                    key={mission.id}
+                    emoji={mission.emoji}
+                    title={mission.title}
+                    frequency={mission.frequency}
+                    reward={activeBoard.rewardText || '스티커 1개'}
+                    isSelected={selectedMissionId === mission.id}
+                    onPress={() => handleMissionPress(mission.id)}
+                    onManagePress={() => handleManageOpen(mission)}
+                  />
+                ))}
+              </ScrollView>
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.missionList}
-          >
-            {activeBoard?.missions.map((mission) => (
-              <MissionCard
-                key={mission.id}
-                emoji={mission.emoji}
-                title={mission.title}
-                frequency={mission.frequency}
-                reward={activeBoard.rewardText || '스티커 1개'}
-                isSelected={selectedMissionId === mission.id}
-                onPress={() => handleMissionPress(mission.id)}
-                onManagePress={() => handleManageOpen(mission)}
-              />
-            ))}
-            {!activeBoard?.missions.length ? (
-              <Text style={styles.emptyText}>등록된 미션이 아직 없어요.</Text>
-            ) : null}
-          </ScrollView>
-
-          <Text style={styles.progressText}>
-            성장나무 완성까지 0/{PROGRESS_TOTAL} 개
-          </Text>
-
-          <TouchableOpacity
-            style={styles.requestButton}
-            onPress={handleRequestStickerPress}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.requestButtonText}>스티커 조르기</Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.requestButton}
+                onPress={handleRequestStickerPress}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.requestButtonText}>스티커 주세요</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={styles.emptyStateCard}>
+              <Text style={styles.emptyStateTitle}>진행중인 미션이 없어요.</Text>
+              <Text style={styles.emptyStateBody}>
+                토닥이 에게 "미션 만들어주세요"{'\n'}이야기 해보는건 어떨까요?
+              </Text>
+            </View>
+          )}
         </View>
+
       </View>
 
       <Modal visible={selectedMission !== null} transparent animationType="fade">
@@ -150,7 +164,7 @@ const MissionListScreen: React.FC = () => {
           <Pressable onPress={(event) => event.stopPropagation()} style={styles.noticeCardWrap}>
             <View style={styles.noticeCard}>
               <Text style={styles.noticeText}>
-                먼저 완료한 항목을 고르고{'\n'}조르기 버튼을 눌러주세요.
+                먼저 완료한 미션을 선택하고 {'\n'}스티커를 요청하세요!
               </Text>
 
               <TouchableOpacity
@@ -204,11 +218,20 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     textAlign: 'center',
     paddingTop: 36,
-    paddingBottom: 32,
+    paddingBottom: 12,
+  },
+  headerGuide: {
+    textAlign: 'center',
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#5C8DFF',
+    fontFamily: fontFamily.bold,
+    marginBottom: 2,
   },
   page: {
     paddingHorizontal: 20,
     flex: 1,
+    paddingTop: 28,
   },
   heroCard: {
     flexDirection: 'row',
@@ -240,7 +263,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     color: '#3578FF',
     marginTop: 0,
-    marginBottom: 18,
+    marginBottom: 0,
   },
   progressHighlight: {
     color: '#4DA8E0',
@@ -260,6 +283,30 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontFamily: fontFamily.bold,
     color: '#6C523C',
+  },
+  emptyStateCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  emptyStateTitle: {
+    fontSize: 22,
+    lineHeight: 28,
+    color: '#1F1A17',
+    fontFamily: fontFamily.bold,
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  emptyStateBody: {
+    fontSize: 18,
+    lineHeight: 28,
+    color: '#1F1A17',
+    fontFamily: fontFamily.bold,
+    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,

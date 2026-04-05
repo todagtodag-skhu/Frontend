@@ -24,17 +24,6 @@ export function CommonOnboardingScreen({
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <View style={styles.progressRow}>
-          {Array.from({ length: totalSteps }, (_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.progressDot,
-                index === step && styles.progressDotActive,
-              ]}
-            />
-          ))}
-        </View>
 
         {children}
 
