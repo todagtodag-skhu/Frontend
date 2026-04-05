@@ -26,7 +26,6 @@ const CompletedStickerCard: React.FC<CompletedStickerCardProps> = ({
 }) => {
   return (
     <View style={styles.card}>
-      {/* 상단: 날짜 + 완료 체크 */}
       <View style={styles.topRow}>
         <Text style={styles.date}>{date}</Text>
         <View style={styles.checkCircle}>
@@ -34,16 +33,13 @@ const CompletedStickerCard: React.FC<CompletedStickerCardProps> = ({
         </View>
       </View>
 
-      {/* 중앙: 제목 + 부제목 */}
       <View style={styles.centerArea}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.subtitle}>스티커 {filled}/{total} 채움</Text>
       </View>
 
-      {/* 구분선 */}
       <View style={styles.divider} />
 
-      {/* 다시보기 버튼 */}
       <TouchableOpacity style={styles.reviewButton} onPress={onReview} activeOpacity={0.7}>
         <Ionicons name="eye" size={16} color={colors.primary[1000]} style={styles.reviewIcon} />
         <Text style={styles.reviewText}>다시보기</Text>
@@ -65,7 +61,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  // 상단
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -91,7 +86,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  // 중앙
   centerArea: {
     alignItems: 'center',
     marginBottom: 32,
@@ -107,13 +101,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: fontFamily.bold,
   },
-  // 구분선
   divider: {
     height: 1,
     backgroundColor: '#F0F0F0',
     marginBottom: 14,
   },
-  // 다시보기
   reviewButton: {
     flexDirection: 'row',
     justifyContent: 'center',

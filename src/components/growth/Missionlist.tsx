@@ -26,10 +26,7 @@ const MissionCard: React.FC<MissionCardProps> = ({
 }) => {
   return (
     <View style={styles.card}>
-      {/* 왼쪽 하트 */}
       <Ionicons name="heart" size={24} color="red" style={styles.leftEmoji} />
-
-      {/* 텍스트 영역 */}
       <View style={styles.textArea}>
         <Text style={styles.title} numberOfLines={1}>
           {title}
@@ -39,7 +36,6 @@ const MissionCard: React.FC<MissionCardProps> = ({
         </Text>
       </View>
 
-      {/* 오른쪽 하트 버튼 */}
       <TouchableOpacity style={styles.heartButton} onPress={onHeartPress} activeOpacity={0.7}>
         <Ionicons
           name={isHeartFilled ? 'heart' : 'heart-outline'}
@@ -63,12 +59,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 16,
     marginBottom: 10,
-    // 그림자 (iOS)
     shadowColor: colors.grayscale[900],
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 4,
-    // 그림자 (Android)
     elevation: 2,
     borderColor: colors.grayscale[300],
     borderWidth: 1,

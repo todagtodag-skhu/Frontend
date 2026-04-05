@@ -14,7 +14,6 @@ import { fontFamily } from '@/constants/fonts';
 import { colors } from '@/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 
-// ── 타입 ──────────────────────────────────────────────────────────────────────
 interface StickerBoard {
   id: string;
   date: string;
@@ -36,7 +35,6 @@ interface Page {
   gifts: Gift[];
 }
 
-// ── 더미 데이터 ───────────────────────────────────────────────────────────────
 const PAGES: Page[] = [
   {
     id: 'page-1',
@@ -48,34 +46,11 @@ const PAGES: Page[] = [
       { id: 'g-2', label: '베스킨라빈스', status: '열기전', isUnlocked: false },
     ],
   },
-  /*
-  {
-    id: 'page-2',
-    stickerBoards: [
-      { id: 'sb-2', date: '2025.02', title: '유진이의 스티커 판', filled: 30, total: 30 },
-    ],
-    gifts: [
-      { id: 'g-3', label: '스타벅스', status: '열기전', isUnlocked: true },
-      { id: 'g-4', label: '편의점', status: '열기전', isUnlocked: false },
-    ],
-  },
-  {
-    id: 'page-3',
-    stickerBoards: [
-      { id: 'sb-3', date: '2025.03', title: '유진이의 스티커 판', filled: 30, total: 30 },
-    ],
-    gifts: [
-      { id: 'g-5', label: '롯데리아', status: '열기전', isUnlocked: false },
-      { id: 'g-6', label: '투썸', status: '열기전', isUnlocked: false },
-    ],
-  },
-  */
 ];
 
 
 const TOTAL_COMPLETED = 12;
 
-// ── 컴포넌트 ──────────────────────────────────────────────────────────────────
 const MemoryStorageScreen: React.FC = () => {
   const item = PAGES[0];
 
@@ -95,7 +70,6 @@ const MemoryStorageScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safe} {...swipeResponder.panHandlers}>
-      {/* 헤더 */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>추억 저장소</Text>
         <View style={styles.badge}>
@@ -109,7 +83,6 @@ const MemoryStorageScreen: React.FC = () => {
       contentContainerStyle={styles.pageContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* 완성된 스티커 판 섹션 */}
       <Text style={styles.sectionTitle}>완성된 스티커 판</Text>
       {item.stickerBoards.map((board) => (
         <CompletedStickerCard
@@ -122,7 +95,6 @@ const MemoryStorageScreen: React.FC = () => {
         />
       ))}
 
-      {/* 선물 보관함 섹션 */}
       <Text style={[styles.sectionTitle, { marginTop: 40 }]}>선물 보관함</Text>
       <View style={styles.giftRow}>
         {item.gifts.map((gift) => (
@@ -134,7 +106,6 @@ const MemoryStorageScreen: React.FC = () => {
             onPress={() => console.log('open gift:', gift.id)}
           />
         ))}
-        {/* gifts가 1개일 경우 빈 공간 채우기 */}
         {item.gifts.length % 2 !== 0 && <View style={{ flex: 1 }} />}
       </View>
     </ScrollView>
@@ -144,13 +115,11 @@ const MemoryStorageScreen: React.FC = () => {
 
 export default MemoryStorageScreen;
 
-// ── 스타일 ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: '#FFF9EE',
   },
-  // ── 헤더
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -184,7 +153,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: fontFamily.bold,
   },
-  // ── 페이지
   page: {
     flex: 1,
   },
@@ -192,14 +160,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
-  // ── 섹션 타이틀
   sectionTitle: {
     fontSize: 15,
     fontFamily: fontFamily.bold,
     color: '#555555',
     marginBottom: 24,
   },
-  // ── 선물 행
   giftRow: {
     flexDirection: 'row',
     gap: 12,

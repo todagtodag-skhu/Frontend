@@ -61,7 +61,6 @@ const TREE_WIDTH = Math.min(SCREEN_WIDTH - 44, 320);
 const TREE_HEIGHT = TREE_WIDTH * 1.08;
 const SPOT_SIZE = 28;
 const STICKERS_PER_PAGE = 4;
-// 드롭 인식 반경 (px) — 기존 38보다 넓혀서 스냅 성공률 향상
 const DROP_RADIUS = 48;
 const STICKER_ICON_COLOR = '#FF3B30';
 const STICKER_ICON_NAME = 'food-apple';
@@ -94,10 +93,7 @@ const SPOT_LAYOUT: { x: number; y: number }[] = [
 function StickerIcon() {
   return (
     <View style={styles.stickerIconWrap}>
-      {/* 배경 원 */}
       <View style={styles.iconBackground} />
-
-      {/* 실제 아이콘 */}
       <MaterialCommunityIcons
         name={STICKER_ICON_NAME}
         size={29}
@@ -143,7 +139,6 @@ export default function GrowthTree({
   const treeLayoutRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const scaleAnims = useRef<Record<number, Animated.Value>>({});
 
-  // placedStickers 를 ref 로도 유지 — PanResponder 클로저에서 최신값 참조
   const placedStickersRef = useRef(placedStickers);
   placedStickersRef.current = placedStickers;
 
@@ -162,7 +157,6 @@ export default function GrowthTree({
     .map((_, i) => i)
     .slice(stickerPage * STICKERS_PER_PAGE, stickerPage * STICKERS_PER_PAGE + STICKERS_PER_PAGE);
 
-  // ── 스티커 부착 ──────────────────────────────────────────────────────────────
   const placeSticker = useCallback((spotId: number, mission: Mission, stickerIdx: number) => {
     const anim = getScaleAnim(spotId);
     anim.setValue(0);
@@ -179,14 +173,12 @@ export default function GrowthTree({
     }));
   }, []);
 
-  // ── 트리 레이아웃 측정 ────────────────────────────────────────────────────────
   const measureTree = useCallback(() => {
     treeWrapperRef.current?.measureInWindow((x, y, width, height) => {
       treeLayoutRef.current = { x, y, width, height };
     });
   }, []);
 
-  // ── 가장 가까운 빈 스팟 탐색 ─────────────────────────────────────────────────
   const getNearestEmptySpot = useCallback(
     (absoluteX: number, absoluteY: number): number | null => {
       const { x: treeX, y: treeY, width: treeWidth, height: treeHeight } = treeLayoutRef.current;
@@ -195,7 +187,6 @@ export default function GrowthTree({
 
       spots.forEach((pos, i) => {
         const spotId = i + 1;
-        // 이미 스티커가 붙은 자리 제외
         if (placedStickersRef.current[spotId]) return;
 
         const cx = treeX + pos.x * treeWidth;
@@ -213,8 +204,6 @@ export default function GrowthTree({
     [spots],
   );
 
-  // ── 드래그 핸들러 (스티커 인덱스별 메모이즈) ──────────────────────────────────
-  //    PanResponder 는 idx 가 달라질 때만 재생성 → 클로저 문제 없음
   const panHandlersMap = useRef<Record<number, ReturnType<typeof PanResponder.create>['panHandlers']>>({});
 
   const getPanHandlers = useCallback(
