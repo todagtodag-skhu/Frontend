@@ -8,6 +8,7 @@ import { Text } from '@/components/ui/Text';
 
 const settingsItems = [
   '이용약관 및 개인정보활용동의 열람',
+  '완료한 스티커판 열람',
   '회원 탈퇴하기',
 ];
 

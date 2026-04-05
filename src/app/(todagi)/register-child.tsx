@@ -17,7 +17,7 @@ export default function RegisterChildScreen() {
   const [birthday, setBirthday] = useState('');
   const [birthdayModalVisible, setBirthdayModalVisible] = useState(false);
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (step === 0) {
       if (!inviteCode.trim()) {
         Alert.alert('알림', '초대코드를 입력해주세요.');
@@ -33,7 +33,7 @@ export default function RegisterChildScreen() {
       return;
     }
 
-    const childId = addChild({
+    const childId = await addChild({
       inviteCode: inviteCode.trim(),
       name: childName.trim(),
       birthday: birthday.trim(),
