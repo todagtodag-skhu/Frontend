@@ -222,4 +222,9 @@ export const todagiStyles = StyleSheet.create({
     textAlign: 'center',
     textDecorationLine: 'underline',
   },
+  missionManageTip: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#FF7A00',
+  },
 });

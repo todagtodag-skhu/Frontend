@@ -1,4 +1,5 @@
 import { Button } from '@/components/common/Button';
+import { Text } from '@/components/ui/Text';
 
 import { MissionEditCard } from './MissionEditCard';
 import { Section } from './Section';
@@ -26,6 +27,10 @@ export function MissionInlineEditorSection({
 }: MissionInlineEditorSectionProps) {
   return (
     <Section title="">
+      <Text style={styles.missionManageTip}>
+        Tip. 미션은 토닥이가 미션 달성 스티커를 지급하는 순간 사라져요.{'\n'}
+        (완료처리) 스티커를 주기 위한 조건을 잘 고려해서 설정해주세요.
+      </Text>
       {missions.map((mission) => (
         <MissionEditCard
           key={mission.id}

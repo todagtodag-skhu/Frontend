@@ -28,19 +28,17 @@ export function StickerBoardSummaryCard({
   const title = board?.title ?? `${childName}의 스티커판`;
 
   return (
-    <View style={styles.boardCard}>
+    <View style={styles.boardCardWrapper}>
+      <View style={styles.boardCard}>
       <View style={styles.boardCardHeader}>
-        <Text weight="bold" style={styles.boardCardTitle} numberOfLines={1}>{title}</Text>
+        <Text weight="bold" style={styles.boardCardTitle} numberOfLines={1}>
+          {title}
+        </Text>
         <View style={styles.stickerBadge}>
           <Text weight="bold" style={styles.stickerBadgeText}>
             {currentStickerCount} / {totalStickerCount || '-'}
           </Text>
         </View>
-        {onPressEditBoard ? (
-          <Pressable style={styles.editBoardButton} onPress={onPressEditBoard}>
-            <Text style={styles.editBoardButtonText}>수정</Text>
-          </Pressable>
-        ) : null}
       </View>
 
       <View style={styles.boardCardMeta}>
@@ -66,7 +64,9 @@ export function StickerBoardSummaryCard({
             size={24}
             style={styles.stickerGiveButtonIcon}
           />
-          <Text weight="bold" style={styles.stickerGiveButtonText}>칭찬 스티커 주기</Text>
+          <Text weight="bold" style={styles.stickerGiveButtonText}>
+            칭찬 스티커 주기
+          </Text>
         </Pressable>
         {showNotification ? (
           <View style={styles.notificationBadge}>
@@ -74,6 +74,14 @@ export function StickerBoardSummaryCard({
           </View>
         ) : null}
       </View>
+
+      </View>
+
+      {onPressEditBoard ? (
+        <Pressable style={styles.editBoardButton} onPress={onPressEditBoard}>
+          <Text style={styles.editBoardButtonText}>스티커판 수정</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }

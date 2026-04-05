@@ -56,6 +56,9 @@ export const childrenStyles = StyleSheet.create({
     lineHeight: 24,
     color: colors.grayscale[1000],
   },
+  boardCardWrapper: {
+    gap: 8,
+  },
   boardCard: {
     borderRadius: 16,
     backgroundColor: colors.grayscale[100],
@@ -140,14 +143,17 @@ export const childrenStyles = StyleSheet.create({
     color: colors.grayscale[1000],
   },
   editBoardButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: colors.grayscale[200],
+    alignSelf: 'flex-end',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 10,
+    backgroundColor: '#FFF3DA',
+    borderWidth: 1.5,
+    borderColor: '#FFCF7D',
   },
   editBoardButtonText: {
     fontSize: 14,
-    color: colors.grayscale[700],
+    color: '#8B5E1A',
   },
   notificationBadge: {
     position: 'absolute',

@@ -1,5 +1,7 @@
 import { ChildProfile, StickerBoard, StickerRequest } from '@/components/todagi/types';
 
+
+// 성장이 정보
 export const MOCK_CHILDREN: ChildProfile[] = [
   {
     id: 'child-1',
@@ -21,13 +23,14 @@ export const MOCK_CHILDREN: ChildProfile[] = [
   },
 ];
 
+// 미션 목록
 export const MOCK_STICKER_BOARDS: StickerBoard[] = [
   {
     id: 'board-1',
     childId: 'child-1',
     title: '유지니유진의 성장나무',
     stickerCount: '20개',
-    boardDesign: '성장 나무',
+    boardDesign: '호랑이',
     rewardText: '주말에 키즈카페 가기',
     missions: [
       {
@@ -58,7 +61,7 @@ export const MOCK_STICKER_BOARDS: StickerBoard[] = [
     childId: 'child-2',
     title: '우럭이우럭의 정리정돈판',
     stickerCount: '20개',
-    boardDesign: '바다 여행',
+    boardDesign: '호랑이',
     rewardText: '좋아하는 간식 먹기',
     missions: [
       {

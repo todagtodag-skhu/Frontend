@@ -26,7 +26,7 @@ export function ChildSelectorRow({
         <Text style={styles.sectionTitle}>연결된 성장이 목록</Text>
         {onPressEditChild ? (
           <Pressable onPress={onPressEditChild}>
-            <Text style={styles.editLink}>정보 수정</Text>
+            <Text style={styles.editLink}>현재 성장이 정보 수정</Text>
           </Pressable>
         ) : null}
       </View>
