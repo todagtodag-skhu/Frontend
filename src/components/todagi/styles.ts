@@ -206,6 +206,15 @@ export const todagiStyles = StyleSheet.create({
     backgroundColor: colors.primary[800],
     marginTop: 0,
   },
+  cancelButton: {
+    fontSize: 16,
+    color: colors.grayscale[700],
+  },
+  missionTip: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#C47F17',
+  },
   editingCaption: {
     fontSize: 14,
     color: colors.grayscale[700],

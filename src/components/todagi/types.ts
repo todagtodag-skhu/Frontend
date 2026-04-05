@@ -4,6 +4,8 @@ export type Mission = {
   title: string;
   days: string;
   frequency: string;
+  completionCount?: number;
+  stickerPerCompletion?: number;
 };
 
 export type ChildProfile = {
