@@ -146,8 +146,9 @@ const MissionListScreen: React.FC = () => {
       </View>
 
       <Modal visible={selectedMission !== null} transparent animationType="fade">
-        <Pressable style={styles.modalOverlay} onPress={handleManageClose}>
-          <Pressable onPress={(event) => event.stopPropagation()} style={styles.modalCardWrap}>
+        <Pressable style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={handleManageClose} />
+          <Pressable onPress={(event) => event.stopPropagation()} style={styles.modalContent}>
             {selectedMission ? (
               <StickerRequestButton
                 missionTitle={selectedMission.title}
@@ -160,41 +161,39 @@ const MissionListScreen: React.FC = () => {
       </Modal>
 
       <Modal visible={showSelectMissionNotice} transparent animationType="fade">
-        <Pressable style={styles.modalOverlay} onPress={() => setShowSelectMissionNotice(false)}>
-          <Pressable onPress={(event) => event.stopPropagation()} style={styles.noticeCardWrap}>
-            <View style={styles.noticeCard}>
-              <Text style={styles.noticeText}>
-                먼저 완료한 미션을 선택하고 {'\n'}스티커를 요청하세요!
-              </Text>
+        <Pressable style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowSelectMissionNotice(false)} />
+          <Pressable onPress={(event) => event.stopPropagation()} style={styles.modalContent}>
+            <Text style={styles.modalDescription}>
+              먼저 완료한 미션을 선택하고 {'\n'}스티커를 요청하세요!
+            </Text>
 
-              <TouchableOpacity
-                style={styles.noticeButton}
-                onPress={() => setShowSelectMissionNotice(false)}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.noticeButtonText}>네</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.modalConfirmButton}
+              onPress={() => setShowSelectMissionNotice(false)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.modalConfirmButtonText}>네</Text>
+            </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
 
       <Modal visible={showRequestCompleteNotice} transparent animationType="fade">
-        <Pressable style={styles.modalOverlay} onPress={() => setShowRequestCompleteNotice(false)}>
-          <Pressable onPress={(event) => event.stopPropagation()} style={styles.noticeCardWrap}>
-            <View style={styles.noticeCard}>
-              <Text style={styles.noticeText}>
-                요청 완료!{'\n'}부모님께 스티커 요청을 보냈어요.
-              </Text>
+        <Pressable style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowRequestCompleteNotice(false)} />
+          <Pressable onPress={(event) => event.stopPropagation()} style={styles.modalContent}>
+            <Text style={styles.modalDescription}>
+              요청 완료!{'\n'}부모님께 스티커 요청을 보냈어요.
+            </Text>
 
-              <TouchableOpacity
-                style={styles.noticeButton}
-                onPress={() => setShowRequestCompleteNotice(false)}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.noticeButtonText}>네</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.modalConfirmButton}
+              onPress={() => setShowRequestCompleteNotice(false)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.modalConfirmButtonText}>네</Text>
+            </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
@@ -310,50 +309,41 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
   },
-  modalCardWrap: {
-    width: '76%',
-    alignItems: 'center',
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
-  noticeCardWrap: {
-    width: '76%',
-    alignItems: 'center',
+  modalContent: {
+    backgroundColor: colors.grayscale[100],
+    borderRadius: 16,
+    padding: 24,
+    paddingTop: 40,
+    width: '80%',
+    gap: 8,
   },
-  noticeCard: {
-    width: '108%',
-    backgroundColor: '#E9DFC8',
-    borderRadius: 13,
-    borderWidth: 2,
-    borderColor: '#FFD89A',
-    paddingTop: 36,
-    paddingRight: 22,
-    paddingBottom: 16,
-    paddingLeft: 22,
-    alignItems: 'center',
-  },
-  noticeText: {
-    fontSize: 22,
-    lineHeight: 26,
-    color: '#2B2118',
+  modalDescription: {
+    fontSize: 18,
+    color: colors.grayscale[700],
     fontFamily: fontFamily.bold,
     textAlign: 'center',
-    marginBottom: 30,
+    lineHeight: 20,
   },
-  noticeButton: {
+  modalConfirmButton: {
+    flex: 0,
     width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 9,
-    paddingVertical: 11,
+    marginTop: 17,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: colors.grayscale[200],
     alignItems: 'center',
     justifyContent: 'center',
   },
-  noticeButtonText: {
-    fontSize: 20,
-    color: '#111111',
+  modalConfirmButtonText: {
+    fontSize: 18,
+    color: colors.grayscale[1000],
     fontFamily: fontFamily.bold,
   },
 });

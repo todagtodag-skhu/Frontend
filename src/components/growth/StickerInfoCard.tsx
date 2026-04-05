@@ -40,7 +40,7 @@ export function StickerInfoCard({
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    backgroundColor: '#FFF2CF',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 2,
     borderColor: '#F7D38B',
@@ -77,12 +77,12 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   stickerEmoji: {
-    fontSize: 22,
-    lineHeight: 24,
+    fontSize: 24,
+    lineHeight: 26,
   },
   mission: {
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 17,
+    lineHeight: 24,
     fontFamily: fontFamily.bold,
     color: '#3A2C1B',
     marginBottom: 14,
@@ -91,13 +91,13 @@ const styles = StyleSheet.create({
   confirmButton: {
     width: '100%',
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFF2CF',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
   },
   confirmButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: fontFamily.bold,
     color: '#1A1A1A',
   },
