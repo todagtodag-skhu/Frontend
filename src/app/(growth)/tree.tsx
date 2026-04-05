@@ -85,6 +85,7 @@ export default function GrowthTree({
 
   const resolvedBoardName = activeBoard?.title ?? boardName;
   const resolvedReward = activeBoard?.rewardText ?? reward;
+  const resolvedBoardDesign = activeBoard?.boardDesign;
   const resolvedMissions = activeBoard
     ? activeBoard.missions.map((mission) => ({
         id: mission.id,
@@ -298,22 +299,7 @@ export default function GrowthTree({
     }
   };
 
-  const handleDeleteSticker = () => {
-    const spotId = infoModal.spotId;
-    if (typeof spotId !== 'number') return;
-
-    const stickerToDelete = placedStickers[spotId];
-
-    setPlacedStickers((prev) => {
-      const next = { ...prev };
-      delete next[spotId];
-      return next;
-    });
-
-    if (stickerToDelete) {
-      setUsedStickerIndices((prev) => prev.filter((idx) => idx !== stickerToDelete.stickerIdx));
-    }
-
+  const handleInfoModalClose = () => {
     setInfoModal({ visible: false });
   };
 
@@ -355,6 +341,7 @@ export default function GrowthTree({
           onCellPress={handleCellPress}
           onLayoutBoard={measureBoard}
           onScrollOffsetChange={setBoardScrollOffsetY}
+          boardDesign={resolvedBoardDesign}
         />
 
         <View style={styles.stickerPickerWrap}>
@@ -445,14 +432,7 @@ export default function GrowthTree({
             <StickerInfoCard
               missionEmoji={infoModal.data?.mission.emoji ?? ''}
               missionTitle={infoModal.data?.mission.title ?? ''}
-              placedAtLabel={
-                infoModal.data?.placedAt.toLocaleDateString('ko-KR', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                }) ?? ''
-              }
-              onDelete={handleDeleteSticker}
+              onConfirm={handleInfoModalClose}
             />
           </Pressable>
         </Pressable>
@@ -632,6 +612,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   infoCardWrap: {
-    width: '76%',
+    width: '46%',
   },
 });

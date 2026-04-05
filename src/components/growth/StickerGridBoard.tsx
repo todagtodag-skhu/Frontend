@@ -3,6 +3,8 @@ import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { fontFamily } from '@/constants/fonts';
 import { colors } from '@/constants/colors';
 import FoxImage from '../../../assets/foxImage.svg';
+import MeowImage from '../../../assets/meowImage.svg';
+import TigerImage from '../../../assets/tigerImage.svg';
 
 const VERTICAL_EDGE_INSET = 53;
 
@@ -36,7 +38,20 @@ type StickerGridBoardProps = {
   onCellPress: (id: number) => void;
   onLayoutBoard: (layout: { x: number; y: number; width: number; height: number }) => void;
   onScrollOffsetChange?: (offsetY: number) => void;
+  boardDesign?: string;
 };
+
+function MascotImage({ boardDesign }: { boardDesign?: string }) {
+  if (boardDesign === '우주 탐험') {
+    return <MeowImage width={190} height={96} />;
+  }
+
+  if (boardDesign === '바다 여행') {
+    return <TigerImage width={190} height={96} />;
+  }
+
+  return <FoxImage width={190} height={96} />;
+}
 
 export function StickerGridBoard({
   width,
@@ -47,6 +62,7 @@ export function StickerGridBoard({
   onCellPress,
   onLayoutBoard,
   onScrollOffsetChange,
+  boardDesign,
 }: StickerGridBoardProps) {
   const boardWrapRef = useRef<View>(null);
   const totalRows = Math.max(...cells.map((cell) => cell.row)) + 1;
@@ -69,7 +85,7 @@ export function StickerGridBoard({
   return (
     <View style={styles.boardOutline}>
       <View style={styles.mascotWrap}>
-        <FoxImage width={190} height={96} />
+        <MascotImage boardDesign={boardDesign} />
       </View>
 
       <View ref={boardWrapRef} style={[styles.boardWrap, { width, height }]} onLayout={handleMeasureBoard}>
