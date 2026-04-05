@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 
 import { colors } from '@/constants/colors';
@@ -28,6 +29,7 @@ export default function TabsLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 13,
+          fontFamily: fontFamily.bold,
         },
       }}
     >
@@ -35,12 +37,26 @@ export default function TabsLayout() {
         name="children"
         options={{
           title: '스티커판 관리',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? 'grid' : 'grid-outline'}
+              size={size}
+              color={color}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="mypage"
         options={{
           title: '마이페이지',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? 'person-circle' : 'person-circle-outline'}
+              size={size}
+              color={color}
+            />
+          ),
         }}
       />
     </Tabs>
