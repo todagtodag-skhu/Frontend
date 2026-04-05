@@ -1,4 +1,4 @@
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Mission } from '@/components/todagi/types';
 import { Text } from '@/components/ui/Text';
@@ -7,13 +7,11 @@ import { childrenStyles as styles } from './styles';
 
 type MissionAssignmentListProps = {
   missions: Mission[];
-  onPressMission: (mission: Mission) => void;
   emptyText: string;
 };
 
 export function MissionAssignmentList({
   missions,
-  onPressMission,
   emptyText,
 }: MissionAssignmentListProps) {
   return (
@@ -22,10 +20,9 @@ export function MissionAssignmentList({
       {missions.length ? (
         <View style={styles.missionList}>
           {missions.map((mission) => (
-            <Pressable
+            <View
               key={mission.id}
               style={styles.missionCard}
-              onPress={() => onPressMission(mission)}
             >
               <Text style={styles.missionEmoji}>{mission.emoji}</Text>
               <View style={styles.missionCopy}>
@@ -34,8 +31,7 @@ export function MissionAssignmentList({
                 </Text>
                 <Text style={styles.missionMeta}>{mission.frequency} / 스티커 1개</Text>
               </View>
-              <Text style={styles.chevron}>›</Text>
-            </Pressable>
+            </View>
           ))}
         </View>
       ) : (

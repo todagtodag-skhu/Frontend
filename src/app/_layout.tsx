@@ -46,40 +46,40 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="create-sticker"
-          options={({ route }) => ({
-            headerShown: true,
-            title:
-              route.params && 'boardId' in route.params && typeof route.params.boardId === 'string'
-                ? '스티커판 수정하기'
-                : '스티커판 만들기',
-            headerLeft: () => (
-              <Pressable
-                onPress={() => {
-                  const childId =
-                    route.params && 'childId' in route.params
-                      ? route.params.childId
-                      : undefined;
-                  const returnTo =
-                    route.params && 'returnTo' in route.params
-                      ? route.params.returnTo
-                      : undefined;
+          options={({ route }) => {
+            const params = route.params as Record<string, string> | undefined;
+            const isMissionsMode = params?.mode === 'missions';
+            const hasBoardId = typeof params?.boardId === 'string' && params.boardId.length > 0;
 
-                  if (returnTo === 'child-detail' && typeof childId === 'string' && childId.length > 0) {
-                    router.replace({
-                      pathname: '/child-detail',
-                      params: { childId },
-                    });
-                    return;
-                  }
+            const title = isMissionsMode
+              ? '미션 관리하기'
+              : hasBoardId
+              ? '스티커판 수정하기'
+              : '스티커판 만들기';
 
-                  router.replace('/children');
-                }}
-                style={{ paddingHorizontal: 16 }}
-              >
-                <Text>뒤로</Text>
-              </Pressable>
-            ),
-          })}
+            return {
+              headerShown: true,
+              title,
+              headerLeft: () => (
+                <Pressable
+                  onPress={() => {
+                    const returnTo = params?.returnTo;
+                    const childId = params?.childId;
+
+                    if (returnTo === 'child-detail' && typeof childId === 'string' && childId.length > 0) {
+                      router.replace({ pathname: '/child-detail', params: { childId } });
+                      return;
+                    }
+
+                    router.replace('/children');
+                  }}
+                  style={{ paddingHorizontal: 16 }}
+                >
+                  <Text>{isMissionsMode ? '취소' : '뒤로'}</Text>
+                </Pressable>
+              ),
+            };
+          }}
         />
       </Stack>
     </GrowthProvider>

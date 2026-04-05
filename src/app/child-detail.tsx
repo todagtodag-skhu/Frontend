@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   dateField: {
-    borderRadius: 9,
+    borderRadius: 8,
     backgroundColor: '#FFFFFF',
     paddingVertical: 16,
     paddingHorizontal: 16,
@@ -292,8 +292,10 @@ const styles = StyleSheet.create({
   actionChip: {
     paddingVertical: 8,
     paddingHorizontal: 14,
-    borderRadius: 999,
-    backgroundColor: '#FFF2D9',
+    borderRadius: 12,
+    backgroundColor: '#FFF3DA',
+    borderWidth: 1.5,
+    borderColor: '#FFCF7D',
   },
   actionChipText: {
     fontSize: 13,

@@ -10,6 +10,7 @@ type ChildSelectorRowProps = {
   selectedChildId?: string;
   onSelectChild: (childId: string) => void;
   onPressAddChild: () => void;
+  onPressEditChild?: () => void;
 };
 
 export function ChildSelectorRow({
@@ -17,10 +18,18 @@ export function ChildSelectorRow({
   selectedChildId,
   onSelectChild,
   onPressAddChild,
+  onPressEditChild,
 }: ChildSelectorRowProps) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>연결된 성장이 목록</Text>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>연결된 성장이 목록</Text>
+        {onPressEditChild ? (
+          <Pressable onPress={onPressEditChild}>
+            <Text style={styles.editLink}>정보 수정</Text>
+          </Pressable>
+        ) : null}
+      </View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
