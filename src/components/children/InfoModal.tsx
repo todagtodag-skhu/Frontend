@@ -4,40 +4,36 @@ import { todagiStyles } from '@/components/todagi/styles';
 import { Text } from '@/components/ui/Text';
 import { colors } from '@/constants/colors';
 
-type ConfirmModalProps = {
+type InfoModalProps = {
   visible: boolean;
   title: string;
+  description?: string;
   confirmLabel?: string;
   onConfirm: () => void;
-  onCancel: () => void;
   useModal?: boolean;
 };
 
-export function ConfirmModal({
+export function InfoModal({
   visible,
   title,
+  description,
   confirmLabel = '확인',
   onConfirm,
-  onCancel,
   useModal = true,
-}: ConfirmModalProps) {
+}: InfoModalProps) {
   if (!visible) {
     return null;
   }
 
   const content = (
     <View style={todagiStyles.modalOverlay}>
-      <Pressable style={todagiStyles.modalBackdrop} onPress={onCancel} />
+      <Pressable style={todagiStyles.modalBackdrop} onPress={onConfirm} />
       <View style={[todagiStyles.modalContent, styles.content]}>
         <Text weight="bold" style={styles.title}>{title}</Text>
-        <View style={styles.actions}>
-          <Pressable style={[styles.button, styles.cancelButton]} onPress={onCancel}>
-            <Text style={styles.cancelText}>취소</Text>
-          </Pressable>
-          <Pressable style={[styles.button, styles.confirmButton]} onPress={onConfirm}>
-            <Text weight="bold" style={styles.confirmText}>{confirmLabel}</Text>
-          </Pressable>
-        </View>
+        {description ? <Text style={styles.description}>{description}</Text> : null}
+        <Pressable style={styles.confirmButton} onPress={onConfirm}>
+          <Text weight="bold" style={styles.confirmText}>{confirmLabel}</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -47,7 +43,7 @@ export function ConfirmModal({
   }
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onCancel}>
+    <Modal visible transparent animationType="fade" onRequestClose={onConfirm}>
       {content}
     </Modal>
   );
@@ -64,28 +60,21 @@ const styles = StyleSheet.create({
     color: colors.grayscale[1000],
     lineHeight: 26,
   },
-  actions: {
-    flexDirection: 'row',
-    gap: 10,
+  description: {
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
+    color: colors.grayscale[700],
   },
-  button: {
-    flex: 1,
+  confirmButton: {
+    width: '100%',
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: colors.grayscale[200],
-  },
-  confirmButton: {
     backgroundColor: '#FFF1CC',
     borderWidth: 1.5,
     borderColor: '#FFCF7D',
-  },
-  cancelText: {
-    fontSize: 15,
-    color: colors.grayscale[700],
   },
   confirmText: {
     fontSize: 15,

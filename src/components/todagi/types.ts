@@ -8,6 +8,15 @@ export type Mission = {
   stickerPerCompletion?: number;
 };
 
+export type StickerRequest = {
+  id: string;
+  missionId: string;
+  missionEmoji: string;
+  missionTitle: string;
+  stickerCount: number;
+  requestedAt: string; // e.g. "오늘 오전 9:15"
+};
+
 export type ChildProfile = {
   id: string;
   inviteCode: string;

@@ -110,9 +110,10 @@ export const todagiStyles = StyleSheet.create({
     marginTop: 0,
   },
   modalOverlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,

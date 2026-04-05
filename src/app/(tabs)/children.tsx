@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable } from 'react-native';
 
+import { MOCK_PREVIOUS_STICKER_REQUESTS, MOCK_STICKER_REQUESTS } from '@/mocks/data';
+
 import { ChildrenEmptyState } from '@/components/children/ChildrenEmptyState';
 import { ChildSelectorRow } from '@/components/children/ChildSelectorRow';
+import { ConfirmModal } from '@/components/children/ConfirmModal';
 import { EditChildModal } from '@/components/children/EditChildModal';
 import { EditStickerBoardModal } from '@/components/children/EditStickerBoardModal';
 import { MissionAssignmentList } from '@/components/children/MissionAssignmentList';
@@ -18,13 +21,16 @@ import { useGrowth } from '@/contexts/GrowthContext';
 export default function ChildrenScreen() {
   const router = useRouter();
   const { focusChildId } = useLocalSearchParams<{ focusChildId?: string }>();
-  const { children, getBoardsByChildId, updateChild, updateStickerBoard } = useGrowth();
+  const { children, getBoardsByChildId, addStickerBoard, updateChild, updateStickerBoard } = useGrowth();
 
   const [selectedChildId, setSelectedChildId] = useState<string | undefined>(focusChildId);
   const [editChildVisible, setEditChildVisible] = useState(false);
+  const [createBoardVisible, setCreateBoardVisible] = useState(false);
   const [editBoardVisible, setEditBoardVisible] = useState(false);
   const [stickerRequestVisible, setStickerRequestVisible] = useState(false);
+  const [boardFullVisible, setBoardFullVisible] = useState(false);
   const [dismissedMissionIds, setDismissedMissionIds] = useState<Set<string>>(new Set());
+  const [givenStickerCount, setGivenStickerCount] = useState(0);
 
   const handleDismissMission = (missionId: string) => {
     setDismissedMissionIds((prev) => new Set(prev).add(missionId));
@@ -51,26 +57,60 @@ export default function ChildrenScreen() {
 
   const activeBoard = selectedBoards[0];
   const totalStickerCount = Number.parseInt(activeBoard?.stickerCount ?? '0', 10) || 0;
-  const currentStickerCount = activeBoard ? Math.min(activeBoard.missions.length, totalStickerCount) : 0;
+  const currentStickerCount = givenStickerCount;
   const remainingMissionCount = (activeBoard?.missions ?? []).filter((m) => !dismissedMissionIds.has(m.id)).length;
   const showNotification = selectedChild?.id === focusChildId || remainingMissionCount > 0;
+
+  useEffect(() => {
+    setGivenStickerCount(0);
+  }, [activeBoard?.id]);
+
+  const handleManualSticker = (): boolean => {
+    if (givenStickerCount >= totalStickerCount) {
+      setStickerRequestVisible(false);
+      setBoardFullVisible(true);
+      return false;
+    }
+    setGivenStickerCount((prev) => prev + 1);
+    return true;
+  };
+
+  const handleNewBoard = () => {
+    setBoardFullVisible(false);
+    setCreateBoardVisible(true);
+  };
 
   const handlePressAddChild = () => {
     router.push('/register-child');
   };
 
   const handlePressPrimaryAction = () => {
-    if (!selectedChild) {
-      return;
-    }
+    if (!selectedChild) return;
 
+    if (activeBoard) {
+      router.push({
+        pathname: '/create-sticker',
+        params: { childId: selectedChild.id, returnTo: 'children', boardId: activeBoard.id, mode: 'missions' },
+      });
+    } else {
+      setCreateBoardVisible(true);
+    }
+  };
+
+  const handleCreateBoard = async (title: string, stickerCount: string, boardDesign: string, rewardText: string) => {
+    if (!selectedChild) return;
+    const boardId = await addStickerBoard({
+      childId: selectedChild.id,
+      title,
+      stickerCount,
+      boardDesign,
+      rewardText,
+      missions: [],
+    });
+    setCreateBoardVisible(false);
     router.push({
       pathname: '/create-sticker',
-      params: {
-        childId: selectedChild.id,
-        returnTo: 'children',
-        ...(activeBoard ? { boardId: activeBoard.id, mode: 'missions' } : {}),
-      },
+      params: { childId: selectedChild.id, returnTo: 'children', boardId, mode: 'missions' },
     });
   };
 
@@ -143,6 +183,15 @@ export default function ChildrenScreen() {
       </AppScreen>
 
       {selectedChild ? (
+        <EditStickerBoardModal
+          visible={createBoardVisible}
+          mode="create"
+          onSave={handleCreateBoard}
+          onClose={() => setCreateBoardVisible(false)}
+        />
+      ) : null}
+
+      {selectedChild ? (
         <EditChildModal
           visible={editChildVisible}
           child={selectedChild}
@@ -162,13 +211,23 @@ export default function ChildrenScreen() {
           <StickerRequestModal
             visible={stickerRequestVisible}
             childName={selectedChild.name}
-            missions={activeBoard.missions}
+            requests={MOCK_STICKER_REQUESTS}
+            previousRequests={MOCK_PREVIOUS_STICKER_REQUESTS}
             dismissedIds={dismissedMissionIds}
             onDismiss={handleDismissMission}
+            onManualSticker={handleManualSticker}
             onClose={() => setStickerRequestVisible(false)}
           />
         </>
       ) : null}
+
+      <ConfirmModal
+        visible={boardFullVisible}
+        title={'이미 스티커를 다 채웠어요'}
+        confirmLabel="새로만들기"
+        onConfirm={handleNewBoard}
+        onCancel={() => setBoardFullVisible(false)}
+      />
     </>
   );
 }

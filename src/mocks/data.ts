@@ -1,4 +1,4 @@
-import { ChildProfile, StickerBoard } from '@/components/todagi/types';
+import { ChildProfile, StickerBoard, StickerRequest } from '@/components/todagi/types';
 
 export const MOCK_CHILDREN: ChildProfile[] = [
   {
@@ -69,5 +69,53 @@ export const MOCK_STICKER_BOARDS: StickerBoard[] = [
         frequency: '하루 1회',
       },
     ],
+  },
+];
+
+// 현재 스티커판 미션 요청
+export const MOCK_STICKER_REQUESTS: StickerRequest[] = [
+  {
+    id: 'req-1',
+    missionId: 'mission-1',
+    missionEmoji: '🪥',
+    missionTitle: '양치하기',
+    stickerCount: 1,
+    requestedAt: '오늘 오전 8:12',
+  },
+  {
+    id: 'req-2',
+    missionId: 'mission-1-1',
+    missionEmoji: '🍚',
+    missionTitle: '밥먹기',
+    stickerCount: 1,
+    requestedAt: '오늘 오후 12:34',
+  },
+  {
+    id: 'req-3',
+    missionId: 'mission-1-2',
+    missionEmoji: '🧹',
+    missionTitle: '청소하기',
+    stickerCount: 2,
+    requestedAt: '오늘 오후 3:07',
+  },
+];
+
+// 이전 스티커판에서 이월된 미션 요청
+export const MOCK_PREVIOUS_STICKER_REQUESTS: StickerRequest[] = [
+  {
+    id: 'prev-req-1',
+    missionId: 'old-mission-1',
+    missionEmoji: '📚',
+    missionTitle: '독서하기',
+    stickerCount: 1,
+    requestedAt: '어제 오후 7:30',
+  },
+  {
+    id: 'prev-req-2',
+    missionId: 'old-mission-2',
+    missionEmoji: '🏃',
+    missionTitle: '운동하기',
+    stickerCount: 1,
+    requestedAt: '어제 오후 5:15',
   },
 ];

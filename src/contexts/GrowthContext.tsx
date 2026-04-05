@@ -25,7 +25,7 @@ type GrowthContextValue = {
   addChild: (input: AddChildInput) => Promise<string>;
   updateChild: (childId: string, input: AddChildInput) => Promise<void>;
   deleteChild: (childId: string) => Promise<void>;
-  addStickerBoard: (input: AddStickerBoardInput) => Promise<void>;
+  addStickerBoard: (input: AddStickerBoardInput) => Promise<string>;
   updateStickerBoard: (boardId: string, input: AddStickerBoardInput) => Promise<void>;
   deleteStickerBoard: (boardId: string) => Promise<void>;
   getChildById: (childId?: string) => ChildProfile | undefined;
@@ -71,6 +71,7 @@ export function GrowthProvider({ children }: { children: ReactNode }) {
     addStickerBoard: async (input) => {
       const newBoard = await stickerBoardApi.createStickerBoard(input);
       setBoards((prev) => [...prev, newBoard]);
+      return newBoard.id;
     },
     updateStickerBoard: async (boardId, input) => {
       const updated = await stickerBoardApi.updateStickerBoard(boardId, input);

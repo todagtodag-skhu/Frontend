@@ -1,49 +1,84 @@
 import { useState } from 'react';
-import { Alert, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Mission } from '@/components/todagi/types';
+import { StickerRequest } from '@/components/todagi/types';
 import { Text } from '@/components/ui/Text';
 import { colors } from '@/constants/colors';
 
 import { ConfirmModal } from './ConfirmModal';
+import { InfoModal } from './InfoModal';
 
 type PendingAction = {
   type: 'accept' | 'reject';
-  missionId: string;
+  requestId: string;
   missionTitle: string;
 };
 
 type StickerRequestModalProps = {
   visible: boolean;
   childName: string;
-  missions: Mission[];
+  requests: StickerRequest[];
+  previousRequests?: StickerRequest[];
   dismissedIds: Set<string>;
-  onDismiss: (missionId: string) => void;
+  onDismiss: (requestId: string) => void;
+  onManualSticker: () => boolean;
   onClose: () => void;
 };
 
-export function StickerRequestModal({ visible, childName, missions, dismissedIds, onDismiss, onClose }: StickerRequestModalProps) {
+export function StickerRequestModal({ visible, childName, requests, previousRequests, dismissedIds, onDismiss, onManualSticker, onClose }: StickerRequestModalProps) {
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [resultModal, setResultModal] = useState<{ title: string; description?: string } | null>(null);
 
-  const visibleMissions = missions.filter((m) => !dismissedIds.has(m.id));
+  const visibleRequests = requests.filter((r) => !dismissedIds.has(r.id));
+  const visiblePreviousRequests = (previousRequests ?? []).filter((r) => !dismissedIds.has(r.id));
+  const hasPreviousRequests = visiblePreviousRequests.length > 0;
 
   const handleConfirmAction = () => {
     if (!pendingAction) return;
 
     if (pendingAction.type === 'accept') {
-      Alert.alert('완료', `"${pendingAction.missionTitle}" 미션에 스티커를 지급했어요! 🌟`);
+      setResultModal({
+        title: '완료',
+        description: `"${pendingAction.missionTitle}" 미션에 스티커를 지급했어요!`,
+      });
     } else {
-      Alert.alert('완료', `"${pendingAction.missionTitle}" 미션 요청을 거절했어요.`);
+      setResultModal({
+        title: '완료',
+        description: `"${pendingAction.missionTitle}" 미션 요청을 거절했어요.`,
+      });
     }
 
-    onDismiss(pendingAction.missionId);
+    onDismiss(pendingAction.requestId);
     setPendingAction(null);
   };
 
-  const handleManualSticker = () => {
-    Alert.alert('스티커 지급', `${childName}에게 스티커를 지급했어요! 🌟`);
-  };
+  const renderRequestCard = (request: StickerRequest) => (
+    <View key={request.id} style={styles.missionCard}>
+      <Text style={styles.missionEmoji}>{request.missionEmoji}</Text>
+      <View style={styles.missionInfo}>
+        <Text weight="bold" style={styles.missionTitle}>{request.missionTitle}</Text>
+        <Text style={styles.missionMeta}>스티커 {request.stickerCount}개</Text>
+      </View>
+      <View style={styles.actionColumn}>
+        <Text style={styles.requestTime}>{request.requestedAt}</Text>
+        <View style={styles.missionActions}>
+          <Pressable
+            style={[styles.actionChip, styles.rejectChip]}
+            onPress={() => setPendingAction({ type: 'reject', requestId: request.id, missionTitle: request.missionTitle })}
+          >
+            <Text style={styles.rejectText}>거절</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.actionChip, styles.acceptChip]}
+            onPress={() => setPendingAction({ type: 'accept', requestId: request.id, missionTitle: request.missionTitle })}
+          >
+            <Text style={styles.acceptText}>수락</Text>
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -60,43 +95,37 @@ export function StickerRequestModal({ visible, childName, missions, dismissedIds
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {visibleMissions.length > 0 ? (
-            visibleMissions.map((mission) => (
-              <View key={mission.id} style={styles.missionCard}>
-                <Text style={styles.missionEmoji}>{mission.emoji}</Text>
-                <View style={styles.missionInfo}>
-                  <Text weight="bold" style={styles.missionTitle}>{mission.title}</Text>
-                  <Text style={styles.missionMeta}>{mission.frequency}</Text>
-                </View>
-                <View style={styles.missionActions}>
-                  <Pressable
-                    style={[styles.actionChip, styles.rejectChip]}
-                    onPress={() =>
-                      setPendingAction({ type: 'reject', missionId: mission.id, missionTitle: mission.title })
-                    }
-                  >
-                    <Text style={styles.rejectText}>거절</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.actionChip, styles.acceptChip]}
-                    onPress={() =>
-                      setPendingAction({ type: 'accept', missionId: mission.id, missionTitle: mission.title })
-                    }
-                  >
-                    <Text style={styles.acceptText}>수락</Text>
-                  </Pressable>
-                </View>
-              </View>
-            ))
-          ) : (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyText}>요청된 미션이 없어요</Text>
+          {hasPreviousRequests && (
+            <View style={styles.section}>
+              <Text weight="bold" style={styles.sectionTitle}>이전 스티커판 요청</Text>
+              {visiblePreviousRequests.map((request) => renderRequestCard(request))}
             </View>
           )}
+
+          <View style={styles.section}>
+            {hasPreviousRequests && (
+              <Text weight="bold" style={styles.sectionTitle}>현재 스티커판 요청</Text>
+            )}
+            {visibleRequests.length > 0 ? (
+              visibleRequests.map((request) => renderRequestCard(request))
+            ) : (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyText}>요청된 미션이 없어요</Text>
+              </View>
+            )}
+          </View>
         </ScrollView>
 
         <View style={styles.footer}>
-          <Pressable style={styles.manualButton} onPress={handleManualSticker}>
+          <Pressable
+            style={styles.manualButton}
+            onPress={() => {
+              const success = onManualSticker();
+              if (success) {
+                setResultModal({ title: '스티커 지급', description: '칭찬스티커 1개를 부여했습니다' });
+              }
+            }}
+          >
             <Text weight="bold" style={styles.manualButtonText}>수동으로 스티커 주기</Text>
           </Pressable>
         </View>
@@ -106,6 +135,14 @@ export function StickerRequestModal({ visible, childName, missions, dismissedIds
           title={pendingAction?.type === 'accept' ? '정말 수락할까요?' : '정말 거절할까요?'}
           onConfirm={handleConfirmAction}
           onCancel={() => setPendingAction(null)}
+          useModal={false}
+        />
+        <InfoModal
+          visible={resultModal !== null}
+          title={resultModal?.title ?? ''}
+          description={resultModal?.description}
+          onConfirm={() => setResultModal(null)}
+          useModal={false}
         />
       </SafeAreaView>
     </Modal>
@@ -140,7 +177,14 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 24,
     paddingBottom: 120,
+    gap: 20,
+  },
+  section: {
     gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    color: colors.grayscale[600],
   },
   missionCard: {
     flexDirection: 'row',
@@ -164,6 +208,16 @@ const styles = StyleSheet.create({
   missionTitle: {
     fontSize: 18,
     color: colors.grayscale[1000],
+  },
+  actionColumn: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  requestTime: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.grayscale[500],
+    textAlign: 'right',
   },
   missionMeta: {
     fontSize: 14,

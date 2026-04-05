@@ -2,21 +2,21 @@ import { useEffect, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { TextInput } from '@/components/common/TextInput';
+import { BOARD_DESIGN_OPTIONS, STICKER_COUNT_OPTIONS } from '@/components/todagi/constants';
 import { todagiStyles } from '@/components/todagi/styles';
 import { StickerBoard } from '@/components/todagi/types';
 import { Text } from '@/components/ui/Text';
 import { colors } from '@/constants/colors';
 
-const BOARD_DESIGNS = ['호랑이', '고양이', '레서판다'] as const;
-
 type EditStickerBoardModalProps = {
   visible: boolean;
-  board: StickerBoard;
+  board?: StickerBoard;
+  mode?: 'create' | 'edit';
   onSave: (title: string, stickerCount: string, boardDesign: string, rewardText: string) => void;
   onClose: () => void;
 };
 
-export function EditStickerBoardModal({ visible, board, onSave, onClose }: EditStickerBoardModalProps) {
+export function EditStickerBoardModal({ visible, board, mode = 'edit', onSave, onClose }: EditStickerBoardModalProps) {
   const [title, setTitle] = useState('');
   const [stickerCount, setStickerCount] = useState('');
   const [boardDesign, setBoardDesign] = useState('');
@@ -24,10 +24,17 @@ export function EditStickerBoardModal({ visible, board, onSave, onClose }: EditS
 
   useEffect(() => {
     if (visible) {
-      setTitle(board.title);
-      setStickerCount(board.stickerCount.replace(/[^0-9]/g, ''));
-      setBoardDesign(board.boardDesign);
-      setRewardText(board.rewardText);
+      if (board) {
+        setTitle(board.title);
+        setStickerCount(board.stickerCount.replace(/[^0-9]/g, ''));
+        setBoardDesign(board.boardDesign);
+        setRewardText(board.rewardText);
+      } else {
+        setTitle('');
+        setStickerCount('');
+        setBoardDesign('');
+        setRewardText('');
+      }
     }
   }, [visible, board]);
 
@@ -37,13 +44,7 @@ export function EditStickerBoardModal({ visible, board, onSave, onClose }: EditS
       return;
     }
 
-    const count = parseInt(stickerCount, 10);
-    if (isNaN(count) || count <= 0) {
-      Alert.alert('알림', '스티커 개수를 올바르게 입력해주세요.');
-      return;
-    }
-
-    onSave(title.trim(), `${count}개`, boardDesign, rewardText.trim());
+    onSave(title.trim(), stickerCount, boardDesign, rewardText.trim());
   };
 
   return (
@@ -51,7 +52,7 @@ export function EditStickerBoardModal({ visible, board, onSave, onClose }: EditS
       <View style={todagiStyles.modalOverlay}>
         <Pressable style={todagiStyles.modalBackdrop} onPress={onClose} />
         <View style={[todagiStyles.modalContent, styles.content]}>
-          <Text weight="bold" style={todagiStyles.modalTitle}>스티커판 수정</Text>
+          <Text weight="bold" style={todagiStyles.modalTitle}>{mode === 'create' ? '스티커판 만들기' : '스티커판 수정'}</Text>
 
           <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll}>
             <View style={styles.fields}>
@@ -67,18 +68,30 @@ export function EditStickerBoardModal({ visible, board, onSave, onClose }: EditS
 
               <View style={styles.field}>
                 <Text style={styles.label}>스티커 개수</Text>
-                <TextInput
-                  value={stickerCount}
-                  onChangeText={setStickerCount}
-                  placeholder="예: 20"
-                  style={styles.input}
-                />
+                <View style={styles.designRow}>
+                  {STICKER_COUNT_OPTIONS.map((count) => (
+                    <Pressable
+                      key={count}
+                      style={[styles.designChip, stickerCount === count && styles.designChipSelected]}
+                      onPress={() => setStickerCount(count)}
+                    >
+                      <Text
+                        style={[
+                          styles.designChipText,
+                          stickerCount === count && styles.designChipTextSelected,
+                        ]}
+                      >
+                        {count}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
               </View>
 
               <View style={styles.field}>
                 <Text style={styles.label}>판 디자인</Text>
                 <View style={styles.designRow}>
-                  {BOARD_DESIGNS.map((design) => (
+                  {BOARD_DESIGN_OPTIONS.map((design) => (
                     <Pressable
                       key={design}
                       style={[styles.designChip, boardDesign === design && styles.designChipSelected]}
@@ -109,7 +122,7 @@ export function EditStickerBoardModal({ visible, board, onSave, onClose }: EditS
               <Text style={styles.cancelText}>취소</Text>
             </Pressable>
             <Pressable style={[styles.button, styles.saveButton]} onPress={handleSave}>
-              <Text weight="bold" style={styles.saveText}>저장</Text>
+              <Text weight="bold" style={styles.saveText}>{mode === 'create' ? '다음' : '저장'}</Text>
             </Pressable>
           </View>
         </View>
