@@ -17,15 +17,12 @@ import { StickerInfoCard } from '@/components/growth/StickerInfoCard';
 import { fontFamily } from '@/constants/fonts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGrowth } from '@/contexts/GrowthContext';
+import { getDefaultTreeMissions } from '@/features/growth/data';
+import { type TreeMission } from '@/features/growth/mockData';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-interface Mission {
-  id: string;
-  emoji: string;
-  title: string;
-  completed: boolean;
-}
+type Mission = TreeMission;
 
 interface StickerInfo {
   placedAt: Date;
@@ -40,17 +37,7 @@ interface TreeProps {
   onRequestSticker?: () => void;
 }
 
-const DEFAULT_MISSIONS: Mission[] = [
-  { id: 'm1', emoji: '🧹', title: '방 청소하기', completed: false },
-  { id: 'm2', emoji: '✏️', title: '숙제 스스로 하기', completed: false },
-  { id: 'm3', emoji: '⏰', title: '일찍 일어나기', completed: false },
-  { id: 'm4', emoji: '🥦', title: '채소 다 먹기', completed: false },
-  { id: 'm5', emoji: '🤝', title: '동생이랑 사이좋게 지내기', completed: false },
-  { id: 'm6', emoji: '📚', title: '책 읽기', completed: false },
-  { id: 'm7', emoji: '🧼', title: '손 씻기', completed: false },
-  { id: 'm8', emoji: '🎹', title: '피아노 연습하기', completed: false },
-  { id: 'm9', emoji: '💤', title: '낮잠 안 자기', completed: false },
-];
+const DEFAULT_MISSIONS: Mission[] = getDefaultTreeMissions();
 
 const BG_COLOR = '#FFF9EE';
 const BLUE_TEXT = '#4C84FF';

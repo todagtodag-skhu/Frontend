@@ -17,6 +17,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import GiftCard from '@/components/growth/GiftCard';
 import { StickerGridBoard, type GridCell } from '@/components/growth/StickerGridBoard';
 import { fontFamily } from '@/constants/fonts';
+import { getCompletedStickerBoards } from '@/features/growth/data';
+import { type CompletedStickerBoard } from '@/features/growth/mockData';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -25,14 +27,6 @@ const CAROUSEL_GAP = 19;
 const BOARD_WIDTH = Math.min(SCREEN_WIDTH - 44, 320);
 const BOARD_HEIGHT = BOARD_WIDTH * 1.08;
 const BOARD_COLS = 5;
-
-type StickerBoard = {
-  id: string;
-  title: string;
-  reward: string;
-  boardDesign: string;
-  stickers: string[];
-};
 
 type PreviewStickerInfo = {
   placedAt: Date;
@@ -45,31 +39,9 @@ type PreviewStickerInfo = {
   stickerIdx: number;
 };
 
-const COMPLETED_BOARDS: StickerBoard[] = [
-  {
-    id: 'board-1',
-    title: '유진이의 성장나무',
-    reward: '닌텐도 스위치',
-    boardDesign: '우주 탐험',
-    stickers: ['❤', '🦷', '❤', '❤', '❤', '❤', '❤', '🦷', '🦷', '🦷', '❤', '❤', '❤', '❤', '❤', '☺', '🦷', '❤', '❤', '❤'],
-  },
-  {
-    id: 'board-2',
-    title: '유진이의 책 읽기판',
-    reward: '새 그림책',
-    boardDesign: '성장 나무',
-    stickers: ['📚', '⭐', '📚', '⭐', '📚', '📚', '⭐', '📚', '⭐', '📚', '📚', '📚', '⭐', '📚', '⭐', '📚', '⭐', '📚', '📚', '⭐'],
-  },
-  {
-    id: 'board-3',
-    title: '유진이의 정리판',
-    reward: '키즈카페 가기',
-    boardDesign: '바다 여행',
-    stickers: ['🧸', '🧸', '✨', '🧸', '✨', '🧸', '✨', '🧸', '🧸', '✨', '🧸', '🧸', '✨', '🧸', '✨', '🧸', '✨', '🧸', '🧸', '✨'],
-  },
-];
+const COMPLETED_BOARDS = getCompletedStickerBoards();
 
-function CompletedBoardCarouselCard({ board }: { board: StickerBoard }) {
+function CompletedBoardCarouselCard({ board }: { board: CompletedStickerBoard }) {
   const scaleAnimsRef = useRef<Record<number, Animated.Value>>({});
 
   const gridCells: GridCell[] = useMemo(

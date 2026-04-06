@@ -1,6 +1,7 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 
 import { Mission, StickerBoard, ChildProfile } from '@/components/todagi/types';
+import { getGrowthSeedData, getStickerBoardDefaultMissions } from '@/features/growth/data';
 
 type AddChildInput = {
   inviteCode: string;
@@ -34,104 +35,15 @@ type GrowthContextValue = {
   getBoardsByChildId: (childId?: string) => StickerBoard[];
 };
 
-const initialChildren: ChildProfile[] = [
-  {
-    id: 'child-1',
-    inviteCode: '123456',
-    name: '유지니유진',
-    birthday: '2020.03.04',
-  },
-  {
-    id: 'child-2',
-    inviteCode: '234567',
-    name: '우럭이우럭',
-    birthday: '2019.10.12',
-  },
-  {
-    id: 'child-3',
-    inviteCode: '345678',
-    name: '시어니시연',
-    birthday: '2021.01.08',
-  },
-];
-
-const initialStickerBoards: StickerBoard[] = [
-  {
-    id: 'board-1',
-    childId: 'child-1',
-    title: '유지니유진의 성장나무',
-    stickerCount: '20개',
-    boardDesign: '성장 나무',
-    rewardText: '주말에 키즈카페 가기',
-    missions: [
-      {
-        id: 'mission-1',
-        emoji: '🪥',
-        title: '양치하기',
-        days: '월,화,수,목,금',
-        frequency: '하루 2회',
-      },
-      {
-        id: 'mission-1-1',
-        emoji: '🪥',
-        title: '밥먹기',
-        days: '월,화,수,목,금',
-        frequency: '하루 2회',
-      },
-      {
-        id: 'mission-1-2',
-        emoji: '🪥',
-        title: '청소하기',
-        days: '월,화,수,목,금',
-        frequency: '하루 2회',
-      },
-    ],
-  },
-  {
-    id: 'board-2',
-    childId: 'child-1',
-    title: '유지니유진의 책 읽기판',
-    stickerCount: '30개',
-    boardDesign: '우주 탐험',
-    rewardText: '새 그림책 고르기',
-    missions: [
-      {
-        id: 'mission-2',
-        emoji: '📚',
-        title: '책 읽기',
-        days: '월,수,금',
-        frequency: '하루 1회',
-      },
-    ],
-  },
-  {
-    id: 'board-3',
-    childId: 'child-2',
-    title: '우럭이우럭의 정리정돈판',
-    stickerCount: '20개',
-    boardDesign: '바다 여행',
-    rewardText: '좋아하는 간식 먹기',
-    missions: [
-      {
-        id: 'mission-3',
-        emoji: '🧸',
-        title: '장난감 정리',
-        days: '월,화,수,목,금',
-        frequency: '하루 1회',
-      },
-    ],
-  },
-];
-
-const BOARD_1_DEFAULT_MISSIONS: Mission[] =
-  initialStickerBoards.find((board) => board.id === 'board-1')?.missions ?? [];
+const initialGrowthData = getGrowthSeedData();
+const BOARD_1_DEFAULT_MISSIONS: Mission[] = getStickerBoardDefaultMissions('board-1');
 
 const GrowthContext = createContext<GrowthContextValue | null>(null);
 
 export function GrowthProvider({ children }: { children: ReactNode }) {
-  const [childProfiles, setChildProfiles] = useState<ChildProfile[]>(initialChildren);
-  const [boards, setBoards] = useState<StickerBoard[]>(initialStickerBoards);
-  const [activeBoardId, setActiveBoardId] = useState<string | undefined>(initialStickerBoards[0]?.id);
+  const [childProfiles, setChildProfiles] = useState<ChildProfile[]>(initialGrowthData.children);
+  const [boards, setBoards] = useState<StickerBoard[]>(initialGrowthData.stickerBoards);
+  const [activeBoardId, setActiveBoardId] = useState<string | undefined>(initialGrowthData.activeBoardId);
 
   useEffect(() => {
     setBoards((prev) =>
