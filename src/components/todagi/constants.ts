@@ -1,11 +1,9 @@
-export const STICKER_COUNT_OPTIONS = ['10개', '20개', '30개', '40개', '50개'];
+export const STICKER_COUNT_OPTIONS = ['20개', '30개', '50개'];
 
 export const BOARD_DESIGN_OPTIONS = [
-  '성장 나무',
-  '우주 탐험',
-  '바다 여행',
-  '꽃 정원',
-  '동물 친구',
+  '호랑이',
+  '고양이',
+  '래서판다',
 ];
 
 export const DAY_OPTIONS = ['월', '화', '수', '목', '금', '토', '일'];

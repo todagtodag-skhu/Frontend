@@ -8,7 +8,7 @@ import {
   growthMockStickerBoards,
   type CompletedStickerBoard,
   type TreeMission,
-} from './mockData';
+} from '@/mocks/growth';
 
 type GrowthSeedData = {
   children: ChildProfile[];

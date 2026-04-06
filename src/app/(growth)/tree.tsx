@@ -18,7 +18,7 @@ import { fontFamily } from '@/constants/fonts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGrowth } from '@/contexts/GrowthContext';
 import { getDefaultTreeMissions } from '@/features/growth/data';
-import { type TreeMission } from '@/features/growth/mockData';
+import { type TreeMission } from '@/mocks/growth';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -41,9 +41,6 @@ const DEFAULT_MISSIONS: Mission[] = getDefaultTreeMissions();
 
 const BG_COLOR = '#FFF9EE';
 const BLUE_TEXT = '#4C84FF';
-const DOT_ACTIVE = '#E9C784';
-const DOT_INACTIVE = '#DFDFDF';
-
 const BOARD_WIDTH = Math.min(SCREEN_WIDTH - 44, 320);
 const BOARD_HEIGHT = BOARD_WIDTH * 1.08;
 const STICKERS_PER_PAGE = 4;
@@ -380,19 +377,6 @@ export default function GrowthTree({
           붙일 수 있는 스티커를 {placedCount}개 가지고 있어요!
         </Text>
 
-        {totalPages > 1 ? (
-          <View style={styles.stickerPageDotContainer}>
-            {Array.from({ length: totalPages }).map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.stickerPageDot,
-                  index === stickerPage && styles.stickerPageDotActive,
-                ]}
-              />
-            ))}
-          </View>
-        ) : null}
       </View>
 
       {draggingStickerIdx !== null && dragPos && (
@@ -486,28 +470,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 18,
   },
-  stickerPageDotContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 14,
-  },
   stickerCountText: {
     marginTop: 10,
     textAlign: 'center',
     fontSize: 16,
     color: BLUE_TEXT,
     fontFamily: fontFamily?.bold || 'System',
-  },
-  stickerPageDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: DOT_INACTIVE,
-  },
-  stickerPageDotActive: {
-    backgroundColor: DOT_ACTIVE,
   },
 
   arrowBtn: {

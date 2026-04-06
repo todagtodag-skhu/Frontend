@@ -13,6 +13,7 @@ type CalendarModalProps = {
   title: string;
   onConfirm: (value: string) => void;
   onClose: () => void;
+  useModal?: boolean;
 };
 
 function formatDate(date: Date) {
@@ -61,6 +62,7 @@ export function CalendarModal({
   title,
   onConfirm,
   onClose,
+  useModal = true,
 }: CalendarModalProps) {
   const today = useMemo(() => new Date(), []);
   const [selectedDate, setSelectedDate] = useState<Date | null>(parseDate(value) ?? today);
@@ -91,49 +93,62 @@ export function CalendarModal({
     onClose();
   };
 
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={todagiStyles.modalOverlay}>
-        <Pressable style={todagiStyles.modalBackdrop} onPress={onClose} />
-        <View style={[todagiStyles.modalContent, styles.modalContent]}>
-          <Text style={todagiStyles.modalTitle}>{title}</Text>
+  if (!visible) {
+    return null;
+  }
 
-          <Text weight="bold" style={styles.monthLabel}>
-            {getMonthLabel(selectedDate ?? today)}
-          </Text>
+  const content = (
+    <View style={todagiStyles.modalOverlay}>
+      <Pressable style={todagiStyles.modalBackdrop} onPress={onClose} />
+      <View style={[todagiStyles.modalContent, styles.modalContent]}>
+        <Text style={todagiStyles.modalTitle}>{title}</Text>
 
-          <View style={styles.pickerWrap}>
-            <DateTimePicker
-              value={selectedDate ?? today}
-              mode="date"
-              display="spinner"
-              locale="ko-KR"
-              maximumDate={today}
-              onChange={handleChange}
-              style={styles.picker}
-            />
-          </View>
+        <Text weight="bold" style={styles.monthLabel}>
+          {getMonthLabel(selectedDate ?? today)}
+        </Text>
 
-          <Text style={styles.selectedDateText}>
-            선택한 날짜 {selectedDate ? formatDate(selectedDate) : '-'}
-          </Text>
+        <View style={styles.pickerWrap}>
+          <DateTimePicker
+            value={selectedDate ?? today}
+            mode="date"
+            display="spinner"
+            locale="ko-KR"
+            maximumDate={today}
+            onChange={handleChange}
+            style={styles.picker}
+          />
+        </View>
 
-          <View style={styles.buttonRow}>
-            <Pressable style={styles.secondaryButton} onPress={onClose}>
-              <Text style={styles.secondaryButtonText}>취소</Text>
-            </Pressable>
-            <Pressable style={styles.primaryButton} onPress={handleConfirm}>
-              <Text style={styles.primaryButtonText}>선택</Text>
-            </Pressable>
-          </View>
+        <Text style={styles.selectedDateText}>
+          선택한 날짜 {selectedDate ? formatDate(selectedDate) : '-'}
+        </Text>
+
+        <View style={styles.buttonRow}>
+          <Pressable style={styles.secondaryButton} onPress={onClose}>
+            <Text style={styles.secondaryButtonText}>취소</Text>
+          </Pressable>
+          <Pressable style={styles.primaryButton} onPress={handleConfirm}>
+            <Text style={styles.primaryButtonText}>선택</Text>
+          </Pressable>
         </View>
       </View>
+    </View>
+  );
+
+  if (!useModal) {
+    return content;
+  }
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      {content}
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   modalContent: {
+    zIndex: 10,
     width: '88%',
     gap: 12,
   },

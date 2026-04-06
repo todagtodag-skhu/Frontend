@@ -110,9 +110,10 @@ export const todagiStyles = StyleSheet.create({
     marginTop: 0,
   },
   modalOverlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -205,5 +206,25 @@ export const todagiStyles = StyleSheet.create({
   addMissionButton: {
     backgroundColor: colors.primary[800],
     marginTop: 0,
+  },
+  cancelButton: {
+    fontSize: 16,
+    color: colors.grayscale[700],
+  },
+  missionTip: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#C47F17',
+  },
+  editingCaption: {
+    fontSize: 14,
+    color: colors.grayscale[700],
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
+  missionManageTip: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#FF7A00',
   },
 });
