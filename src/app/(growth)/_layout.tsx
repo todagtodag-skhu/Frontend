@@ -1,3 +1,4 @@
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
 import { colors } from '@/constants/colors';
@@ -25,25 +26,47 @@ export default function GrowthTabsLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 13,
+          fontFamily: fontFamily.bold,
         },
       }}
     >
       <Tabs.Screen
         name="tree"
         options={{
-          title: '성장나무',
+          title: '스티커판',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? 'grid' : 'grid-outline'}
+              size={size}
+              color={color}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="MissionHome"
         options={{
           title: '미션 목록',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? 'list' : 'list-outline'}
+              size={size}
+              color={color}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="MemoryStorage"
         options={{
           title: '완성된 스티커 판',
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'crown' : 'crown-outline'}
+              size={size}
+              color={color}
+            />
+          ),
         }}
       />
     </Tabs>
