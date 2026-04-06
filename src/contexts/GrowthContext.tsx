@@ -19,32 +19,37 @@ type AddStickerBoardInput = {
   missions: Mission[];
 };
 
-type GrowthContextValue = {
+export type GrowthContextValue = {
   children: ChildProfile[];
   stickerBoards: StickerBoard[];
+  activeBoardId?: string;
+  activeStickerBoard?: StickerBoard;
   addChild: (input: AddChildInput) => Promise<string>;
   updateChild: (childId: string, input: AddChildInput) => Promise<void>;
   deleteChild: (childId: string) => Promise<void>;
   addStickerBoard: (input: AddStickerBoardInput) => Promise<string>;
   updateStickerBoard: (boardId: string, input: AddStickerBoardInput) => Promise<void>;
   deleteStickerBoard: (boardId: string) => Promise<void>;
+  setActiveBoardId: (boardId?: string) => void;
   getChildById: (childId?: string) => ChildProfile | undefined;
   getBoardById: (boardId?: string) => StickerBoard | undefined;
   getBoardByChildId: (childId?: string) => StickerBoard | undefined;
   getBoardsByChildId: (childId?: string) => StickerBoard[];
 };
 
-const GrowthContext = createContext<GrowthContextValue | null>(null);
+const GrowthContext = createContext<GrowthContextValue | undefined>(undefined);
 
 export function GrowthProvider({ children }: { children: ReactNode }) {
   const [childProfiles, setChildProfiles] = useState<ChildProfile[]>([]);
   const [boards, setBoards] = useState<StickerBoard[]>([]);
+  const [activeBoardId, setActiveBoardId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     Promise.all([childrenApi.getChildren(), stickerBoardApi.getStickerBoards()]).then(
       ([fetchedChildren, fetchedBoards]) => {
         setChildProfiles(fetchedChildren);
         setBoards(fetchedBoards);
+        setActiveBoardId((prev) => prev ?? fetchedBoards[0]?.id);
       }
     );
   }, []);
@@ -52,6 +57,8 @@ export function GrowthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<GrowthContextValue>(() => ({
     children: childProfiles,
     stickerBoards: boards,
+    activeBoardId,
+    activeStickerBoard: boards.find((board) => board.id === activeBoardId) ?? boards[0],
     addChild: async (input) => {
       const newChild = await childrenApi.createChild(input);
       setChildProfiles((prev) => [...prev, newChild]);
@@ -71,6 +78,7 @@ export function GrowthProvider({ children }: { children: ReactNode }) {
     addStickerBoard: async (input) => {
       const newBoard = await stickerBoardApi.createStickerBoard(input);
       setBoards((prev) => [...prev, newBoard]);
+      setActiveBoardId(newBoard.id);
       return newBoard.id;
     },
     updateStickerBoard: async (boardId, input) => {
@@ -78,21 +86,31 @@ export function GrowthProvider({ children }: { children: ReactNode }) {
       setBoards((prev) =>
         prev.map((board) => (board.id === boardId ? updated : board))
       );
+      setActiveBoardId(boardId);
     },
     deleteStickerBoard: async (boardId) => {
       await stickerBoardApi.deleteStickerBoard(boardId);
-      setBoards((prev) => prev.filter((board) => board.id !== boardId));
+      setBoards((prev) => {
+        const nextBoards = prev.filter((board) => board.id !== boardId);
+
+        if (activeBoardId === boardId) {
+          setActiveBoardId(nextBoards[0]?.id);
+        }
+
+        return nextBoards;
+      });
     },
+    setActiveBoardId,
     getChildById: (childId) => childProfiles.find((child) => child.id === childId),
     getBoardById: (boardId) => boards.find((board) => board.id === boardId),
     getBoardByChildId: (childId) => boards.find((board) => board.childId === childId),
     getBoardsByChildId: (childId) => boards.filter((board) => board.childId === childId),
-  }), [boards, childProfiles]);
+  }), [activeBoardId, boards, childProfiles]);
 
   return <GrowthContext.Provider value={value}>{children}</GrowthContext.Provider>;
 }
 
-export function useGrowth() {
+export function useGrowth(): GrowthContextValue {
   const context = useContext(GrowthContext);
 
   if (!context) {

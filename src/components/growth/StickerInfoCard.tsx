@@ -1,54 +1,38 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { fontFamily } from '@/constants/fonts';
 
 type StickerInfoCardProps = {
+  missionEmoji: string;
   missionTitle: string;
-  placedAtLabel: string;
-  onDelete: () => void;
+  onConfirm: () => void;
 };
 
-const STICKER_ICON_COLOR = '#FF3B30';
-const STICKER_ICON_NAME = 'food-apple';
-const STICKER_ICON_SIZE = 44;
 const STICKER_ICON_OUTLINE_SIZE = 44;
 
-function StickerIcon() {
+function StickerIcon({ emoji }: { emoji?: string }) {
   return (
     <View style={styles.stickerIconWrap}>
-      <MaterialCommunityIcons
-        name={STICKER_ICON_NAME}
-        size={STICKER_ICON_OUTLINE_SIZE}
-        color="#FFFFFF"
-        style={styles.stickerIconOutline}
-      />
-      <MaterialCommunityIcons
-        name={STICKER_ICON_NAME}
-        size={STICKER_ICON_SIZE}
-        color={STICKER_ICON_COLOR}
-      />
+      <View style={styles.iconBackground} />
+      {emoji ? <Text style={styles.stickerEmoji}>{emoji}</Text> : null}
     </View>
   );
 }
 
 export function StickerInfoCard({
+  missionEmoji,
   missionTitle,
-  placedAtLabel,
-  onDelete,
+  onConfirm,
 }: StickerInfoCardProps) {
   return (
     <View style={styles.card}>
-      <Pressable style={styles.deleteButton} onPress={onDelete} hitSlop={8}>
-        <Text style={styles.deleteButtonText}>삭제</Text>
-      </Pressable>
-
       <View style={styles.iconWrap}>
-        <StickerIcon />
+        <StickerIcon emoji={missionEmoji} />
       </View>
       <Text style={styles.mission}>{missionTitle}</Text>
-      <Text style={styles.date}>{placedAtLabel}</Text>
-      <Text style={styles.closeHint}>바깥 영역을 탭해서 닫기</Text>
+      <Pressable style={styles.confirmButton} onPress={onConfirm}>
+        <Text style={styles.confirmButtonText}>확인</Text>
+      </Pressable>
     </View>
   );
 }
@@ -56,37 +40,22 @@ export function StickerInfoCard({
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 22,
-    paddingTop: 24,
-    paddingRight: 28,
-    paddingBottom: 28,
-    paddingLeft: 28,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: '#F7D38B',
+    paddingTop: 22,
+    paddingRight: 16,
+    paddingBottom: 14,
+    paddingLeft: 16,
     alignItems: 'center',
     position: 'relative',
-  },
-  deleteButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 44,
-    height: 24,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F7F2EA',
-  },
-  deleteButtonText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#8F7B63',
-    fontFamily: fontFamily.bold,
   },
   iconWrap: {
     width: 58,
     height: 58,
     borderRadius: 29,
-    marginBottom: 2,
+    marginBottom: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -96,25 +65,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stickerIconOutline: {
-    position: 'absolute',
+  iconBackground: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 1,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  stickerEmoji: {
+    fontSize: 24,
+    lineHeight: 26,
   },
   mission: {
-    fontSize: 18,
+    fontSize: 17,
+    lineHeight: 24,
     fontFamily: fontFamily.bold,
-    color: '#222',
-    marginBottom: 6,
+    color: '#3A2C1B',
+    marginBottom: 14,
     textAlign: 'center',
   },
-  date: {
-    fontSize: 15,
-    fontFamily: fontFamily.bold,
-    color: '#888',
-    marginBottom: 14,
+  confirmButton: {
+    width: '100%',
+    borderRadius: 8,
+    backgroundColor: '#FFF2CF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
   },
-  closeHint: {
-    fontSize: 14,
+  confirmButtonText: {
+    fontSize: 18,
     fontFamily: fontFamily.bold,
-    color: '#AAA',
+    color: '#1A1A1A',
   },
 });

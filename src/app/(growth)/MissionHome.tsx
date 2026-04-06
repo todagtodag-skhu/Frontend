@@ -4,22 +4,30 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
   PanResponder,
+  Modal,
+  Pressable,
+  TouchableOpacity,
 } from 'react-native';
 import { router } from 'expo-router';
 import MissionCard from '@/components/growth/Missionlist';
+import { StickerRequestButton } from '@/components/growth/StickerRequestButton';
 import { fontFamily } from '@/constants/fonts';
 import { colors } from '@/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useGrowth } from '@/contexts/GrowthContext';
+import { Mission } from '@/components/todagi/types';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PROGRESS_TOTAL = 20;
 
 const MissionListScreen: React.FC = () => {
-  const { stickerBoards } = useGrowth();
-  const activeBoard = stickerBoards[0];
-  const [likedMissionIds, setLikedMissionIds] = useState<string[]>([]);
+  const { activeStickerBoard } = useGrowth();
+  const activeBoard = activeStickerBoard;
+  const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
+  const [selectedMissionId, setSelectedMissionId] = useState<string | null>(null);
+  const [showSelectMissionNotice, setShowSelectMissionNotice] = useState(false);
+  const [showRequestCompleteNotice, setShowRequestCompleteNotice] = useState(false);
 
   const swipeResponder = useMemo(
     () =>
@@ -40,13 +48,46 @@ const MissionListScreen: React.FC = () => {
     [],
   );
 
-  const toggleMissionHeart = (missionId: string) => {
-    setLikedMissionIds((prev) =>
-      prev.includes(missionId)
-        ? prev.filter((id) => id !== missionId)
-        : [...prev, missionId],
-    );
+  const handleManageOpen = (mission: Mission) => {
+    setSelectedMission(mission);
   };
+
+  const handleManageClose = () => {
+    setSelectedMission(null);
+  };
+
+  const handleMissionPress = (missionId: string) => {
+    setSelectedMissionId((prev) => (prev === missionId ? null : missionId));
+  };
+
+  const handleStickerRequestConfirm = () => {
+    if (!selectedMissionId) {
+      setSelectedMission(null);
+      setShowSelectMissionNotice(true);
+      return;
+    }
+
+    setSelectedMission(null);
+    setShowRequestCompleteNotice(true);
+  };
+
+  const handleRequestStickerPress = () => {
+    if (!activeBoard?.missions.length) {
+      return;
+    }
+
+    if (!selectedMissionId) {
+      setShowSelectMissionNotice(true);
+      return;
+    }
+
+    const missionToOpen =
+      activeBoard.missions.find((mission) => mission.id === selectedMissionId) ?? activeBoard.missions[0];
+
+    setSelectedMission(missionToOpen);
+  };
+
+  const hasMissions = Boolean(activeBoard?.missions.length);
 
   return (
     <SafeAreaView style={styles.safe} {...swipeResponder.panHandlers}>
@@ -55,37 +96,107 @@ const MissionListScreen: React.FC = () => {
           {activeBoard ? `${activeBoard.title} 미션 목록` : '유진이의 미션 목록'}
         </Text>
 
+        <Text style={styles.headerGuide}>
+          아래 미션을 하고, 칭찬 스티커를 열심히 모아요!
+        </Text>
+
+        <Text style={styles.progressText}>
+          완성까지 0/{PROGRESS_TOTAL} 개
+        </Text>
+
         <View style={styles.page}>
-          <View style={styles.heroCard}>
-            <Ionicons name="heart" size={24} color="red" style={styles.heroEmoji} />
-            <View style={{ flex: 1 }} />
-            <Ionicons name="heart" size={24} color="red" style={styles.heroEmoji} />
-          </View>
+          {hasMissions ? (
+            <>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.missionList}
+              >
+                {activeBoard?.missions.map((mission) => (
+                  <MissionCard
+                    key={mission.id}
+                    emoji={mission.emoji}
+                    title={mission.title}
+                    frequency={mission.frequency}
+                    reward={activeBoard.rewardText || '스티커 1개'}
+                    isSelected={selectedMissionId === mission.id}
+                    onPress={() => handleMissionPress(mission.id)}
+                    onManagePress={() => handleManageOpen(mission)}
+                  />
+                ))}
+              </ScrollView>
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.missionList}
-          >
-            {activeBoard?.missions.map((mission) => (
-              <MissionCard
-                key={mission.id}
-                title={mission.title}
-                frequency={mission.frequency}
-                reward={activeBoard.rewardText || '스티커 1개'}
-                isHeartFilled={likedMissionIds.includes(mission.id)}
-                onHeartPress={() => toggleMissionHeart(mission.id)}
-              />
-            ))}
-            {!activeBoard?.missions.length ? (
-              <Text style={styles.emptyText}>등록된 미션이 아직 없어요.</Text>
-            ) : null}
-          </ScrollView>
-
-          <Text style={styles.progressText}>
-            성장나무 완성까지 {likedMissionIds.length}/{PROGRESS_TOTAL} 개
-          </Text>
+              <TouchableOpacity
+                style={styles.requestButton}
+                onPress={handleRequestStickerPress}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.requestButtonText}>스티커 주세요</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={styles.emptyStateCard}>
+              <Text style={styles.emptyStateTitle}>진행중인 미션이 없어요.</Text>
+              <Text style={styles.emptyStateBody}>
+                토닥이 에게 "미션 만들어주세요"{'\n'}이야기 해보는건 어떨까요?
+              </Text>
+            </View>
+          )}
         </View>
+
       </View>
+
+      <Modal visible={selectedMission !== null} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={handleManageClose} />
+          <Pressable onPress={(event) => event.stopPropagation()} style={styles.modalContent}>
+            {selectedMission ? (
+              <StickerRequestButton
+                missionTitle={selectedMission.title}
+                onConfirm={handleStickerRequestConfirm}
+                onCancel={handleManageClose}
+              />
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal visible={showSelectMissionNotice} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowSelectMissionNotice(false)} />
+          <Pressable onPress={(event) => event.stopPropagation()} style={styles.modalContent}>
+            <Text style={styles.modalDescription}>
+              먼저 완료한 미션을 선택하고 {'\n'}스티커를 요청해 주세요!
+            </Text>
+
+            <TouchableOpacity
+              style={styles.modalConfirmButton}
+              onPress={() => setShowSelectMissionNotice(false)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.modalConfirmButtonText}>네</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal visible={showRequestCompleteNotice} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowRequestCompleteNotice(false)} />
+          <Pressable onPress={(event) => event.stopPropagation()} style={styles.modalContent}>
+            <Text style={styles.modalDescription}>
+              요청 완료!{'\n'}부모님께 스티커 요청을 보냈어요.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.modalConfirmButton}
+              onPress={() => setShowRequestCompleteNotice(false)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.modalConfirmButtonText}>네</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -106,11 +217,20 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     textAlign: 'center',
     paddingTop: 36,
-    paddingBottom: 32,
+    paddingBottom: 12,
+  },
+  headerGuide: {
+    textAlign: 'center',
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#5C8DFF',
+    fontFamily: fontFamily.bold,
+    marginBottom: 2,
   },
   page: {
     paddingHorizontal: 20,
     flex: 1,
+    paddingTop: 28,
   },
   heroCard: {
     flexDirection: 'row',
@@ -142,10 +262,88 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     color: '#3578FF',
     marginTop: 0,
-    marginBottom: 50,
+    marginBottom: 0,
   },
   progressHighlight: {
     color: '#4DA8E0',
+    fontFamily: fontFamily.bold,
+  },
+  requestButton: {
+    alignSelf: 'center',
+    backgroundColor: '#E7DDCD',
+    borderRadius: 999,
+    paddingHorizontal: 20,
+    paddingVertical: 11,
+    borderWidth: 1,
+    borderColor: '#D7C9B2',
+    marginBottom: 42,
+  },
+  requestButtonText: {
+    fontSize: 17,
+    fontFamily: fontFamily.bold,
+    color: '#6C523C',
+  },
+  emptyStateCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  emptyStateTitle: {
+    fontSize: 22,
+    lineHeight: 28,
+    color: '#1F1A17',
+    fontFamily: fontFamily.bold,
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  emptyStateBody: {
+    fontSize: 18,
+    lineHeight: 28,
+    color: '#1F1A17',
+    fontFamily: fontFamily.bold,
+    textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  modalContent: {
+    backgroundColor: colors.grayscale[100],
+    borderRadius: 16,
+    padding: 24,
+    paddingTop: 40,
+    width: '80%',
+    gap: 8,
+  },
+  modalDescription: {
+    fontSize: 18,
+    color: colors.grayscale[700],
+    fontFamily: fontFamily.bold,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  modalConfirmButton: {
+    flex: 0,
+    width: '100%',
+    marginTop: 17,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: colors.grayscale[200],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalConfirmButtonText: {
+    fontSize: 18,
+    color: colors.grayscale[1000],
     fontFamily: fontFamily.bold,
   },
 });

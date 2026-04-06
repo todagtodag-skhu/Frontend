@@ -43,7 +43,7 @@ export default function GrowthTabsLayout() {
       <Tabs.Screen
         name="MemoryStorage"
         options={{
-          title: '추억 저장소',
+          title: '완성된 스티커 판',
         }}
       />
     </Tabs>
