@@ -18,7 +18,7 @@ import GiftCard from '@/components/growth/GiftCard';
 import { StickerGridBoard, type GridCell } from '@/components/growth/StickerGridBoard';
 import { fontFamily } from '@/constants/fonts';
 import { getCompletedStickerBoards } from '@/features/growth/data';
-import { type CompletedStickerBoard } from '@/mocks/growth';
+import { type CompletedStickerBoard } from '@/mocks/data';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
