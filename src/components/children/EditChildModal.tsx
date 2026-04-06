@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
+import { AppModal } from '@/components/common/AppModal';
+import { Button } from '@/components/common/Button';
 import { TextInput } from '@/components/common/TextInput';
-import { todagiStyles } from '@/components/todagi/styles';
 import { ChildProfile } from '@/components/todagi/types';
 import { Text } from '@/components/ui/Text';
 import { colors } from '@/constants/colors';
@@ -75,50 +76,47 @@ export function EditChildModal({ visible, child, onSave, onClose }: EditChildMod
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={todagiStyles.modalOverlay}>
-        <Pressable style={todagiStyles.modalBackdrop} onPress={onClose} />
-        <View style={[todagiStyles.modalContent, styles.content]}>
-          <Text weight="bold" style={todagiStyles.modalTitle}>성장이 정보 수정</Text>
+    <AppModal
+      visible={visible}
+      onClose={onClose}
+      title="성장이 정보 수정"
+      contentStyle={styles.content}
+      footer={
+        <View style={styles.actions}>
+          <Button title="취소" onPress={onClose} variant="secondary" size="sm" style={styles.button} />
+          <Button title="저장" onPress={handleSave} variant="chip" size="sm" style={styles.button} />
+        </View>
+      }
+    >
+      <View style={styles.field}>
+        <Text style={styles.label}>이름</Text>
+        <TextInput
+          value={name}
+          onChangeText={setName}
+          placeholder="성장이 이름"
+          align="left"
+          size="sm"
+          style={styles.input}
+        />
+      </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>이름</Text>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="성장이 이름"
-              style={styles.input}
+      <View style={styles.field}>
+        <Text style={styles.label}>생년월일</Text>
+        <View style={styles.birthdayField}>
+          <View style={styles.pickerWrap}>
+            <DateTimePicker
+              value={selectedBirthday}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'compact' : 'default'}
+              locale="ko-KR"
+              maximumDate={new Date()}
+              onChange={handleChangeBirthday}
+              style={styles.picker}
             />
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>생년월일</Text>
-            <View style={styles.birthdayField}>
-              <View style={styles.pickerWrap}>
-                <DateTimePicker
-                  value={selectedBirthday}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'compact' : 'default'}
-                  locale="ko-KR"
-                  maximumDate={new Date()}
-                  onChange={handleChangeBirthday}
-                  style={styles.picker}
-                />
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.actions}>
-            <Pressable style={[styles.button, styles.cancelButton]} onPress={onClose}>
-              <Text style={styles.cancelText}>취소</Text>
-            </Pressable>
-            <Pressable style={[styles.button, styles.saveButton]} onPress={handleSave}>
-              <Text weight="bold" style={styles.saveText}>저장</Text>
-            </Pressable>
           </View>
         </View>
       </View>
-    </Modal>
+    </AppModal>
   );
 }
 
@@ -161,25 +159,6 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: colors.grayscale[200],
-  },
-  saveButton: {
-    backgroundColor: '#FFF1CC',
-    borderWidth: 1.5,
-    borderColor: '#FFCF7D',
-  },
-  cancelText: {
-    fontSize: 15,
-    color: colors.grayscale[700],
-  },
-  saveText: {
-    fontSize: 15,
-    color: '#8B5E1A',
+    marginTop: 0,
   },
 });

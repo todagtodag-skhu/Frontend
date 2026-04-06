@@ -1,8 +1,9 @@
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import { TextInput } from '@/components/common/TextInput';
 import { Text } from '@/components/ui/Text';
+import { borderWidth } from '@/constants/borders';
 import { colors } from '@/constants/colors';
-import { fontFamily } from '@/constants/fonts';
 
 import { Mission } from './types';
 
@@ -40,6 +41,8 @@ export function MissionEditCard({
         </Pressable>
 
         <TextInput
+          align="left"
+          size="md"
           style={styles.titleInput}
           value={mission.title}
           onChangeText={(text) => onChangeTitle(text.slice(0, TITLE_MAX_LENGTH))}
@@ -48,20 +51,26 @@ export function MissionEditCard({
           maxLength={TITLE_MAX_LENGTH}
         />
 
-        <Pressable onPress={onDelete} hitSlop={8}>
-          <Text style={styles.deleteText}>✕</Text>
+        <Pressable style={styles.deleteButton} onPress={onDelete} hitSlop={8}>
+          <Text style={styles.deleteText}>삭제</Text>
         </Pressable>
       </View>
 
       <View style={styles.divider} />
 
       <View style={styles.stepperRow}>
-        <Text style={styles.stepperLabel}>달성 횟수</Text>
+        <View style={styles.stepperCopy}>
+          <Text weight="bold" style={styles.stepperLabel}>달성 횟수</Text>
+          <Text style={styles.stepperHint}>몇 번 수행하면 완료로 볼지 정해요.</Text>
+        </View>
         <Stepper value={completionCount} unit="회" min={COMPLETION_MIN} max={COMPLETION_MAX} onChange={onChangeCompletionCount} />
       </View>
 
       <View style={styles.stepperRow}>
-        <Text style={styles.stepperLabel}>스티커 개수</Text>
+        <View style={styles.stepperCopy}>
+          <Text weight="bold" style={styles.stepperLabel}>스티커 개수</Text>
+          <Text style={styles.stepperHint}>완료 시 줄 스티커 수량이에요.</Text>
+        </View>
         <Stepper value={stickerPerCompletion} unit="개" min={STICKER_MIN} max={STICKER_MAX} onChange={onChangeStickerPerCompletion} />
       </View>
     </View>
@@ -85,10 +94,12 @@ function Stepper({ value, unit, min, max, onChange }: StepperProps) {
         disabled={value <= min}
         hitSlop={6}
       >
-        <Text style={[styles.stepperBtnText, value <= min && styles.stepperBtnDisabled]}>−</Text>
+        <Text weight="bold" style={[styles.stepperBtnText, value <= min && styles.stepperBtnDisabled]}>−</Text>
       </Pressable>
 
-      <Text weight="bold" style={styles.stepperValue}>{value}{unit}</Text>
+      <View style={styles.stepperValueBox}>
+        <Text weight="bold" style={styles.stepperValue}>{value}{unit}</Text>
+      </View>
 
       <Pressable
         style={styles.stepperBtn}
@@ -96,7 +107,7 @@ function Stepper({ value, unit, min, max, onChange }: StepperProps) {
         disabled={value >= max}
         hitSlop={6}
       >
-        <Text style={[styles.stepperBtnText, value >= max && styles.stepperBtnDisabled]}>+</Text>
+        <Text weight="bold" style={[styles.stepperBtnText, value >= max && styles.stepperBtnDisabled]}>+</Text>
       </Pressable>
     </View>
   );
@@ -106,10 +117,10 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.grayscale[100],
     borderRadius: 16,
-    padding: 16,
-    gap: 14,
-    borderWidth: 1,
-    borderColor: '#EDE8E0',
+    padding: 18,
+    gap: 16,
+    borderWidth: borderWidth.hairline,
+    borderColor: '#EEE4D6',
   },
   titleRow: {
     flexDirection: 'row',
@@ -119,8 +130,10 @@ const styles = StyleSheet.create({
   emojiBox: {
     width: 48,
     height: 48,
-    borderRadius: 12,
-    backgroundColor: '#FFF3DA',
+    borderRadius: 14,
+    backgroundColor: colors.primary[700],
+    borderWidth: borderWidth.hairline,
+    borderColor: '#F0E3C6',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -129,54 +142,82 @@ const styles = StyleSheet.create({
   },
   titleInput: {
     flex: 1,
-    fontSize: 18,
-    color: colors.grayscale[1000],
-    paddingVertical: 0,
-    fontFamily: fontFamily.regular,
+    minHeight: 48,
+    paddingVertical: 12,
+  },
+  deleteButton: {
+    minHeight: 40,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#FDE8E8',
+    borderWidth: borderWidth.hairline,
+    borderColor: '#F4C6C6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   deleteText: {
-    fontSize: 16,
-    color: colors.grayscale[400],
+    fontSize: 13,
+    color: '#B54747',
   },
   divider: {
     height: 1,
-    backgroundColor: '#EDE8E0',
-    marginHorizontal: -20,
+    backgroundColor: '#EFE7DB',
+    marginHorizontal: -18,
   },
   stepperRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    gap: 12,
+  },
+  stepperCopy: {
+    flex: 1,
+    gap: 4,
   },
   stepperLabel: {
     fontSize: 15,
-    color: '#8A8278',
+    color: colors.grayscale[1000],
+  },
+  stepperHint: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.grayscale[600],
   },
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 10,
+    paddingVertical: 2,
   },
   stepperBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     backgroundColor: '#FFF3DA',
+    borderWidth: borderWidth.hairline,
+    borderColor: '#F2DFC1',
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepperBtnText: {
     fontSize: 16,
-    color: colors.grayscale[1000],
+    color: '#8B5E1A',
     lineHeight: 20,
   },
   stepperBtnDisabled: {
     color: colors.grayscale[300],
   },
+  stepperValueBox: {
+    minWidth: 58,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: colors.grayscale[200],
+    alignItems: 'center',
+  },
   stepperValue: {
     fontSize: 16,
     color: colors.grayscale[1000],
-    minWidth: 40,
     textAlign: 'center',
   },
 });

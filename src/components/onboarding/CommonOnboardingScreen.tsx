@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { SafeAreaView, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/common/Button';
+import { borderWidth } from '@/constants/borders';
 import { colors } from '@/constants/colors';
 
 type CommonOnboardingScreenProps = {
@@ -103,7 +104,7 @@ export const onboardingStyles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 10,
     backgroundColor: colors.grayscale[100],
-    borderWidth: 2,
+    borderWidth: borderWidth.emphasis,
     borderColor: '#F1E6D3',
     gap: 6,
   },
@@ -136,7 +137,7 @@ export const onboardingStyles = StyleSheet.create({
     paddingVertical: 28,
     paddingHorizontal: 20,
     backgroundColor: colors.grayscale[100],
-    borderWidth: 2,
+    borderWidth: borderWidth.emphasis,
     borderColor: '#F1E6D3',
     gap: 8,
     marginBottom: 18,
@@ -163,7 +164,7 @@ export const onboardingStyles = StyleSheet.create({
     borderRadius: 9,
     paddingVertical: 16,
     backgroundColor: colors.grayscale[100],
-    borderWidth: 1,
+    borderWidth: borderWidth.hairline,
     borderColor: '#F1E6D3',
   },
   shareButtonText: {

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
-import { Text } from '@/components/ui/Text';
+import { AppModal } from '@/components/common/AppModal';
+import { Button } from '@/components/common/Button';
 import { colors } from '@/constants/colors';
-
-import { todagiStyles } from './styles';
+import { Text } from '@/components/ui/Text';
 
 type CalendarModalProps = {
   visible: boolean;
@@ -97,52 +97,40 @@ export function CalendarModal({
     return null;
   }
 
-  const content = (
-    <View style={todagiStyles.modalOverlay}>
-      <Pressable style={todagiStyles.modalBackdrop} onPress={onClose} />
-      <View style={[todagiStyles.modalContent, styles.modalContent]}>
-        <Text style={todagiStyles.modalTitle}>{title}</Text>
-
-        <Text weight="bold" style={styles.monthLabel}>
-          {getMonthLabel(selectedDate ?? today)}
-        </Text>
-
-        <View style={styles.pickerWrap}>
-          <DateTimePicker
-            value={selectedDate ?? today}
-            mode="date"
-            display="spinner"
-            locale="ko-KR"
-            maximumDate={today}
-            onChange={handleChange}
-            style={styles.picker}
-          />
-        </View>
-
-        <Text style={styles.selectedDateText}>
-          선택한 날짜 {selectedDate ? formatDate(selectedDate) : '-'}
-        </Text>
-
-        <View style={styles.buttonRow}>
-          <Pressable style={styles.secondaryButton} onPress={onClose}>
-            <Text style={styles.secondaryButtonText}>취소</Text>
-          </Pressable>
-          <Pressable style={styles.primaryButton} onPress={handleConfirm}>
-            <Text style={styles.primaryButtonText}>선택</Text>
-          </Pressable>
-        </View>
-      </View>
-    </View>
-  );
-
-  if (!useModal) {
-    return content;
-  }
-
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      {content}
-    </Modal>
+    <AppModal
+      visible={visible}
+      onClose={onClose}
+      title={title}
+      useModal={useModal}
+      contentStyle={styles.modalContent}
+      footer={
+        <View style={styles.buttonRow}>
+          <Button title="취소" onPress={onClose} variant="secondary" size="sm" style={styles.button} />
+          <Button title="선택" onPress={handleConfirm} variant="soft" size="sm" style={styles.button} />
+        </View>
+      }
+    >
+      <Text weight="bold" style={styles.monthLabel}>
+        {getMonthLabel(selectedDate ?? today)}
+      </Text>
+
+      <View style={styles.pickerWrap}>
+        <DateTimePicker
+          value={selectedDate ?? today}
+          mode="date"
+          display="spinner"
+          locale="ko-KR"
+          maximumDate={today}
+          onChange={handleChange}
+          style={styles.picker}
+        />
+      </View>
+
+      <Text style={styles.selectedDateText}>
+        선택한 날짜 {selectedDate ? formatDate(selectedDate) : '-'}
+      </Text>
+    </AppModal>
   );
 }
 
@@ -176,29 +164,8 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 4,
   },
-  secondaryButton: {
+  button: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: colors.grayscale[200],
-  },
-  secondaryButtonText: {
-    fontSize: 15,
-    color: colors.grayscale[1000],
-  },
-  primaryButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: colors.primary[800],
-  },
-  primaryButtonText: {
-    fontSize: 15,
-    color: colors.grayscale[1000],
-    fontWeight: '700',
+    marginTop: 0,
   },
 });

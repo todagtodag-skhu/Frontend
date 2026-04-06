@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { StickerRequest } from '@/components/todagi/types';
 import { Text } from '@/components/ui/Text';
+import { borderWidth } from '@/constants/borders';
 import { colors } from '@/constants/colors';
 
 import { ConfirmModal } from './ConfirmModal';
@@ -192,7 +193,7 @@ const styles = StyleSheet.create({
     gap: 12,
     backgroundColor: colors.grayscale[100],
     borderRadius: 16,
-    borderWidth: 1.5,
+    borderWidth: borderWidth.strong,
     borderColor: '#E8E3DC',
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -266,7 +267,7 @@ const styles = StyleSheet.create({
   manualButton: {
     borderRadius: 12,
     backgroundColor: '#FFF1CC',
-    borderWidth: 2,
+    borderWidth: borderWidth.emphasis,
     borderColor: '#FFCF7D',
     alignItems: 'center',
     justifyContent: 'center',

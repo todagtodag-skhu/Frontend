@@ -29,6 +29,8 @@ export function BoardBasicsSection({
         placeholder="판 이름을 입력하세요"
         value={boardTitle}
         onChangeText={onChangeBoardTitle}
+        align="left"
+        size="md"
       />
       <View style={styles.row}>
         <InfoSelectCard
