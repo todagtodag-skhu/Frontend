@@ -1,7 +1,7 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
   Dimensions,
-  StyleProp,
   NativeScrollEvent,
   NativeSyntheticEvent,
   PanResponder,
@@ -10,38 +10,21 @@ import {
   Text,
   TouchableOpacity,
   View,
-  ViewStyle,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import GiftCard from '@/components/growth/GiftCard';
+import { StickerGridBoard, type GridCell } from '@/components/growth/StickerGridBoard';
 import { fontFamily } from '@/constants/fonts';
-import MeowImage from '../../../assets/meowImage.svg';
-import FoxImage from '../../../assets/foxImage.svg';
-import TigerImage from '../../../assets/tigerImage.svg';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const CAROUSEL_CARD_WIDTH = SCREEN_WIDTH - 32;
 const CAROUSEL_GAP = 19;
-const BOARD_ROWS = 4;
+const BOARD_WIDTH = Math.min(SCREEN_WIDTH - 44, 320);
+const BOARD_HEIGHT = BOARD_WIDTH * 1.08;
 const BOARD_COLS = 5;
-const BOARD_PREVIEW_WIDTH = Math.min(SCREEN_WIDTH - 44, 320);
-const CARD_HORIZONTAL_PADDING = 10;
-const BOARD_OUTLINE_PADDING = 8;
-const BOARD_HORIZONTAL_PADDING = 10;
-const GRID_GAP = 10;
-const GRID_ROW_GAP = 15;
-const SLOT_SIZE =
-  (BOARD_PREVIEW_WIDTH -
-    BOARD_HORIZONTAL_PADDING * 2 -
-    GRID_GAP * (BOARD_COLS - 1)) /
-  BOARD_COLS;
-const BOARD_PREVIEW_HEIGHT =
-  SLOT_SIZE * BOARD_ROWS + GRID_ROW_GAP * (BOARD_ROWS - 1) + 28;
 
 type StickerBoard = {
   id: string;
@@ -49,6 +32,17 @@ type StickerBoard = {
   reward: string;
   boardDesign: string;
   stickers: string[];
+};
+
+type PreviewStickerInfo = {
+  placedAt: Date;
+  mission: {
+    id: string;
+    emoji: string;
+    title: string;
+    completed: boolean;
+  };
+  stickerIdx: number;
 };
 
 const COMPLETED_BOARDS: StickerBoard[] = [
@@ -75,92 +69,68 @@ const COMPLETED_BOARDS: StickerBoard[] = [
   },
 ];
 
-function MascotImage({ boardDesign }: { boardDesign: string }) {
-  if (boardDesign === '우주 탐험') {
-    return <MeowImage width={156} height={90} />;
-  }
-
-  if (boardDesign === '바다 여행') {
-    return <TigerImage width={156} height={90} />;
-  }
-
-  return <FoxImage width={156} height={90} />;
-}
-
-function StickerSymbol({ symbol }: { symbol: string }) {
-  if (symbol === '❤') {
-    return <Ionicons name="heart" size={28} color="#F25C54" />;
-  }
-
-  if (symbol === '🦷') {
-    return <MaterialCommunityIcons name="tooth-outline" size={25} color="#CDBAA1" />;
-  }
-
-  if (symbol === '☺') {
-    return <Ionicons name="happy-outline" size={24} color="#707070" />;
-  }
-
-  if (symbol === '📚') {
-    return <Ionicons name="book" size={24} color="#4C84FF" />;
-  }
-
-  if (symbol === '⭐') {
-    return <Ionicons name="star" size={24} color="#FFB400" />;
-  }
-
-  if (symbol === '🧸') {
-    return <MaterialCommunityIcons name="teddy-bear" size={24} color="#B9815D" />;
-  }
-
-  if (symbol === '✨') {
-    return <Ionicons name="sparkles" size={22} color="#F4B53F" />;
-  }
-
-  return <Text style={styles.slotEmoji}>{symbol}</Text>;
-}
-
 function CompletedBoardCarouselCard({ board }: { board: StickerBoard }) {
-  const rows = Array.from({ length: BOARD_ROWS }, (_, rowIndex) =>
-    Array.from({ length: BOARD_COLS }, (_, colIndex) => {
-      const stickerIndex = rowIndex * BOARD_COLS + colIndex;
-      return board.stickers[stickerIndex] ?? '';
-    }),
+  const scaleAnimsRef = useRef<Record<number, Animated.Value>>({});
+
+  const gridCells: GridCell[] = useMemo(
+    () =>
+      Array.from({ length: board.stickers.length }, (_, index) => {
+        const row = Math.floor(index / BOARD_COLS);
+        const col = index % BOARD_COLS;
+
+        return {
+          id: index + 1,
+          row,
+          col,
+          x: (col + 0.5) / BOARD_COLS,
+          y: row,
+        };
+      }),
+    [board.stickers.length],
   );
+
+  const placedStickers = useMemo<Record<number, PreviewStickerInfo>>(
+    () =>
+      board.stickers.reduce<Record<number, PreviewStickerInfo>>((acc, sticker, index) => {
+        acc[index + 1] = {
+          placedAt: new Date(),
+          mission: {
+            id: `${board.id}-mission-${index}`,
+            emoji: sticker,
+            title: sticker,
+            completed: true,
+          },
+          stickerIdx: index,
+        };
+
+        return acc;
+      }, {}),
+    [board.id, board.stickers],
+  );
+
+  const getScaleAnim = useCallback((id: number) => {
+    if (!scaleAnimsRef.current[id]) {
+      scaleAnimsRef.current[id] = new Animated.Value(1);
+    }
+
+    return scaleAnimsRef.current[id];
+  }, []);
 
   return (
     <View style={styles.carouselCard}>
       <Text style={styles.boardTitle}>{board.title}</Text>
 
-      <View style={styles.previewWrap}>
-        <View style={styles.mascotWrap}>
-          <MascotImage boardDesign={board.boardDesign} />
-        </View>
-
-        <View style={styles.boardOutline}>
-          <View style={styles.boardFrame}>
-            {rows.map((row, rowIndex) => (
-              <View
-                key={`${board.id}-row-${rowIndex}`}
-                style={[
-                  styles.gridRow,
-                  rowIndex < rows.length - 1 ? styles.gridRowSpacing : null,
-                ]}
-              >
-                {row.map((symbol, colIndex) => (
-                  <View
-                    key={`${board.id}-${rowIndex}-${colIndex}`}
-                    style={[
-                      styles.stickerSlot,
-                      colIndex < row.length - 1 ? styles.stickerSlotSpacing : null,
-                    ]}
-                  >
-                    <StickerSymbol symbol={symbol} />
-                  </View>
-                ))}
-              </View>
-            ))}
-          </View>
-        </View>
+      <View style={styles.boardPreviewWrap}>
+        <StickerGridBoard
+          width={BOARD_WIDTH}
+          height={BOARD_HEIGHT}
+          cells={gridCells}
+          placedStickers={placedStickers}
+          getScaleAnim={getScaleAnim}
+          onCellPress={() => undefined}
+          onLayoutBoard={() => undefined}
+          boardDesign={board.boardDesign}
+        />
       </View>
     </View>
   );
@@ -290,69 +260,17 @@ const styles = StyleSheet.create({
     width: CAROUSEL_CARD_WIDTH,
     borderRadius: 20,
     backgroundColor: '#FFFFFF',
-    paddingTop: 18,
-    paddingRight: CARD_HORIZONTAL_PADDING,
+    paddingTop: 12,
+    paddingHorizontal: 10,
     paddingBottom: 14,
-    paddingLeft: CARD_HORIZONTAL_PADDING,
   },
   boardTitle: {
     fontSize: 17,
     color: '#4D453B',
     fontFamily: fontFamily.bold,
-    marginBottom: 10,
   },
-  previewWrap: {
-    position: 'relative',
+  boardPreviewWrap: {
     alignItems: 'center',
-    paddingTop: 76,
-  },
-  mascotWrap: {
-    position: 'absolute',
-    top: -6,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 2,
-  },
-  boardOutline: {
-    width: BOARD_PREVIEW_WIDTH + BOARD_OUTLINE_PADDING * 2,
-    paddingHorizontal: BOARD_OUTLINE_PADDING,
-    paddingVertical: BOARD_OUTLINE_PADDING,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-  },
-  boardFrame: {
-    width: BOARD_PREVIEW_WIDTH,
-    height: BOARD_PREVIEW_HEIGHT,
-    borderRadius: 16,
-    backgroundColor: '#FFF2CF',
-    paddingHorizontal: BOARD_HORIZONTAL_PADDING,
-    paddingTop: 12,
-    paddingBottom: 0,
-  },
-  gridRow: {
-    flexDirection: 'row',
-  },
-  gridRowSpacing: {
-    marginBottom: GRID_ROW_GAP,
-  },
-  stickerSlot: {
-    width: SLOT_SIZE,
-    height: SLOT_SIZE,
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D7DFE7',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stickerSlotSpacing: {
-    marginRight: GRID_GAP,
-  },
-  slotEmoji: {
-    fontSize: 26,
-    lineHeight: 30,
-    textAlign: 'center',
   },
   arrowButton: {
     position: 'absolute',

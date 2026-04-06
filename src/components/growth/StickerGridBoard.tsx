@@ -43,14 +43,18 @@ type StickerGridBoardProps = {
 
 function MascotImage({ boardDesign }: { boardDesign?: string }) {
   if (boardDesign === '우주 탐험') {
-    return <MeowImage width={190} height={96} />;
+    return (
+      <View style={styles.meowImageWrap}>
+        <MeowImage width={190} height={106} />
+      </View>
+    );
   }
 
   if (boardDesign === '바다 여행') {
-    return <TigerImage width={190} height={96} />;
+    return <TigerImage width={146} height={96} />;
   }
 
-  return <FoxImage width={190} height={96} />;
+  return <FoxImage width={146} height={96} />;
 }
 
 export function StickerGridBoard({
@@ -124,7 +128,9 @@ export function StickerGridBoard({
                       },
                     ]}
                   >
-                    <Text style={styles.placedStickerEmoji}>{sticker.mission.emoji}</Text>
+                    <View style={styles.placedStickerEmojiWrap}>
+                      <Text style={styles.placedStickerEmoji}>{sticker.mission.emoji}</Text>
+                    </View>
                   </Animated.View>
                 ) : (
                   <View style={styles.emptyCellHint}>
@@ -157,11 +163,14 @@ const styles = StyleSheet.create({
   },
   mascotWrap: {
     position: 'absolute',
-    top: -12,
+    top: -3,
     left: 0,
     right: 0,
     alignItems: 'center',
     zIndex: 2,
+  },
+  meowImageWrap: {
+    transform: [{ translateY: -3 }],
   },
   cellPressable: {
     position: 'absolute',
@@ -191,8 +200,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  placedStickerEmojiWrap: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   placedStickerEmoji: {
     fontSize: 22,
-    lineHeight: 24,
+    lineHeight: 22,
+    textAlign: 'center',
+    includeFontPadding: false,
   },
 });

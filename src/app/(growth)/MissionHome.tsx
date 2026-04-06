@@ -165,7 +165,7 @@ const MissionListScreen: React.FC = () => {
           <Pressable style={styles.modalBackdrop} onPress={() => setShowSelectMissionNotice(false)} />
           <Pressable onPress={(event) => event.stopPropagation()} style={styles.modalContent}>
             <Text style={styles.modalDescription}>
-              먼저 완료한 미션을 선택하고 {'\n'}스티커를 요청하세요!
+              먼저 완료한 미션을 선택하고 {'\n'}스티커를 요청해 주세요!
             </Text>
 
             <TouchableOpacity

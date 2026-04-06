@@ -49,10 +49,6 @@ const MissionCard: React.FC<MissionCardProps> = ({
           {frequency} / {reward}
         </Text>
       </View>
-
-      <TouchableOpacity style={styles.heartButton} onPress={onManagePress} activeOpacity={0.7}>
-        <MaterialIcons name="keyboard-double-arrow-right" size={27} color={colors.grayscale[700]} />
-      </TouchableOpacity>
     </TouchableOpacity>
   );
 };
