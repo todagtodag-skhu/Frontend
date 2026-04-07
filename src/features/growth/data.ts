@@ -23,7 +23,7 @@ function cloneChildProfile(child: ChildProfile): ChildProfile {
 function cloneCompletedStickerBoard(board: CompletedStickerBoard): CompletedStickerBoard {
   return {
     ...board,
-    stickers: [...board.stickers],
+    stickers: board.stickers.map((sticker) => ({ ...sticker })),
   };
 }
 

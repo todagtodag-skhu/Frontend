@@ -26,10 +26,7 @@ export function MissionInlineEditorSection({
   onAddMission,
 }: MissionInlineEditorSectionProps) {
   return (
-    <Section title="미션 관리">
-      <Text style={styles.missionManageIntro}>
-        미션별 달성 조건과 지급 스티커를 한눈에 정리할 수 있어요.
-      </Text>
+    <Section title="">
       <Text style={styles.missionManageTip}>
         Tip. 미션은 토닥이가 미션 달성 스티커를 지급하는 순간 사라져요.{'\n'}
         완료 처리 흐름을 고려해서 조건을 설정해주세요.

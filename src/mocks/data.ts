@@ -12,7 +12,10 @@ export type CompletedStickerBoard = {
   title: string;
   reward: string;
   boardDesign: string;
-  stickers: string[];
+  stickers: {
+    emoji: string;
+    title: string;
+  }[];
 };
 
 // 성장이 정보
@@ -112,21 +115,84 @@ export const MOCK_COMPLETED_STICKER_BOARDS: CompletedStickerBoard[] = [
     title: '유진이의 성장나무',
     reward: '닌텐도 스위치',
     boardDesign: '우주 탐험',
-    stickers: ['❤', '🦷', '❤', '❤', '❤', '❤', '❤', '🦷', '🦷', '🦷', '❤', '❤', '❤', '❤', '❤', '☺', '🦷', '❤', '❤', '❤'],
+    stickers: [
+      { emoji: '❤', title: '칭찬 스티커' },
+      { emoji: '🦷', title: '양치하기' },
+      { emoji: '❤', title: '칭찬 스티커' },
+      { emoji: '❤', title: '칭찬 스티커' },
+      { emoji: '❤', title: '칭찬 스티커' },
+      { emoji: '❤', title: '칭찬 스티커' },
+      { emoji: '❤', title: '칭찬 스티커' },
+      { emoji: '🦷', title: '양치하기' },
+      { emoji: '🦷', title: '양치하기' },
+      { emoji: '🦷', title: '양치하기' },
+      { emoji: '❤', title: '칭찬 스티커' },
+      { emoji: '❤', title: '칭찬 스티커' },
+      { emoji: '❤', title: '칭찬 스티커' },
+      { emoji: '❤', title: '칭찬 스티커' },
+      { emoji: '❤', title: '칭찬 스티커' },
+      { emoji: '☺', title: '밥먹기' },
+      { emoji: '🦷', title: '양치하기' },
+      { emoji: '❤', title: '칭찬 스티커' },
+      { emoji: '❤', title: '칭찬 스티커' },
+      { emoji: '❤', title: '칭찬 스티커' },
+    ],
   },
   {
     id: 'board-2',
     title: '유진이의 책 읽기판',
     reward: '새 그림책',
     boardDesign: '성장 나무',
-    stickers: ['📚', '⭐', '📚', '⭐', '📚', '📚', '⭐', '📚', '⭐', '📚', '📚', '📚', '⭐', '📚', '⭐', '📚', '⭐', '📚', '📚', '⭐'],
+    stickers: [
+      { emoji: '📚', title: '책 읽기' },
+      { emoji: '⭐', title: '독서 칭찬' },
+      { emoji: '📚', title: '책 읽기' },
+      { emoji: '⭐', title: '독서 칭찬' },
+      { emoji: '📚', title: '책 읽기' },
+      { emoji: '📚', title: '책 읽기' },
+      { emoji: '⭐', title: '독서 칭찬' },
+      { emoji: '📚', title: '책 읽기' },
+      { emoji: '⭐', title: '독서 칭찬' },
+      { emoji: '📚', title: '책 읽기' },
+      { emoji: '📚', title: '책 읽기' },
+      { emoji: '📚', title: '책 읽기' },
+      { emoji: '⭐', title: '독서 칭찬' },
+      { emoji: '📚', title: '책 읽기' },
+      { emoji: '⭐', title: '독서 칭찬' },
+      { emoji: '📚', title: '책 읽기' },
+      { emoji: '⭐', title: '독서 칭찬' },
+      { emoji: '📚', title: '책 읽기' },
+      { emoji: '📚', title: '책 읽기' },
+      { emoji: '⭐', title: '독서 칭찬' },
+    ],
   },
   {
     id: 'board-3',
     title: '유진이의 정리판',
     reward: '키즈카페 가기',
     boardDesign: '바다 여행',
-    stickers: ['🧸', '🧸', '✨', '🧸', '✨', '🧸', '✨', '🧸', '🧸', '✨', '🧸', '🧸', '✨', '🧸', '✨', '🧸', '✨', '🧸', '🧸', '✨'],
+    stickers: [
+      { emoji: '🧸', title: '장난감 정리' },
+      { emoji: '🧸', title: '장난감 정리' },
+      { emoji: '✨', title: '정리 칭찬' },
+      { emoji: '🧸', title: '장난감 정리' },
+      { emoji: '✨', title: '정리 칭찬' },
+      { emoji: '🧸', title: '장난감 정리' },
+      { emoji: '✨', title: '정리 칭찬' },
+      { emoji: '🧸', title: '장난감 정리' },
+      { emoji: '🧸', title: '장난감 정리' },
+      { emoji: '✨', title: '정리 칭찬' },
+      { emoji: '🧸', title: '장난감 정리' },
+      { emoji: '🧸', title: '장난감 정리' },
+      { emoji: '✨', title: '정리 칭찬' },
+      { emoji: '🧸', title: '장난감 정리' },
+      { emoji: '✨', title: '정리 칭찬' },
+      { emoji: '🧸', title: '장난감 정리' },
+      { emoji: '✨', title: '정리 칭찬' },
+      { emoji: '🧸', title: '장난감 정리' },
+      { emoji: '🧸', title: '장난감 정리' },
+      { emoji: '✨', title: '정리 칭찬' },
+    ],
   },
 ];
 
