@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 
 export interface AuthSession {
   accessToken: string;
+  refreshToken: string;
   role: string;
 }
 
@@ -12,6 +13,7 @@ interface StorageAdapter {
 }
 
 const ACCESS_TOKEN_KEY = 'auth.accessToken';
+const REFRESH_TOKEN_KEY = 'auth.refreshToken';
 const ROLE_KEY = 'auth.role';
 
 const memoryStorage = new Map<string, string>();
@@ -63,23 +65,26 @@ export async function saveAuthSession(session: AuthSession) {
 
   await Promise.all([
     storage.setItem(ACCESS_TOKEN_KEY, session.accessToken),
+    storage.setItem(REFRESH_TOKEN_KEY, session.refreshToken),
     storage.setItem(ROLE_KEY, session.role),
   ]);
 }
 
 export async function getAuthSession(): Promise<AuthSession | null> {
   const storage = await getStorageAdapter();
-  const [accessToken, role] = await Promise.all([
+  const [accessToken, refreshToken, role] = await Promise.all([
     storage.getItem(ACCESS_TOKEN_KEY),
+    storage.getItem(REFRESH_TOKEN_KEY),
     storage.getItem(ROLE_KEY),
   ]);
 
-  if (!accessToken || !role) {
+  if (!accessToken || !refreshToken || !role) {
     return null;
   }
 
   return {
     accessToken,
+    refreshToken,
     role,
   };
 }
@@ -89,6 +94,7 @@ export async function clearAuthSession() {
 
   await Promise.all([
     storage.deleteItem(ACCESS_TOKEN_KEY),
+    storage.deleteItem(REFRESH_TOKEN_KEY),
     storage.deleteItem(ROLE_KEY),
   ]);
 }

@@ -10,6 +10,8 @@ import { OnboardingInfoStep } from '@/components/onboarding/OnboardingInfoStep';
 import { RoleSelectStep } from '@/components/onboarding/RoleSelectStep';
 import { CalendarModal } from '@/components/todagi/CalendarModal';
 import { useGrowth } from '@/contexts/GrowthContext';
+import * as authApi from '@/features/auth/api';
+import { saveAuthSession, getAuthSession } from '@/features/auth/session';
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -19,6 +21,7 @@ export default function OnboardingScreen() {
   const [inviteCode, setInviteCode] = useState('');
   const [createdChildId, setCreatedChildId] = useState<string | null>(null);
   const [childName, setChildName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [birthday, setBirthday] = useState('');
   const [birthdayModalVisible, setBirthdayModalVisible] = useState(false);
 
@@ -56,77 +59,112 @@ export default function OnboardingScreen() {
   };
 
   const handleConfirm = async () => {
-    if (step === 0) {
-      if (!selectedRole) {
-        Alert.alert('알림', '역할을 선택해주세요.');
-        return;
-      }
+    try {
+      setIsLoading(true);
 
-      if (isGrowth) {
-        const nextInviteCode = generateInviteCode();
-        const childId = await addChild({
-          inviteCode: nextInviteCode,
-          name: '성장이',
-          birthday: '-',
-        });
+      if (step === 0) {
+        if (!selectedRole) {
+          Alert.alert('알림', '역할을 선택해주세요.');
+          return;
+        }
 
-        setInviteCode(nextInviteCode);
-        setCreatedChildId(childId);
+        if (isGrowth) {
+          const session = await getAuthSession();
+          if (!session) {
+            Alert.alert('알림', '로그인 정보를 찾을 수 없습니다.');
+            return;
+          }
+
+          // Growth: 초대코드 요청
+          try {
+            const response = await authApi.requestInviteCode(session.accessToken);
+            setInviteCode(response.inviteCode);
+            setCreatedChildId('growth-child'); // Growth는 자동으로 "성장이" 자식이 생김
+            setStep(1);
+          } catch (error) {
+            Alert.alert('알림', error instanceof Error ? error.message : '초대코드를 발급받는데 실패했습니다.');
+          }
+          return;
+        }
+
         setStep(1);
         return;
       }
 
-      setStep(1);
-      return;
-    }
+      if (step === 1) {
+        if (isGrowth) {
+          setStep(2);
+          return;
+        }
 
-    if (step === 1) {
-      if (isGrowth) {
         setStep(2);
         return;
       }
 
-      setStep(2);
-      return;
-    }
-
-    if (isGrowth) {
-      if (createdChildId) {
-        routeToGrowth();
-      }
-      return;
-    }
-
-    if (step === 2) {
-      setStep(3);
-      return;
-    }
-
-    if (step === 3) {
-      if (!inviteCode.trim()) {
-        Alert.alert('알림', '초대코드를 입력해주세요.');
+      if (isGrowth) {
+        if (createdChildId) {
+          routeToGrowth();
+        }
         return;
       }
 
-      setStep(4);
-      return;
+      if (step === 2) {
+        setStep(3);
+        return;
+      }
+
+      if (step === 3) {
+        if (!inviteCode.trim()) {
+          Alert.alert('알림', '초대코드를 입력해주세요.');
+          return;
+        }
+
+        const session = await getAuthSession();
+        if (!session) {
+          Alert.alert('알림', '로그인 정보를 찾을 수 없습니다.');
+          return;
+        }
+
+        // Todagi: 초대코드로 연결
+        try {
+          const response = await authApi.connectWithInviteCode(
+            session.accessToken,
+            inviteCode.trim()
+          );
+
+          // 토큰 교체: 기존 PENDING 토큰을 새 토큰으로 교체
+          await saveAuthSession({
+            accessToken: response.accessToken,
+            refreshToken: response.refreshToken,
+            role: response.role,
+          });
+
+          setStep(4);
+        } catch (error) {
+          Alert.alert('알림', error instanceof Error ? error.message : '초대코드 연결에 실패했습니다.');
+        }
+        return;
+      }
+
+      if (!childName.trim() || !birthday.trim()) {
+        Alert.alert('알림', '이름과 생일을 모두 입력해주세요.');
+        return;
+      }
+
+      const childId = await addChild({
+        inviteCode: inviteCode.trim(),
+        name: childName.trim(),
+        birthday: birthday.trim(),
+      });
+
+      routeToChildren(childId);
+    } finally {
+      setIsLoading(false);
     }
-
-    if (!childName.trim() || !birthday.trim()) {
-      Alert.alert('알림', '이름과 생일을 모두 입력해주세요.');
-      return;
-    }
-
-    const childId = await addChild({
-      inviteCode: inviteCode.trim(),
-      name: childName.trim(),
-      birthday: birthday.trim(),
-    });
-
-    routeToChildren(childId);
   };
 
   const handleBack = () => {
+    if (isLoading) return;
     setStep((currentStep) => Math.max(0, currentStep - 1));
   };
 

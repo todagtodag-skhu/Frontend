@@ -36,6 +36,7 @@ export default function LoginRoute() {
 
       await saveAuthSession({
         accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
         role: result.role,
       });
 

@@ -15,6 +15,7 @@ interface SocialLoginRequest {
 interface SocialLoginData {
   isNewUser: boolean;
   accessToken: string;
+  refreshToken: string;
   role: UserRole;
 }
 
@@ -40,6 +41,7 @@ function isSocialLoginData(value: unknown): value is SocialLoginData {
   return (
     typeof candidate.isNewUser === 'boolean' &&
     typeof candidate.accessToken === 'string' &&
+    typeof candidate.refreshToken === 'string' &&
     typeof candidate.role === 'string'
   );
 }
@@ -105,4 +107,111 @@ export async function signInWithApple(token: string) {
   return socialLogin('APPLE', { token });
 }
 
-export type { SocialLoginData, SocialLoginResponse, UserRole };
+// Onboarding API types
+interface OnboardingInviteCodeResponse {
+  inviteCode: string;
+}
+
+interface OnboardingConnectionRequest {
+  inviteCode: string;
+}
+
+interface OnboardingConnectionData {
+  isNewUser: boolean;
+  accessToken: string;
+  refreshToken: string;
+  role: UserRole;
+}
+
+interface OnboardingConnectionResponse {
+  success: boolean;
+  data: OnboardingConnectionData;
+  message?: string;
+}
+
+function isOnboardingConnectionData(value: unknown): value is OnboardingConnectionData {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Partial<OnboardingConnectionData>;
+
+  return (
+    typeof candidate.isNewUser === 'boolean' &&
+    typeof candidate.accessToken === 'string' &&
+    typeof candidate.refreshToken === 'string' &&
+    typeof candidate.role === 'string'
+  );
+}
+
+// Growth (성장이) - request invite code
+export async function requestInviteCode(accessToken: string): Promise<OnboardingInviteCodeResponse> {
+  const response = await fetch(`${getApiBaseUrl()}/users/onboarding/sungjang/invite-code`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const body = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      body?.message || body?.error || '초대코드를 발급 받는데 실패했습니다.'
+    );
+  }
+
+  return body;
+}
+
+// Todagi (토닥이) - connect with invite code
+export async function connectWithInviteCode(
+  accessToken: string,
+  inviteCode: string
+): Promise<OnboardingConnectionData> {
+  const response = await fetch(`${getApiBaseUrl()}/users/onboarding/todak`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ inviteCode } as OnboardingConnectionRequest),
+  });
+
+  const rawBody = await response.text();
+  let body: OnboardingConnectionResponse | ApiErrorPayload | null = null;
+
+  if (rawBody) {
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      body = null;
+    }
+  }
+
+  if (!response.ok) {
+    const errorMessage = 
+      (body && typeof body === 'object' && 'message' in body && typeof body.message === 'string')
+        ? body.message
+        : (body && typeof body === 'object' && 'error' in body && typeof body.error === 'string')
+        ? body.error
+        : '초대코드 연결에 실패했습니다.';
+
+    throw new Error(errorMessage);
+  }
+
+  if (isOnboardingConnectionData(body)) {
+    return body;
+  }
+
+  const result = body as OnboardingConnectionResponse | null;
+
+  if (result?.success && isOnboardingConnectionData(result.data)) {
+    return result.data;
+  }
+
+  throw new Error(result?.message || '초대코드 연결에 실패했습니다.');
+}
+
+export type { SocialLoginData, SocialLoginResponse, UserRole, OnboardingConnectionData };
