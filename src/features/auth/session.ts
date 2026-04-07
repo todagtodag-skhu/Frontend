@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import type { AsyncStorageStatic } from '@react-native-async-storage/async-storage';
 
 export interface AuthSession {
   accessToken: string;
@@ -49,7 +50,30 @@ async function createStorageAdapter(): Promise<StorageAdapter> {
     };
   }
 
-  return createMemoryStorageAdapter();
+  const asyncStorageModule = await import('@react-native-async-storage/async-storage');
+  const AsyncStorage = (asyncStorageModule.default ?? asyncStorageModule) as AsyncStorageStatic;
+
+  if (
+    !AsyncStorage ||
+    typeof AsyncStorage.getItem !== 'function' ||
+    typeof AsyncStorage.setItem !== 'function' ||
+    typeof AsyncStorage.removeItem !== 'function'
+  ) {
+    console.warn('AsyncStorage 모듈을 불러오지 못했습니다. 메모리 저장소로 대체합니다.');
+    return createMemoryStorageAdapter();
+  }
+
+  return {
+    async getItem(key) {
+      return AsyncStorage.getItem(key);
+    },
+    async setItem(key, value) {
+      await AsyncStorage.setItem(key, value);
+    },
+    async deleteItem(key) {
+      await AsyncStorage.removeItem(key);
+    },
+  };
 }
 
 async function getStorageAdapter() {

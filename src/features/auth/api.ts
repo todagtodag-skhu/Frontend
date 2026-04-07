@@ -1,3 +1,5 @@
+import { clearAuthSession, getAuthSession, saveAuthSession } from '@/features/auth/session';
+
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
 type LoginProvider = 'APPLE';
@@ -212,6 +214,79 @@ export async function connectWithInviteCode(
   }
 
   throw new Error(result?.message || '초대코드 연결에 실패했습니다.');
+}
+
+interface RefreshResponse {
+  accessToken: string;
+  refreshToken: string;
+}
+
+export async function refreshAccessToken(): Promise<string> {
+  const session = await getAuthSession();
+
+  if (!session?.refreshToken) {
+    throw new Error('리프레시 토큰이 없습니다.');
+  }
+
+  const response = await fetch(`${getApiBaseUrl()}/auth/refresh`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ refreshToken: session.refreshToken }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`토큰 재발급에 실패했습니다. (${response.status})`);
+  }
+
+  const data = (await response.json()) as RefreshResponse;
+
+  if (!data?.accessToken || !data?.refreshToken) {
+    throw new Error('토큰 재발급 응답이 올바르지 않습니다.');
+  }
+
+  await saveAuthSession({
+    accessToken: data.accessToken,
+    refreshToken: data.refreshToken,
+    role: session.role,
+  });
+
+  return data.accessToken;
+}
+
+export async function logout(): Promise<void> {
+  const session = await getAuthSession();
+
+  try {
+    if (session?.accessToken) {
+      await fetch(`${getApiBaseUrl()}/users/logout`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+      });
+    }
+  } finally {
+    await clearAuthSession();
+  }
+}
+
+export async function withdraw(): Promise<void> {
+  const session = await getAuthSession();
+
+  try {
+    if (session?.accessToken) {
+      await fetch(`${getApiBaseUrl()}/users/withdraw`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+      });
+    }
+  } finally {
+    await clearAuthSession();
+  }
 }
 
 export type { SocialLoginData, SocialLoginResponse, UserRole, OnboardingConnectionData };
