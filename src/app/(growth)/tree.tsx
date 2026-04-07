@@ -18,7 +18,7 @@ import { fontFamily } from '@/constants/fonts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGrowth } from '@/contexts/GrowthContext';
 import { getDefaultTreeMissions } from '@/features/growth/data';
-import { type TreeMission } from '@/mocks/growth';
+import { type TreeMission } from '@/mocks/data';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

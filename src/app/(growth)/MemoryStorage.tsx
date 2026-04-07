@@ -2,9 +2,11 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
+  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
   PanResponder,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,10 +17,11 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import GiftCard from '@/components/growth/GiftCard';
+import { StickerInfoCard } from '@/components/growth/StickerInfoCard';
 import { StickerGridBoard, type GridCell } from '@/components/growth/StickerGridBoard';
 import { fontFamily } from '@/constants/fonts';
 import { getCompletedStickerBoards } from '@/features/growth/data';
-import { type CompletedStickerBoard } from '@/mocks/growth';
+import { type CompletedStickerBoard } from '@/mocks/data';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -43,6 +46,7 @@ const COMPLETED_BOARDS = getCompletedStickerBoards();
 
 function CompletedBoardCarouselCard({ board }: { board: CompletedStickerBoard }) {
   const scaleAnimsRef = useRef<Record<number, Animated.Value>>({});
+  const [selectedSticker, setSelectedSticker] = useState<PreviewStickerInfo | null>(null);
 
   const gridCells: GridCell[] = useMemo(
     () =>
@@ -68,8 +72,8 @@ function CompletedBoardCarouselCard({ board }: { board: CompletedStickerBoard })
           placedAt: new Date(),
           mission: {
             id: `${board.id}-mission-${index}`,
-            emoji: sticker,
-            title: sticker,
+            emoji: sticker.emoji,
+            title: sticker.title,
             completed: true,
           },
           stickerIdx: index,
@@ -99,11 +103,23 @@ function CompletedBoardCarouselCard({ board }: { board: CompletedStickerBoard })
           cells={gridCells}
           placedStickers={placedStickers}
           getScaleAnim={getScaleAnim}
-          onCellPress={() => undefined}
+          onCellPress={(cellId) => setSelectedSticker(placedStickers[cellId] ?? null)}
           onLayoutBoard={() => undefined}
           boardDesign={board.boardDesign}
         />
       </View>
+
+      <Modal visible={selectedSticker !== null} transparent animationType="fade">
+        <Pressable style={styles.modalOverlayCenter} onPress={() => setSelectedSticker(null)}>
+          <Pressable onPress={(event) => event.stopPropagation()} style={styles.infoCardWrap}>
+            <StickerInfoCard
+              missionEmoji={selectedSticker?.mission.emoji ?? ''}
+              missionTitle={selectedSticker?.mission.title ?? ''}
+              onConfirm={() => setSelectedSticker(null)}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -243,6 +259,17 @@ const styles = StyleSheet.create({
   },
   boardPreviewWrap: {
     alignItems: 'center',
+  },
+  modalOverlayCenter: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  infoCardWrap: {
+    width: '100%',
+    maxWidth: 320,
   },
   arrowButton: {
     position: 'absolute',

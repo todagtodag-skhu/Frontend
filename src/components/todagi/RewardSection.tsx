@@ -14,6 +14,8 @@ export function RewardSection({ rewardText, onChangeRewardText }: RewardSectionP
         placeholder="선물 내용을 작성해주세요."
         value={rewardText}
         onChangeText={onChangeRewardText}
+        align="left"
+        size="md"
       />
     </Section>
   );

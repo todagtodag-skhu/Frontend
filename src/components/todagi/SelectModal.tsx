@@ -1,5 +1,6 @@
-import { Modal, Pressable, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity } from 'react-native';
 
+import { AppModal } from '@/components/common/AppModal';
 import { Text } from '@/components/ui/Text';
 
 import { todagiStyles } from './styles';
@@ -20,25 +21,19 @@ export function SelectModal({
   onClose,
 }: SelectModalProps) {
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={todagiStyles.modalOverlay}>
-        <Pressable style={todagiStyles.modalBackdrop} onPress={onClose} />
-        <View style={todagiStyles.modalContent}>
-          <Text style={todagiStyles.modalTitle}>{title}</Text>
-          {options.map((option) => (
-            <TouchableOpacity
-              key={option}
-              style={todagiStyles.modalOption}
-              onPress={() => {
-                onSelect(option);
-                onClose();
-              }}
-            >
-              <Text style={todagiStyles.modalOptionText}>{option}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    </Modal>
+    <AppModal visible={visible} onClose={onClose} title={title}>
+      {options.map((option) => (
+        <TouchableOpacity
+          key={option}
+          style={todagiStyles.modalOption}
+          onPress={() => {
+            onSelect(option);
+            onClose();
+          }}
+        >
+          <Text style={todagiStyles.modalOptionText}>{option}</Text>
+        </TouchableOpacity>
+      ))}
+    </AppModal>
   );
 }

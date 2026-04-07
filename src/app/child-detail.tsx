@@ -99,6 +99,8 @@ export default function ChildDetailScreen() {
                       value={inviteCode}
                       onChangeText={setInviteCode}
                       placeholder="초대코드 입력"
+                      align="left"
+                      size="md"
                       style={styles.fieldInput}
                     />
                   </View>
@@ -108,6 +110,8 @@ export default function ChildDetailScreen() {
                       value={name}
                       onChangeText={setName}
                       placeholder="성장이 이름"
+                      align="left"
+                      size="md"
                       style={styles.fieldInput}
                     />
                   </View>
@@ -123,12 +127,20 @@ export default function ChildDetailScreen() {
                     </Pressable>
                   </View>
                   <View style={styles.actionRow}>
-                    <Pressable style={styles.actionChip} onPress={handleCancelEdit}>
-                      <Text style={styles.actionChipText}>취소</Text>
-                    </Pressable>
-                    <Pressable style={styles.actionChip} onPress={handleSave}>
-                      <Text style={styles.actionChipText}>저장</Text>
-                    </Pressable>
+                    <Button
+                      title="취소"
+                      onPress={handleCancelEdit}
+                      variant="secondary"
+                      size="sm"
+                      style={styles.actionButton}
+                    />
+                    <Button
+                      title="저장"
+                      onPress={handleSave}
+                      variant="chip"
+                      size="sm"
+                      style={styles.actionButton}
+                    />
                   </View>
                 </View>
               ) : (
@@ -140,15 +152,20 @@ export default function ChildDetailScreen() {
                   <Text style={styles.itemSub}>생일 {child?.birthday ?? '-'}</Text>
                   <Text style={styles.itemSub}>현재 스티커판 {activeBoard ? '생성됨' : '없음'}</Text>
                   <View style={styles.actionRow}>
-                    <Pressable style={styles.actionChip} onPress={() => setIsEditing(true)}>
-                      <Text style={styles.actionChipText}>수정</Text>
-                    </Pressable>
-                    <Pressable
-                      style={[styles.actionChip, styles.deleteChip]}
+                    <Button
+                      title="수정"
+                      onPress={() => setIsEditing(true)}
+                      variant="chip"
+                      size="sm"
+                      style={styles.actionButton}
+                    />
+                    <Button
+                      title="삭제"
                       onPress={handleDeleteChild}
-                    >
-                      <Text style={[styles.actionChipText, styles.deleteChipText]}>삭제</Text>
-                    </Pressable>
+                      variant="chipDanger"
+                      size="sm"
+                      style={styles.actionButton}
+                    />
                   </View>
                 </>
               )}
@@ -168,19 +185,20 @@ export default function ChildDetailScreen() {
                 </Text>
                 <Text style={styles.itemSub}>미션 {activeBoard.missions.length}개</Text>
                 <View style={styles.actionRow}>
-                  <Pressable
-                    style={styles.actionChip}
+                  <Button
+                    title="수정"
                     onPress={() =>
                       router.push({
                         pathname: '/create-sticker',
                         params: { childId, boardId: activeBoard.id, returnTo: 'child-detail' },
                       })
                     }
-                  >
-                    <Text style={styles.actionChipText}>수정</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.actionChip, styles.deleteChip]}
+                    variant="chip"
+                    size="sm"
+                    style={styles.actionButton}
+                  />
+                  <Button
+                    title="삭제"
                     onPress={() =>
                       Alert.alert('스티커판 삭제', `"${activeBoard.title}"을 삭제할까요?`, [
                         { text: '취소', style: 'cancel' },
@@ -191,9 +209,10 @@ export default function ChildDetailScreen() {
                         },
                       ])
                     }
-                  >
-                    <Text style={[styles.actionChipText, styles.deleteChipText]}>삭제</Text>
-                  </Pressable>
+                    variant="chipDanger"
+                    size="sm"
+                    style={styles.actionButton}
+                  />
                 </View>
               </Pressable>
             ) : (
@@ -288,22 +307,8 @@ const styles = StyleSheet.create({
     gap: 10,
     justifyContent: 'flex-end',
   },
-  actionChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    backgroundColor: '#FFF3DA',
-    borderWidth: 1.5,
-    borderColor: '#FFCF7D',
-  },
-  actionChipText: {
-    fontSize: 13,
-    color: '#8B5E1A',
-  },
-  deleteChip: {
-    backgroundColor: '#FDE8E8',
-  },
-  deleteChipText: {
-    color: '#B54747',
+  actionButton: {
+    flex: 0,
+    marginTop: 0,
   },
 });

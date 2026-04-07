@@ -41,6 +41,7 @@ export function ChildInfoStep({
             value={childName}
             onChangeText={onChangeChildName}
             placeholder={namePlaceholder}
+            align="left"
             style={onboardingStyles.fieldInput}
           />
         </View>

@@ -1,7 +1,7 @@
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
 type LoginProvider = 'APPLE';
-type UserRole = 'SUNGJANG' | string;
+type UserRole = 'PENDING' | 'SUNGJANG' | 'TODAGI' | string;
 
 interface ApiErrorPayload {
   message?: string;
@@ -23,6 +23,12 @@ interface SocialLoginResponse {
   data: SocialLoginData;
   message?: string;
 }
+
+const DEFAULT_LOGIN_ERROR_MESSAGE: Record<number, string> = {
+  400: '로그인 요청이 올바르지 않습니다.',
+  401: '소셜 로그인 토큰이 유효하지 않습니다.',
+  502: '소셜 로그인 서버와 통신하지 못했습니다. 잠시 후 다시 시도해주세요.',
+};
 
 function isSocialLoginData(value: unknown): value is SocialLoginData {
   if (!value || typeof value !== 'object') {
@@ -77,7 +83,9 @@ async function socialLogin(provider: LoginProvider, payload: SocialLoginRequest)
       }
     }
 
-    throw new Error(errorMessage || `로그인에 실패했습니다. (${response.status})`);
+    throw new Error(
+      errorMessage || DEFAULT_LOGIN_ERROR_MESSAGE[response.status] || `로그인에 실패했습니다. (${response.status})`
+    );
   }
 
   if (isSocialLoginData(parsedBody)) {

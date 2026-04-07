@@ -39,11 +39,6 @@ export default function LoginRoute() {
         role: result.role,
       });
 
-      if (result.isNewUser) {
-        router.replace('/onboarding');
-        return;
-      }
-
       router.replace(getPostLoginRoute(result.role));
     } catch (error) {
       if (

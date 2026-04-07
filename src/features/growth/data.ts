@@ -2,13 +2,13 @@ import { ChildProfile, StickerBoard } from '@/components/todagi/types';
 
 import {
   cloneStickerBoard,
-  completedStickerBoardMocks,
-  defaultTreeMissionMocks,
-  growthMockChildren,
-  growthMockStickerBoards,
+  MOCK_CHILDREN,
+  MOCK_COMPLETED_STICKER_BOARDS,
+  MOCK_DEFAULT_TREE_MISSIONS,
+  MOCK_STICKER_BOARDS,
   type CompletedStickerBoard,
   type TreeMission,
-} from '@/mocks/growth';
+} from '@/mocks/data';
 
 type GrowthSeedData = {
   children: ChildProfile[];
@@ -23,7 +23,7 @@ function cloneChildProfile(child: ChildProfile): ChildProfile {
 function cloneCompletedStickerBoard(board: CompletedStickerBoard): CompletedStickerBoard {
   return {
     ...board,
-    stickers: [...board.stickers],
+    stickers: board.stickers.map((sticker) => ({ ...sticker })),
   };
 }
 
@@ -32,25 +32,25 @@ function cloneTreeMission(mission: TreeMission): TreeMission {
 }
 
 export function getGrowthSeedData(): GrowthSeedData {
-  const stickerBoards = growthMockStickerBoards.map(cloneStickerBoard);
+  const stickerBoards = MOCK_STICKER_BOARDS.map(cloneStickerBoard);
 
   return {
-    children: growthMockChildren.map(cloneChildProfile),
+    children: MOCK_CHILDREN.map(cloneChildProfile),
     stickerBoards,
     activeBoardId: stickerBoards[0]?.id,
   };
 }
 
 export function getStickerBoardDefaultMissions(boardId: string): StickerBoard['missions'] {
-  const board = growthMockStickerBoards.find((item) => item.id === boardId);
+  const board = MOCK_STICKER_BOARDS.find((item) => item.id === boardId);
 
   return board ? board.missions.map((mission) => ({ ...mission })) : [];
 }
 
 export function getCompletedStickerBoards(): CompletedStickerBoard[] {
-  return completedStickerBoardMocks.map(cloneCompletedStickerBoard);
+  return MOCK_COMPLETED_STICKER_BOARDS.map(cloneCompletedStickerBoard);
 }
 
 export function getDefaultTreeMissions(): TreeMission[] {
-  return defaultTreeMissionMocks.map(cloneTreeMission);
+  return MOCK_DEFAULT_TREE_MISSIONS.map(cloneTreeMission);
 }

@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 
+import { borderWidth } from '@/constants/borders';
 import { colors } from '@/constants/colors';
 
 export const childrenStyles = StyleSheet.create({
@@ -29,7 +30,7 @@ export const childrenStyles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     backgroundColor: colors.grayscale[100],
-    borderWidth: 2,
+    borderWidth: borderWidth.emphasis,
     borderColor: colors.grayscale[100],
     alignItems: 'center',
     justifyContent: 'center',
@@ -63,7 +64,7 @@ export const childrenStyles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: colors.grayscale[100],
     padding: 16,
-    borderWidth: 1,
+    borderWidth: borderWidth.hairline,
     borderColor: '#F5EAD5',
     gap: 14,
   },
@@ -84,7 +85,7 @@ export const childrenStyles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderWidth: 1.5,
+    borderWidth: borderWidth.strong,
     borderColor: '#FFCF7D',
   },
   stickerBadgeText: {
@@ -130,7 +131,7 @@ export const childrenStyles = StyleSheet.create({
     gap: 8,
     borderRadius: 12,
     backgroundColor: '#FFF3DA',
-    borderWidth: 2,
+    borderWidth: borderWidth.emphasis,
     borderColor: '#FFCF7D',
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -148,7 +149,7 @@ export const childrenStyles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 10,
     backgroundColor: '#FFF3DA',
-    borderWidth: 1.5,
+    borderWidth: borderWidth.strong,
     borderColor: '#FFCF7D',
   },
   editBoardButtonText: {
@@ -163,7 +164,7 @@ export const childrenStyles = StyleSheet.create({
     height: 22,
     borderRadius: 999,
     backgroundColor: '#FF3B30',
-    borderWidth: 2.5,
+    borderWidth: borderWidth.emphasis,
     borderColor: '#F5EAD5',
     alignItems: 'center',
     justifyContent: 'center',
@@ -183,7 +184,7 @@ export const childrenStyles = StyleSheet.create({
     gap: 14,
     borderRadius: 16,
     backgroundColor: colors.grayscale[100],
-    borderWidth: 1.5,
+    borderWidth: borderWidth.strong,
     borderColor: '#E8E3DC',
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -236,7 +237,7 @@ export const childrenStyles = StyleSheet.create({
   primaryButton: {
     borderRadius: 12,
     backgroundColor: '#FFF3DA',
-    borderWidth: 2,
+    borderWidth: borderWidth.emphasis,
     borderColor: '#FFCF7D',
     alignItems: 'center',
     justifyContent: 'center',

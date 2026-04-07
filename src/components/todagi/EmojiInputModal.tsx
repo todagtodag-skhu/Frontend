@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, View } from 'react-native';
+import { Alert } from 'react-native';
 
+import { AppModal } from '@/components/common/AppModal';
 import { Button } from '@/components/common/Button';
 import { TextInput } from '@/components/common/TextInput';
 import { Text } from '@/components/ui/Text';
@@ -39,23 +40,20 @@ export function EmojiInputModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={todagiStyles.modalOverlay}>
-        <Pressable style={todagiStyles.modalBackdrop} onPress={onClose} />
-        <View style={todagiStyles.modalContent}>
-          <Text style={todagiStyles.modalTitle}>미션 이모지 입력</Text>
-          <Text style={todagiStyles.modalDescription}>
-            기본 이모지 키보드에서 원하는 이모지를 입력하세요.
-          </Text>
-          <TextInput
-            value={localEmoji}
-            onChangeText={setLocalEmoji}
-            placeholder="😀"
-            style={todagiStyles.emojiInput}
-          />
-          <Button title="확인" onPress={handleConfirm} style={todagiStyles.modalConfirmButton} />
-        </View>
-      </View>
-    </Modal>
+    <AppModal
+      visible={visible}
+      onClose={onClose}
+      title="미션 이모지 입력"
+      description="기본 이모지 키보드에서 원하는 이모지를 입력하세요."
+      footer={<Button title="확인" onPress={handleConfirm} style={todagiStyles.modalConfirmButton} />}
+    >
+      <TextInput
+        value={localEmoji}
+        onChangeText={setLocalEmoji}
+        placeholder="😀"
+        size="md"
+        style={todagiStyles.emojiInput}
+      />
+    </AppModal>
   );
 }

@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 
+import { borderWidth } from '@/constants/borders';
 import { colors } from '@/constants/colors';
 
 export const todagiStyles = StyleSheet.create({
@@ -37,17 +38,26 @@ export const todagiStyles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.grayscale[100],
-    borderRadius: 9,
-    padding: 16,
+    borderRadius: 16,
+    padding: 18,
     gap: 12,
+    borderWidth: borderWidth.hairline,
+    borderColor: '#EEE4D6',
+    shadowColor: '#D8C3A2',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 2,
   },
   infoCard: {
     flex: 1,
     backgroundColor: colors.grayscale[100],
-    borderRadius: 9,
-    paddingVertical: 20,
+    borderRadius: 16,
+    paddingVertical: 18,
     paddingHorizontal: 18,
     gap: 6,
+    borderWidth: borderWidth.hairline,
+    borderColor: '#EEE4D6',
   },
   infoCardLabel: {
     fontSize: 13,
@@ -70,7 +80,7 @@ export const todagiStyles = StyleSheet.create({
     fontSize: 24,
   },
   emojiPicker: {
-    borderWidth: 1,
+    borderWidth: borderWidth.hairline,
     borderColor: '#F0E3C6',
   },
   missionItemTitle: {
@@ -85,7 +95,7 @@ export const todagiStyles = StyleSheet.create({
   selectBox: {
     backgroundColor: colors.grayscale[100],
     borderRadius: 9,
-    borderWidth: 1,
+    borderWidth: borderWidth.hairline,
     borderColor: '#E5E5E5',
     paddingVertical: 14,
     paddingHorizontal: 14,
@@ -121,10 +131,17 @@ export const todagiStyles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: colors.grayscale[100],
-    borderRadius: 16,
+    borderRadius: 22,
     padding: 24,
     width: '80%',
-    gap: 8,
+    gap: 10,
+    borderWidth: borderWidth.hairline,
+    borderColor: '#F1E7D8',
+    shadowColor: '#AA8B58',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    elevation: 4,
   },
   modalTitle: {
     fontSize: 17,
@@ -139,9 +156,7 @@ export const todagiStyles = StyleSheet.create({
     lineHeight: 20,
   },
   emojiInput: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     backgroundColor: colors.grayscale[200],
     fontSize: 28,
     color: colors.grayscale[1000],
@@ -155,7 +170,7 @@ export const todagiStyles = StyleSheet.create({
   },
   modalOption: {
     paddingVertical: 14,
-    borderBottomWidth: 1,
+    borderBottomWidth: borderWidth.hairline,
     borderBottomColor: '#F0F0F0',
     alignItems: 'center',
   },
@@ -204,7 +219,6 @@ export const todagiStyles = StyleSheet.create({
     width: 90,
   },
   addMissionButton: {
-    backgroundColor: colors.primary[800],
     marginTop: 0,
   },
   cancelButton: {
@@ -226,5 +240,16 @@ export const todagiStyles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     color: '#FF7A00',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: '#FFF4E2',
+    borderWidth: borderWidth.hairline,
+    borderColor: '#F4DFC1',
+  },
+  missionManageIntro: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.grayscale[700],
   },
 });

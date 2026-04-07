@@ -68,8 +68,10 @@ export function MissionBuilderSection({
         </Pressable>
       ) : null}
       <Button
-        title={editingMissionId ? '미션 수정하기' : '+'}
+        title={editingMissionId ? '미션 수정하기' : '미션 추가하기'}
         onPress={onSubmitMission}
+        size="md"
+        variant="soft"
         style={styles.addMissionButton}
       />
     </Section>
