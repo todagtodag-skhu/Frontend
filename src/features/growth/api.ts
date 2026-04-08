@@ -4,11 +4,7 @@ import { router } from 'expo-router';
 import { type Mission } from '@/components/todagi/types';
 import { refreshAccessToken } from '@/features/auth/api';
 import { clearAuthSession, getAuthSession } from '@/features/auth/session';
-import {
-  MOCK_COMPLETED_STICKER_BOARDS,
-  MOCK_STICKER_BOARDS,
-  type CompletedStickerBoard,
-} from '@/mocks/data';
+import { type CompletedStickerBoard } from '@/mocks/data';
 
 export type GrowthStickerPlacement = {
   cellId: number;
@@ -109,6 +105,16 @@ function getApiBaseUrl() {
   }
 
   return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+}
+
+async function requireAuthSession() {
+  const session = await getAuthSession();
+
+  if (!session?.accessToken) {
+    throw new Error('로그인이 필요합니다.');
+  }
+
+  return session;
 }
 
 let apiClient: ReturnType<typeof axios.create> | null = null;
@@ -363,27 +369,8 @@ function normalizeCompletedBoard(value: unknown, index: number): CompletedSticke
   };
 }
 
-function getMockGrowthBoard(): GrowthStickerBoard {
-  const board = MOCK_STICKER_BOARDS[0];
-
-  return {
-    id: board.id,
-    title: board.title,
-    rewardText: board.rewardText,
-    boardDesign: normalizeBoardDesign(board.boardDesign),
-    stickerCount: board.stickerCount,
-    totalSpots: Number.parseInt(board.stickerCount, 10) || 20,
-    missions: board.missions,
-    placedStickers: [],
-  };
-}
-
 export async function getGrowthStickerBoard(): Promise<GrowthStickerBoard> {
-  const session = await getAuthSession();
-
-  if (!session) {
-    return getMockGrowthBoard();
-  }
+  await requireAuthSession();
 
   const response = await getApiClient().get('/sungjang/sticker-board');
   assertOkStatus(response, '성장이 스티커판을 불러오지 못했습니다.');
@@ -398,33 +385,14 @@ export async function getGrowthStickerBoard(): Promise<GrowthStickerBoard> {
 }
 
 export async function requestMissionSticker(missionId: string): Promise<void> {
-  const session = await getAuthSession();
-
-  if (!session) {
-    return;
-  }
+  await requireAuthSession();
 
   const response = await getApiClient().post(`/sungjang/mission-request/${missionId}`);
   assertOkStatus(response, '스티커 요청에 실패했습니다.');
 }
 
 export async function attachGrowthSticker(position: number): Promise<GrowthStickerBoard> {
-  const session = await getAuthSession();
-
-  if (!session) {
-    const board = getMockGrowthBoard();
-
-    if (!board.placedStickers.some((sticker) => sticker.cellId === position)) {
-      board.placedStickers.push({
-        cellId: position,
-        missionId: `mock-mission-${position}`,
-        emoji: '⭐',
-        title: `스티커 ${position}`,
-      });
-    }
-
-    return board;
-  }
+  await requireAuthSession();
 
   const response = await getApiClient().post('/sungjang/sticker/attach', {
     position,
@@ -435,11 +403,7 @@ export async function attachGrowthSticker(position: number): Promise<GrowthStick
 }
 
 export async function getCompletedGrowthStickerBoards(): Promise<CompletedStickerBoard[]> {
-  const session = await getAuthSession();
-
-  if (!session) {
-    return structuredClone(MOCK_COMPLETED_STICKER_BOARDS);
-  }
+  await requireAuthSession();
 
   const response = await getApiClient().get('/sungjang/sticker-board/memory');
   assertOkStatus(response, '완성된 스티커판을 불러오지 못했습니다.');
@@ -449,5 +413,9 @@ export async function getCompletedGrowthStickerBoards(): Promise<CompletedSticke
     .map(normalizeCompletedBoard)
     .filter((board): board is CompletedStickerBoard => Boolean(board));
 
-  return boards.length > 0 ? boards : structuredClone(MOCK_COMPLETED_STICKER_BOARDS);
+  if (boards.length === 0) {
+    throw new Error('완성된 스티커판 응답이 비어 있습니다.');
+  }
+
+  return boards;
 }
