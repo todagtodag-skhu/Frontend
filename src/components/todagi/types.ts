@@ -14,7 +14,7 @@ export type StickerRequest = {
   missionEmoji: string;
   missionTitle: string;
   stickerCount: number;
-  requestedAt: string; // e.g. "오늘 오전 9:15"
+  requestedAt: string;
 };
 
 export type ChildProfile = {

@@ -10,10 +10,10 @@ import { fontFamily } from '@/constants/fonts';
 import { colors } from '@/constants/colors';
 
 interface CompletedStickerCardProps {
-  date: string;          // e.g. '2025.01'
-  title: string;         // e.g. '유진이의 스티커 판'
-  filled: number;        // e.g. 30
-  total: number;         // e.g. 30
+  date: string;
+  title: string;
+  filled: number;
+  total: number;
   onReview?: () => void;
 }
 

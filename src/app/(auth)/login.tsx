@@ -36,10 +36,12 @@ export default function LoginRoute() {
 
       await saveAuthSession({
         accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
         role: result.role,
       });
 
-      router.replace(getPostLoginRoute(result.role));
+      const nextRoute = result.isNewUser ? '/onboarding' : getPostLoginRoute(result.role);
+      router.replace(nextRoute);
     } catch (error) {
       if (
         typeof error === 'object' &&

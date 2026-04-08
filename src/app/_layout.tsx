@@ -1,19 +1,62 @@
 import { Stack, useRouter } from 'expo-router';
 import { Pressable } from 'react-native';
+import { useEffect, useRef } from 'react';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
+import { QueryClientProvider } from '@tanstack/react-query';
 
 import { Text } from '@/components/ui/Text';
 import { colors } from '@/constants/colors';
 import { fontFamily } from '@/constants/fonts';
 import { GrowthProvider } from '@/contexts/GrowthContext';
+import { refreshAccessToken } from '@/features/auth/api';
+import { useAuthSession } from '@/features/auth/session';
+import { queryClient } from '@/lib/queryClient';
 
 export default function RootLayout() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RootApp />
+    </QueryClientProvider>
+  );
+}
+
+function RootApp() {
   const router = useRouter();
+  const { data: session } = useAuthSession();
+  const hasValidatedRef = useRef(false);
   const [fontsLoaded] = useFonts({
     GangwonEduAllLight: require('../../assets/fonts/GangwonEduAll-Light.otf'),
     GangwonEduAllBold: require('../../assets/fonts/GangwonEduAll-Bold.otf'),
   });
+
+  useEffect(() => {
+    if (!session) {
+      hasValidatedRef.current = false;
+      return;
+    }
+    if (hasValidatedRef.current) return;
+    hasValidatedRef.current = true;
+
+    let isActive = true;
+
+    const validateSession = async () => {
+      try {
+        await refreshAccessToken();
+      } catch {
+        if (isActive) {
+          hasValidatedRef.current = false;
+          router.replace('/login');
+        }
+      }
+    };
+
+    validateSession();
+
+    return () => {
+      isActive = false;
+    };
+  }, [router, session]);
 
   if (!fontsLoaded) {
     return null;
