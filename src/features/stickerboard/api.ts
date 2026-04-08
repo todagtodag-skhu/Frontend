@@ -1,8 +1,6 @@
 import { Mission, StickerBoard } from '@/components/todagi/types';
 import { MOCK_STICKER_BOARDS } from '@/mocks/data';
 
-// 실제 API 연동 시 fetch 호출로 교체
-
 export type CreateStickerBoardInput = {
   childId: string;
   title: string;
@@ -43,6 +41,4 @@ export async function updateStickerBoard(
   };
 }
 
-export async function deleteStickerBoard(_boardId: string): Promise<void> {
-  // no-op in mock
-}
+export async function deleteStickerBoard(_boardId: string): Promise<void> {}

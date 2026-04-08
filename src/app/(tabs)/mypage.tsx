@@ -53,7 +53,11 @@ export default function MyPageScreen() {
             await authApi.withdraw();
             router.replace('/login');
           } catch (error) {
-            Alert.alert('오류', error instanceof Error ? error.message : '회원 탈퇴에 실패했습니다.');
+            const message =
+              error instanceof Error ? error.message : '회원 탈퇴에 실패했습니다.';
+            Alert.alert('탈퇴 실패', message, [
+              { text: '확인', onPress: () => router.replace('/login') },
+            ]);
           } finally {
             setIsProcessing(false);
           }

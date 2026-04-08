@@ -12,8 +12,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 interface MissionCardProps {
   emoji: string;
   title: string;
-  frequency: string;   // e.g. '주 1회'
-  reward: string;      // e.g. '스티커 1개'
+  frequency: string;
+  reward: string;
   isSelected?: boolean;
   onPress?: () => void;
   onManagePress?: () => void;

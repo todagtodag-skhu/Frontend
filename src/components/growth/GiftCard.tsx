@@ -5,8 +5,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { fontFamily } from '@/constants/fonts';
 
 interface GiftCardProps {
-  label: string;       // e.g. '베스킨라빈스'
-  status: string;      // e.g. '열기전'
+  label: string;
+  status: string;
   onPress?: () => void;
 }
 

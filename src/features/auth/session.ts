@@ -1,5 +1,7 @@
-import { Platform } from 'react-native';
-import type { AsyncStorageStatic } from '@react-native-async-storage/async-storage';
+import { useQuery } from '@tanstack/react-query';
+import * as SecureStore from 'expo-secure-store';
+
+import { queryClient } from '@/lib/queryClient';
 
 export interface AuthSession {
   accessToken: string;
@@ -7,118 +9,78 @@ export interface AuthSession {
   role: string;
 }
 
-interface StorageAdapter {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-  deleteItem(key: string): Promise<void>;
-}
-
+export const AUTH_SESSION_QUERY_KEY = ['auth', 'session'] as const;
 const ACCESS_TOKEN_KEY = 'auth.accessToken';
 const REFRESH_TOKEN_KEY = 'auth.refreshToken';
 const ROLE_KEY = 'auth.role';
 
-const memoryStorage = new Map<string, string>();
-
-let storageAdapterPromise: Promise<StorageAdapter> | null = null;
-
-function createMemoryStorageAdapter(): StorageAdapter {
-  return {
-    async getItem(key) {
-      return memoryStorage.get(key) ?? null;
-    },
-    async setItem(key, value) {
-      memoryStorage.set(key, value);
-    },
-    async deleteItem(key) {
-      memoryStorage.delete(key);
-    },
-  };
-}
-
-async function createStorageAdapter(): Promise<StorageAdapter> {
-  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
-    return {
-      async getItem(key) {
-        return window.localStorage.getItem(key);
-      },
-      async setItem(key, value) {
-        window.localStorage.setItem(key, value);
-      },
-      async deleteItem(key) {
-        window.localStorage.removeItem(key);
-      },
-    };
-  }
-
-  const asyncStorageModule = await import('@react-native-async-storage/async-storage');
-  const AsyncStorage = (asyncStorageModule.default ?? asyncStorageModule) as AsyncStorageStatic;
-
-  if (
-    !AsyncStorage ||
-    typeof AsyncStorage.getItem !== 'function' ||
-    typeof AsyncStorage.setItem !== 'function' ||
-    typeof AsyncStorage.removeItem !== 'function'
-  ) {
-    console.warn('AsyncStorage 모듈을 불러오지 못했습니다. 메모리 저장소로 대체합니다.');
-    return createMemoryStorageAdapter();
-  }
-
-  return {
-    async getItem(key) {
-      return AsyncStorage.getItem(key);
-    },
-    async setItem(key, value) {
-      await AsyncStorage.setItem(key, value);
-    },
-    async deleteItem(key) {
-      await AsyncStorage.removeItem(key);
-    },
-  };
-}
-
-async function getStorageAdapter() {
-  if (!storageAdapterPromise) {
-    storageAdapterPromise = createStorageAdapter();
-  }
-
-  return storageAdapterPromise;
-}
-
-export async function saveAuthSession(session: AuthSession) {
-  const storage = await getStorageAdapter();
-
-  await Promise.all([
-    storage.setItem(ACCESS_TOKEN_KEY, session.accessToken),
-    storage.setItem(REFRESH_TOKEN_KEY, session.refreshToken),
-    storage.setItem(ROLE_KEY, session.role),
-  ]);
-}
-
-export async function getAuthSession(): Promise<AuthSession | null> {
-  const storage = await getStorageAdapter();
-  const [accessToken, refreshToken, role] = await Promise.all([
-    storage.getItem(ACCESS_TOKEN_KEY),
-    storage.getItem(REFRESH_TOKEN_KEY),
-    storage.getItem(ROLE_KEY),
-  ]);
-
-  if (!accessToken || !refreshToken || !role) {
+function normalizeSession(session: AuthSession | null | undefined) {
+  if (!session?.accessToken || !session.refreshToken || !session.role) {
     return null;
   }
 
-  return {
-    accessToken,
-    refreshToken,
-    role,
-  };
+  return session;
+}
+
+async function readPersistedSession(): Promise<AuthSession | null> {
+  const [accessToken, refreshToken, role] = await Promise.all([
+    SecureStore.getItemAsync(ACCESS_TOKEN_KEY),
+    SecureStore.getItemAsync(REFRESH_TOKEN_KEY),
+    SecureStore.getItemAsync(ROLE_KEY),
+  ]);
+
+  return normalizeSession({
+    accessToken: accessToken ?? '',
+    refreshToken: refreshToken ?? '',
+    role: role ?? '',
+  });
+}
+
+export async function saveAuthSession(session: AuthSession) {
+  const normalizedSession = normalizeSession(session);
+
+  if (!normalizedSession) {
+    queryClient.setQueryData(AUTH_SESSION_QUERY_KEY, null);
+    return;
+  }
+
+  await Promise.all([
+    SecureStore.setItemAsync(ACCESS_TOKEN_KEY, normalizedSession.accessToken),
+    SecureStore.setItemAsync(REFRESH_TOKEN_KEY, normalizedSession.refreshToken),
+    SecureStore.setItemAsync(ROLE_KEY, normalizedSession.role),
+  ]);
+
+  queryClient.setQueryData(AUTH_SESSION_QUERY_KEY, normalizedSession);
+}
+
+export async function getAuthSession(): Promise<AuthSession | null> {
+  const cachedSession = normalizeSession(
+    queryClient.getQueryData<AuthSession | null>(AUTH_SESSION_QUERY_KEY)
+  );
+
+  if (cachedSession) {
+    return cachedSession;
+  }
+
+  const persistedSession = await readPersistedSession();
+  queryClient.setQueryData(AUTH_SESSION_QUERY_KEY, persistedSession);
+  return persistedSession;
 }
 
 export async function clearAuthSession() {
-  const storage = await getStorageAdapter();
-
   await Promise.all([
-    storage.deleteItem(ACCESS_TOKEN_KEY),
-    storage.deleteItem(REFRESH_TOKEN_KEY),
-    storage.deleteItem(ROLE_KEY),
+    SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY),
+    SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
+    SecureStore.deleteItemAsync(ROLE_KEY),
   ]);
+
+  queryClient.setQueryData(AUTH_SESSION_QUERY_KEY, null);
+}
+
+export function useAuthSession() {
+  return useQuery({
+    queryKey: AUTH_SESSION_QUERY_KEY,
+    queryFn: getAuthSession,
+    initialData: null as AuthSession | null,
+  });
 }
