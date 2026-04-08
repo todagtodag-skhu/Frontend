@@ -42,7 +42,7 @@ type StickerGridBoardProps = {
 };
 
 function MascotImage({ boardDesign }: { boardDesign?: string }) {
-  if (boardDesign === '우주 탐험') {
+  if (boardDesign === 'meowImage') {
     return (
       <View style={styles.meowImageWrap}>
         <MeowImage width={190} height={106} />
@@ -50,7 +50,7 @@ function MascotImage({ boardDesign }: { boardDesign?: string }) {
     );
   }
 
-  if (boardDesign === '바다 여행') {
+  if (boardDesign === 'tigerImage') {
     return <TigerImage width={146} height={96} />;
   }
 

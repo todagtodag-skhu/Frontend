@@ -14,6 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
+      "usesAppleSignIn": true,
       "bundleIdentifier": "kr.omong.todag",
       "infoPlist": {
         "NSAppTransportSecurity": {
@@ -42,6 +43,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-apple-authentication",
       "@react-native-community/datetimepicker",
       "expo-secure-store"
     ]
