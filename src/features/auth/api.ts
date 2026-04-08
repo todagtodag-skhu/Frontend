@@ -10,16 +10,12 @@ import {
 export type LoginProvider = 'APPLE';
 export type UserRole = 'PENDING' | 'SUNGJANG' | 'TODAGI' | string;
 
-// ─── 공통 응답 타입 ────────────────────────────────────────────────────────────
-
 export interface AuthTokenData {
   isNewUser: boolean;
   accessToken: string;
   refreshToken: string;
   role: UserRole;
 }
-
-// ─── 소셜 로그인 ───────────────────────────────────────────────────────────────
 
 interface SocialLoginRequest {
   token: string;
@@ -77,8 +73,6 @@ export async function signInWithApple(token: string): Promise<AuthTokenData> {
   return socialLogin('APPLE', { token });
 }
 
-// ─── 토큰 재발급 ───────────────────────────────────────────────────────────────
-
 const REFRESH_ERROR: Record<number, string> = {
   400: '토큰 재발급 요청이 올바르지 않습니다.',
   401: '리프레시 토큰이 만료됐거나 유효하지 않습니다. 다시 로그인해 주세요.',
@@ -103,6 +97,8 @@ export async function refreshAccessToken(): Promise<string> {
 
   const body = parseJsonMaybe(response.data) as Partial<AuthTokenData> | null;
 
+  console.log('[refreshAccessToken] status:', response.status, 'role:', body?.role);
+
   if (response.status < 200 || response.status >= 300) {
     await clearAuthSession();
     const fallback =
@@ -116,16 +112,17 @@ export async function refreshAccessToken(): Promise<string> {
     throw new ApiError('토큰 재발급 응답이 올바르지 않습니다.', 0);
   }
 
+  const savedRole = body.role ?? session.role;
+  console.log('[refreshAccessToken] savedRole:', savedRole, '(body.role:', body.role, ', session.role:', session.role, ')');
+
   await saveAuthSession({
     accessToken: body.accessToken,
     refreshToken: body.refreshToken,
-    role: body.role ?? session.role,
+    role: savedRole,
   });
 
   return body.accessToken;
 }
-
-// ─── 로그아웃 ──────────────────────────────────────────────────────────────────
 
 export async function logout(): Promise<void> {
   const session = await getAuthSession();
@@ -143,14 +140,11 @@ export async function logout(): Promise<void> {
           validateStatus: () => true,
         }
       );
-      // 서버 에러가 있어도 로컬 세션은 반드시 삭제
     }
   } finally {
     await clearAuthSession();
   }
 }
-
-// ─── 회원 탈퇴 ─────────────────────────────────────────────────────────────────
 
 const WITHDRAW_ERROR: Record<number, string> = {
   401: '인증이 필요합니다. 다시 로그인해 주세요.',
@@ -182,11 +176,8 @@ export async function withdraw(): Promise<void> {
     throw new ApiError(serverMessage ?? fallback, response.status);
   }
 
-  // 성공 시에만 세션 삭제
   await clearAuthSession();
 }
-
-// ─── 온보딩: 성장이 초대코드 생성 ────────────────────────────────────────────
 
 export interface InviteCodeResponse {
   inviteCode: string;
@@ -226,11 +217,7 @@ export async function requestSungjangInviteCode(accessToken: string): Promise<In
 
   return result;
 }
-
-// keep backward-compatible alias
 export const requestInviteCode = requestSungjangInviteCode;
-
-// ─── 온보딩: 토닥이 초대코드로 연결 ─────────────────────────────────────────
 
 const TODAK_ONBOARDING_ERROR: Record<number, string> = {
   400: '유효하지 않은 초대코드입니다.',
@@ -257,6 +244,8 @@ export async function connectWithInviteCode(
 
   const body = parseJsonMaybe(response.data);
 
+  console.log('[connectWithInviteCode] status:', response.status, 'body:', JSON.stringify(body));
+
   if (response.status < 200 || response.status >= 300) {
     const serverMessage = extractApiErrorMessage(body);
     const fallback =
@@ -266,11 +255,13 @@ export async function connectWithInviteCode(
   }
 
   if (isAuthTokenData(body)) {
+    console.log('[connectWithInviteCode] role:', (body as AuthTokenData).role);
     return body;
   }
 
   const wrapped = body as { success?: boolean; data?: unknown; message?: string } | null;
   if (wrapped?.success && isAuthTokenData(wrapped.data)) {
+    console.log('[connectWithInviteCode] role (wrapped):', (wrapped.data as AuthTokenData).role);
     return wrapped.data;
   }
 

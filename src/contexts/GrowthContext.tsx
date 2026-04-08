@@ -55,6 +55,8 @@ export function GrowthProvider({ children }: { children: ReactNode }) {
     const loadGrowthData = async () => {
       const isGrowthRoute = segments[0] === '(growth)';
 
+      console.log('[GrowthContext] segments:', segments[0], 'role:', session?.role);
+
       if (session?.role === 'PENDING') {
         if (segments[0] !== 'onboarding') {
           router.replace('/onboarding');
@@ -64,15 +66,18 @@ export function GrowthProvider({ children }: { children: ReactNode }) {
 
       if (session?.role === 'SUNGJANG') {
         if (!isGrowthRoute) {
+          console.log('[GrowthContext] SUNGJANG → /(growth)/tree로 이동');
           router.replace('/(growth)/tree');
         }
         return;
       }
 
       if (session?.role !== 'TODAGI') {
+        console.log('[GrowthContext] role 없음, 데이터 로딩 스킵');
         return;
       }
 
+      console.log('[GrowthContext] TODAGI → 데이터 로딩 시작');
       try {
         const [fetchedChildren, fetchedBoards] = await Promise.all([
           childrenApi.getChildren(),
@@ -83,11 +88,12 @@ export function GrowthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
+        console.log('[GrowthContext] 데이터 로딩 완료 - children:', fetchedChildren.length, 'boards:', fetchedBoards.length);
         setChildProfiles(fetchedChildren);
         setBoards(fetchedBoards);
         setActiveBoardId((prev) => prev ?? fetchedBoards[0]?.id);
       } catch (error) {
-        console.error('데이터 로딩 실패:', error);
+        console.error('[GrowthContext] 데이터 로딩 실패:', error);
       }
     };
 

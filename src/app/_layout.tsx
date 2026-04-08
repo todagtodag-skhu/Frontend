@@ -1,6 +1,6 @@
 import { Stack, useRouter } from 'expo-router';
 import { Pressable } from 'react-native';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -24,23 +24,28 @@ export default function RootLayout() {
 function RootApp() {
   const router = useRouter();
   const { data: session } = useAuthSession();
+  const hasValidatedRef = useRef(false);
   const [fontsLoaded] = useFonts({
     GangwonEduAllLight: require('../../assets/fonts/GangwonEduAll-Light.otf'),
     GangwonEduAllBold: require('../../assets/fonts/GangwonEduAll-Bold.otf'),
   });
 
   useEffect(() => {
+    if (!session) {
+      hasValidatedRef.current = false;
+      return;
+    }
+    if (hasValidatedRef.current) return;
+    hasValidatedRef.current = true;
+
     let isActive = true;
 
     const validateSession = async () => {
-      if (!session) {
-        return;
-      }
-
       try {
         await refreshAccessToken();
       } catch {
         if (isActive) {
+          hasValidatedRef.current = false;
           router.replace('/login');
         }
       }

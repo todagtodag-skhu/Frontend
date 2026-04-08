@@ -17,8 +17,6 @@ export type CompletedStickerBoard = {
     title: string;
   }[];
 };
-
-// 성장이 정보
 export const MOCK_CHILDREN: ChildProfile[] = [
   {
     id: 'child-1',
@@ -39,8 +37,6 @@ export const MOCK_CHILDREN: ChildProfile[] = [
     birthday: '2021.01.08',
   },
 ];
-
-// 미션 목록
 export const MOCK_STICKER_BOARDS: StickerBoard[] = [
   {
     id: 'board-1',
@@ -207,8 +203,6 @@ export const MOCK_DEFAULT_TREE_MISSIONS: TreeMission[] = [
   { id: 'm8', emoji: '🎹', title: '피아노 연습하기', completed: false },
   { id: 'm9', emoji: '💤', title: '낮잠 안 자기', completed: false },
 ];
-
-// 현재 스티커판 미션 요청
 export const MOCK_STICKER_REQUESTS: StickerRequest[] = [
   {
     id: 'req-1',
@@ -246,8 +240,6 @@ export function cloneStickerBoard(board: StickerBoard): StickerBoard {
     missions: board.missions.map(cloneMission),
   };
 }
-
-// 이전 스티커판에서 이월된 미션 요청
 export const MOCK_PREVIOUS_STICKER_REQUESTS: StickerRequest[] = [
   {
     id: 'prev-req-1',

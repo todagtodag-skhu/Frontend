@@ -1,11 +1,11 @@
 import { saveAuthSession } from '@/features/auth/session';
 import { ApiError, assertOkStatus, extractApiErrorMessage, getApiClient, parseJsonMaybe } from '@/lib/apiClient';
 
-// ─── 타입 정의 ─────────────────────────────────────────────────────────────────
-
 export interface RelationItem {
   relationId: number;
-  sungjangName: string;
+  sungjangName?: string;
+  sungjangBirthday?: string;
+  inviteCode?: string;
 }
 
 export interface RelationListResponse {
@@ -29,10 +29,8 @@ export interface ConnectTodakResponse {
 
 export interface UpdateSungjangInfoRequest {
   sungjangName: string;
-  sungjangBirthday: string; // "YYYY-MM-DD"
+  sungjangBirthday: string;
 }
-
-// ─── 에러 메시지 맵 ────────────────────────────────────────────────────────────
 
 const GET_RELATIONS_ERROR: Record<number, string> = {
   403: '토닥이 계정만 관계 목록을 조회할 수 있습니다.',
@@ -59,8 +57,6 @@ const UPDATE_SUNGJANG_INFO_ERROR: Record<number, string> = {
   404: '해당 관계를 찾을 수 없습니다.',
 };
 
-// ─── 헬퍼 ─────────────────────────────────────────────────────────────────────
-
 function buildErrorMessage(
   body: unknown,
   status: number,
@@ -73,13 +69,6 @@ function buildErrorMessage(
     `${defaultMessage} (${status})`
   );
 }
-
-// ─── API 함수 ──────────────────────────────────────────────────────────────────
-
-/**
- * GET /relation/todak
- * 토닥이 유저가 소속된 관계 목록 조회
- */
 export async function getRelations(): Promise<RelationListResponse> {
   const response = await getApiClient().get('/relation/todak');
   const body = parseJsonMaybe(response.data);
@@ -96,14 +85,9 @@ export async function getRelations(): Promise<RelationListResponse> {
     throw new ApiError('관계 목록 응답이 올바르지 않습니다.', 0);
   }
 
+  console.log('[getRelations] relations:', JSON.stringify(data.relations));
   return data;
 }
-
-/**
- * POST /relation/invite-code
- * 기존 연결이 있는 성장이 유저의 초대코드 생성 (5분 유효)
- * PENDING 유저는 사용 불가 → auth/api의 requestSungjangInviteCode 사용
- */
 export async function createRelationInviteCode(): Promise<InviteCodeResponse> {
   const response = await getApiClient().post('/relation/invite-code');
   const body = parseJsonMaybe(response.data);
@@ -122,12 +106,6 @@ export async function createRelationInviteCode(): Promise<InviteCodeResponse> {
 
   return data;
 }
-
-/**
- * POST /relation/connect/todak
- * 기존 연결이 있는 토닥이가 추가로 성장이와 연결
- * 성공 시 새 토큰을 세션에 저장합니다.
- */
 export async function connectTodak(code: string): Promise<ConnectTodakResponse> {
   const response = await getApiClient().post('/relation/connect/todak', { code } satisfies ConnectTodakRequest);
   const body = parseJsonMaybe(response.data);
@@ -144,7 +122,6 @@ export async function connectTodak(code: string): Promise<ConnectTodakResponse> 
     throw new ApiError('연결 응답이 올바르지 않습니다.', 0);
   }
 
-  // 토큰이 응답에 포함된 경우에만 세션 갱신
   if (data.accessToken && data.refreshToken && data.role) {
     await saveAuthSession({
       accessToken: data.accessToken,
@@ -155,11 +132,6 @@ export async function connectTodak(code: string): Promise<ConnectTodakResponse> 
 
   return data;
 }
-
-/**
- * POST /relation/{relationId}/sungjang-info
- * 성장이 이름 및 생일 수정 (토닥이 계정 필요)
- */
 export async function updateSungjangInfo(
   relationId: number | string,
   input: UpdateSungjangInfoRequest

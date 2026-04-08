@@ -2,6 +2,7 @@ import { ChildProfile } from '@/components/todagi/types';
 import { MOCK_CHILDREN } from '@/mocks/data';
 import { getAuthSession } from '@/features/auth/session';
 import { getRelations, connectTodak, updateSungjangInfo } from '@/features/relation/api';
+import { getChildMetadata, saveChildMetadata } from '@/features/children/storage';
 
 export type CreateChildInput = {
   inviteCode: string;
@@ -25,12 +26,18 @@ export async function getChildren(): Promise<ChildProfile[]> {
 
   try {
     const data = await getRelations();
-    return data.relations.map((rel) => ({
-      id: rel.relationId.toString(),
-      name: rel.sungjangName || '성장이',
-      birthday: '-',
-      inviteCode: '',
-    }));
+    return Promise.all(
+      data.relations.map(async (rel) => {
+        const metadata = await getChildMetadata(rel.relationId);
+
+        return {
+          id: rel.relationId.toString(),
+          name: metadata?.name || rel.sungjangName || '성장이',
+          birthday: rel.sungjangBirthday || metadata?.birthday || '-',
+          inviteCode: rel.inviteCode || metadata?.inviteCode || '',
+        };
+      })
+    );
   } catch (error) {
     console.error('아이 목록 조회 중 오류가 발생했습니다:', error);
     throw error;
@@ -56,7 +63,6 @@ export async function createChild(input: CreateChildInput): Promise<ChildProfile
       const data = await connectTodak(input.inviteCode);
       relationId = data.relationId.toString();
     } catch (connectError: unknown) {
-      // 이미 연결된 관계(409)이거나 유효하지 않은 코드(400)인 경우 기존 관계 첫 번째 항목 사용
       const status =
         connectError instanceof Error && 'statusCode' in connectError
           ? (connectError as { statusCode: number }).statusCode
@@ -77,6 +83,12 @@ export async function createChild(input: CreateChildInput): Promise<ChildProfile
     await updateSungjangInfo(relationId, {
       sungjangName: input.name,
       sungjangBirthday: normalizeBirthday(input.birthday),
+    });
+
+    await saveChildMetadata(relationId, {
+      name: input.name,
+      birthday: normalizeBirthday(input.birthday),
+      inviteCode: input.inviteCode,
     });
 
     return {
@@ -110,6 +122,12 @@ export async function updateChild(
     await updateSungjangInfo(relationId, {
       sungjangName: input.name,
       sungjangBirthday: normalizeBirthday(input.birthday),
+    });
+
+    await saveChildMetadata(relationId, {
+      name: input.name,
+      birthday: normalizeBirthday(input.birthday),
+      inviteCode: input.inviteCode,
     });
 
     return {
