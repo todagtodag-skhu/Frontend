@@ -28,6 +28,15 @@ export type GrowthStickerBoard = {
   placedStickers: GrowthStickerPlacement[];
 };
 
+const BOARD_DESIGN_MAP: Record<string, string> = {
+  '성장 나무': 'foxImage',
+  '우주 탐험': 'meowImage',
+  '바다 여행': 'tigerImage',
+  foxImage: 'foxImage',
+  meowImage: 'meowImage',
+  tigerImage: 'tigerImage',
+};
+
 function parseJsonMaybe(value: unknown) {
   if (typeof value !== 'string') {
     return value;
@@ -219,6 +228,16 @@ function getStickerCountLabel(totalSpots: number, rawValue?: string) {
   return totalSpots > 0 ? `${totalSpots}개` : '0개';
 }
 
+function normalizeBoardDesign(value: unknown, fallback = 'foxImage') {
+  const boardDesign = asString(value);
+
+  if (!boardDesign) {
+    return fallback;
+  }
+
+  return BOARD_DESIGN_MAP[boardDesign] ?? fallback;
+}
+
 function normalizePlacedStickers(value: unknown, missions: Mission[]): GrowthStickerPlacement[] {
   const missionMap = new Map(missions.map((mission) => [mission.id, mission]));
 
@@ -289,10 +308,7 @@ function normalizeGrowthBoard(value: unknown): GrowthStickerBoard | null {
       asString(record.rewardText) ||
       asString(record.reward) ||
       asString(record.rewardName),
-    boardDesign:
-      asString(record.boardDesign) ||
-      asString(record.design) ||
-      '성장 나무',
+    boardDesign: normalizeBoardDesign(record.boardDesign ?? record.design),
     stickerCount: getStickerCountLabel(totalSpots, asString(record.stickerCountLabel)),
     totalSpots,
     missions,
@@ -326,10 +342,7 @@ function normalizeCompletedBoard(value: unknown, index: number): CompletedSticke
       asString(record.reward) ||
       asString(record.rewardText) ||
       asString(record.rewardName),
-    boardDesign:
-      asString(record.boardDesign) ||
-      asString(record.design) ||
-      '성장 나무',
+    boardDesign: normalizeBoardDesign(record.boardDesign ?? record.design),
     stickers: asArray(record.stickers ?? record.placedStickers ?? record.memories).map(
       (sticker, stickerIndex) => {
         const item = asRecord(sticker);
@@ -357,7 +370,7 @@ function getMockGrowthBoard(): GrowthStickerBoard {
     id: board.id,
     title: board.title,
     rewardText: board.rewardText,
-    boardDesign: board.boardDesign,
+    boardDesign: normalizeBoardDesign(board.boardDesign),
     stickerCount: board.stickerCount,
     totalSpots: Number.parseInt(board.stickerCount, 10) || 20,
     missions: board.missions,
