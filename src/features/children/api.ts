@@ -1,6 +1,7 @@
-import axios from 'axios';
+import axios, { AxiosHeaders, type InternalAxiosRequestConfig } from 'axios';
 import { ChildProfile } from '@/components/todagi/types';
 import { MOCK_CHILDREN } from '@/mocks/data';
+import { refreshAccessToken } from '@/features/auth/api';
 import { getAuthSession, saveAuthSession } from '@/features/auth/session';
 
 // 실제 API 연동
@@ -60,6 +61,22 @@ function parseJsonMaybe(value: unknown) {
   }
 }
 
+function extractApiErrorMessage(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  if ('message' in payload && typeof payload.message === 'string') {
+    return payload.message;
+  }
+
+  if ('error' in payload && typeof payload.error === 'string') {
+    return payload.error;
+  }
+
+  return null;
+}
+
 function getApiBaseUrl() {
   if (!API_BASE_URL) {
     throw new Error('EXPO_PUBLIC_API_URL이 설정되어 있지 않습니다.');
@@ -68,13 +85,77 @@ function getApiBaseUrl() {
   return API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
 }
 
-async function getFirstRelationId(accessToken: string): Promise<string | null> {
-  const response = await axios.get(`${getApiBaseUrl()}/relation/todak`, {
+let apiClient: ReturnType<typeof axios.create> | null = null;
+
+function getApiClient() {
+  if (apiClient) {
+    return apiClient;
+  }
+
+  const client = axios.create({
+    baseURL: getApiBaseUrl(),
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
     },
     validateStatus: () => true,
+  });
+
+  client.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
+    const session = await getAuthSession();
+    if (session?.accessToken) {
+      const headers = AxiosHeaders.from(config.headers ?? {});
+      if (!headers.has('Authorization')) {
+        headers.set('Authorization', `Bearer ${session.accessToken}`);
+      }
+      config.headers = headers;
+    }
+
+    return config;
+  });
+
+  client.interceptors.response.use(async (response) => {
+    if (response.status !== 401) {
+      return response;
+    }
+
+    const originalRequest = response.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    if (originalRequest._retry) {
+      return response;
+    }
+
+    originalRequest._retry = true;
+
+    try {
+      const newAccessToken = await refreshAccessToken();
+      const headers = AxiosHeaders.from(originalRequest.headers ?? {});
+      headers.set('Authorization', `Bearer ${newAccessToken}`);
+      originalRequest.headers = headers;
+
+      return await client.request(originalRequest);
+    } catch {
+      return response;
+    }
+  });
+
+  apiClient = client;
+  return client;
+}
+
+function assertOkStatus(response: { status: number; data: unknown }, fallbackMessage: string) {
+  if (response.status < 200 || response.status >= 300) {
+    const parsedBody = parseJsonMaybe(response.data);
+    const message =
+      extractApiErrorMessage(parsedBody) || `${fallbackMessage} (${response.status})`;
+    throw new Error(message);
+  }
+}
+
+async function getFirstRelationId(accessToken: string): Promise<string | null> {
+  const response = await getApiClient().get('/relation/todak', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
   });
 
   if (response.status < 200 || response.status >= 300) {
@@ -98,18 +179,8 @@ export async function getChildren(): Promise<ChildProfile[]> {
   }
 
   try {
-    const response = await axios.get(`${getApiBaseUrl()}/relation/todak`, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-      validateStatus: () => true,
-    });
-
-    if (response.status < 200 || response.status >= 300) {
-      console.error('아이 목록을 불러오지 못했습니다:', response.status);
-      return structuredClone(MOCK_CHILDREN);
-    }
+    const response = await getApiClient().get('/relation/todak');
+    assertOkStatus(response, '아이 목록을 불러오지 못했습니다.');
 
     const data = parseJsonMaybe(response.data) as RelationListResponse | null;
     
@@ -123,10 +194,10 @@ export async function getChildren(): Promise<ChildProfile[]> {
       }));
     }
 
-    return structuredClone(MOCK_CHILDREN);
+    throw new Error('아이 목록 응답이 올바르지 않습니다.');
   } catch (error) {
     console.error('아이 목록 조회 중 오류가 발생했습니다:', error);
-    return structuredClone(MOCK_CHILDREN);
+    throw error;
   }
 }
 
@@ -145,18 +216,11 @@ export async function createChild(input: CreateChildInput): Promise<ChildProfile
 
   try {
     // 토닥이 관계 연결
-    const response = await axios.post(
-      `${getApiBaseUrl()}/relation/connect/todak`,
+    const response = await getApiClient().post(
+      '/relation/connect/todak',
       {
         code: input.inviteCode,
       },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-        validateStatus: () => true,
-      }
     );
 
     let relationId: string | null = null;
@@ -183,7 +247,10 @@ export async function createChild(input: CreateChildInput): Promise<ChildProfile
       // 초대코드가 이미 사용됐거나 관계가 존재하는 경우: 기존 관계 조회
       relationId = await getFirstRelationId(session.accessToken);
     } else {
-      throw new Error(`아이 생성에 실패했습니다: ${response.status}`);
+      const parsedBody = parseJsonMaybe(response.data);
+      const message =
+        extractApiErrorMessage(parsedBody) || `아이 생성에 실패했습니다: ${response.status}`;
+      throw new Error(message);
     }
 
     if (!relationId) {
@@ -192,24 +259,20 @@ export async function createChild(input: CreateChildInput): Promise<ChildProfile
 
     // 성장이 정보 업데이트
     const normalizedBirthday = normalizeBirthday(input.birthday);
-    const updateResponse = await axios.post(
-      `${getApiBaseUrl()}/relation/${relationId}/sungjang-info`,
+    const updateResponse = await getApiClient().post(
+      `/relation/${relationId}/sungjang-info`,
       {
         sungjangName: input.name,
         sungjangBirthday: normalizedBirthday,
       },
       {
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${accessTokenForUpdate}`,
         },
-        validateStatus: () => true,
       }
     );
 
-    if (updateResponse.status < 200 || updateResponse.status >= 300) {
-      console.error('성장이 정보 업데이트에 실패했습니다:', updateResponse.status);
-    }
+    assertOkStatus(updateResponse, '성장이 정보 업데이트에 실패했습니다.');
 
     return {
       id: relationId,
@@ -219,26 +282,19 @@ export async function createChild(input: CreateChildInput): Promise<ChildProfile
     };
   } catch (error) {
     console.error('아이 생성 중 오류가 발생했습니다:', error);
-    
-    // 폴백: 로컬 생성
-    return {
-      id: `child-${Date.now()}`,
-      inviteCode: input.inviteCode,
-      name: input.name,
-      birthday: input.birthday,
-    };
+    throw error;
   }
 }
 
 export async function updateChild(
-  childId: string,
+  relationId: string,
   input: CreateChildInput
 ): Promise<ChildProfile> {
   const session = await getAuthSession();
   
   if (!session) {
     return {
-      id: childId,
+      id: relationId,
       inviteCode: input.inviteCode,
       name: input.name,
       birthday: input.birthday,
@@ -246,40 +302,25 @@ export async function updateChild(
   }
 
   try {
-    const response = await axios.post(
-      `${getApiBaseUrl()}/relation/${childId}/sungjang-info`,
+    const response = await getApiClient().post(
+      `/relation/${relationId}/sungjang-info`,
       {
         sungjangName: input.name,
         sungjangBirthday: normalizeBirthday(input.birthday),
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-        validateStatus: () => true,
       }
     );
 
-    if (response.status < 200 || response.status >= 300) {
-      throw new Error(`아이 정보 업데이트에 실패했습니다: ${response.status}`);
-    }
+    assertOkStatus(response, '아이 정보 업데이트에 실패했습니다.');
 
     return {
-      id: childId,
+      id: relationId,
       inviteCode: input.inviteCode,
       name: input.name,
       birthday: input.birthday,
     };
   } catch (error) {
     console.error('아이 정보 업데이트 중 오류가 발생했습니다:', error);
-    
-    return {
-      id: childId,
-      inviteCode: input.inviteCode,
-      name: input.name,
-      birthday: input.birthday,
-    };
+    throw error;
   }
 }
 

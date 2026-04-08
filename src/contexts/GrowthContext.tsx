@@ -1,8 +1,10 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSegments } from 'expo-router';
 
 import { Mission, StickerBoard, ChildProfile } from '@/components/todagi/types';
 import * as childrenApi from '@/features/children/api';
 import * as stickerBoardApi from '@/features/stickerboard/api';
+import { getAuthSession } from '@/features/auth/session';
 
 type AddChildInput = {
   inviteCode: string;
@@ -40,19 +42,46 @@ export type GrowthContextValue = {
 const GrowthContext = createContext<GrowthContextValue | undefined>(undefined);
 
 export function GrowthProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const segments = useSegments();
   const [childProfiles, setChildProfiles] = useState<ChildProfile[]>([]);
   const [boards, setBoards] = useState<StickerBoard[]>([]);
   const [activeBoardId, setActiveBoardId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    Promise.all([childrenApi.getChildren(), stickerBoardApi.getStickerBoards()]).then(
-      ([fetchedChildren, fetchedBoards]) => {
-        setChildProfiles(fetchedChildren);
-        setBoards(fetchedBoards);
-        setActiveBoardId((prev) => prev ?? fetchedBoards[0]?.id);
+    let cancelled = false;
+
+    const loadGrowthData = async () => {
+      const session = await getAuthSession();
+      const isGrowthRoute = segments[0] === '(growth)';
+
+      if (session?.role === 'SUNGJANG') {
+        if (!isGrowthRoute) {
+          router.replace('/(growth)/tree');
+        }
+        return;
       }
-    );
-  }, []);
+
+      const [fetchedChildren, fetchedBoards] = await Promise.all([
+        childrenApi.getChildren(),
+        stickerBoardApi.getStickerBoards(),
+      ]);
+
+      if (cancelled) {
+        return;
+      }
+
+      setChildProfiles(fetchedChildren);
+      setBoards(fetchedBoards);
+      setActiveBoardId((prev) => prev ?? fetchedBoards[0]?.id);
+    };
+
+    loadGrowthData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router, segments]);
 
   const value = useMemo<GrowthContextValue>(() => ({
     children: childProfiles,
