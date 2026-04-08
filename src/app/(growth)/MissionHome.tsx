@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Alert,
   View,
@@ -18,54 +18,17 @@ import { colors } from '@/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { Mission } from '@/components/todagi/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getGrowthStickerBoard, requestMissionSticker, type GrowthStickerBoard } from '@/features/growth/api';
+import { useGrowthStickerBoard, useRequestMissionSticker } from '@/features/growth/hooks';
 
 const PROGRESS_TOTAL = 20;
 
 const MissionListScreen: React.FC = () => {
-  const [board, setBoard] = useState<GrowthStickerBoard | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRequesting, setIsRequesting] = useState(false);
+  const { data: board, isLoading, error } = useGrowthStickerBoard();
+  const requestStickerMutation = useRequestMissionSticker();
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [selectedMissionId, setSelectedMissionId] = useState<string | null>(null);
   const [showSelectMissionNotice, setShowSelectMissionNotice] = useState(false);
   const [showRequestCompleteNotice, setShowRequestCompleteNotice] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadBoard = async () => {
-      try {
-        setIsLoading(true);
-        const nextBoard = await getGrowthStickerBoard();
-
-        if (cancelled) {
-          return;
-        }
-
-        setBoard(nextBoard);
-        setSelectedMissionId((prev) =>
-          prev && nextBoard.missions.some((mission) => mission.id === prev) ? prev : null,
-        );
-      } catch (error) {
-        if (!cancelled) {
-          const message =
-            error instanceof Error ? error.message : '미션 목록을 불러오지 못했습니다.';
-          Alert.alert('불러오기 실패', message);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadBoard();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const swipeResponder = useMemo(
     () =>
@@ -107,16 +70,13 @@ const MissionListScreen: React.FC = () => {
 
     void (async () => {
       try {
-        setIsRequesting(true);
-        await requestMissionSticker(selectedMissionId);
+        await requestStickerMutation.mutateAsync(selectedMissionId);
         setSelectedMission(null);
         setShowRequestCompleteNotice(true);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : '스티커 요청에 실패했습니다.';
         Alert.alert('요청 실패', message);
-      } finally {
-        setIsRequesting(false);
       }
     })();
   };
@@ -140,6 +100,7 @@ const MissionListScreen: React.FC = () => {
   const hasMissions = Boolean(board?.missions.length);
   const progressTotal = board?.totalSpots || PROGRESS_TOTAL;
   const placedCount = board?.placedStickers.length ?? 0;
+  const isRequesting = requestStickerMutation.isPending;
 
   return (
     <SafeAreaView style={styles.safe} {...swipeResponder.panHandlers}>
@@ -157,7 +118,14 @@ const MissionListScreen: React.FC = () => {
         </Text>
 
         <View style={styles.page}>
-          {isLoading ? (
+          {error ? (
+            <View style={styles.emptyStateCard}>
+              <Text style={styles.emptyStateTitle}>미션 목록을 불러오지 못했어요.</Text>
+              <Text style={styles.emptyStateBody}>
+                {error.message}
+              </Text>
+            </View>
+          ) : isLoading ? (
             <View style={styles.emptyStateCard}>
               <Text style={styles.emptyStateTitle}>미션 목록을 불러오는 중이에요.</Text>
             </View>

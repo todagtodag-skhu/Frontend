@@ -18,11 +18,7 @@ import { StickerInfoCard } from '@/components/growth/StickerInfoCard';
 import { fontFamily } from '@/constants/fonts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { type TreeMission } from '@/mocks/data';
-import {
-  attachGrowthSticker,
-  getGrowthStickerBoard,
-  type GrowthStickerBoard,
-} from '@/features/growth/api';
+import { useAttachGrowthSticker, useGrowthStickerBoard } from '@/features/growth/hooks';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -66,47 +62,8 @@ export default function GrowthTree({
   reward = '닌텐도 DS 1시간 사용',
   missions = [],
 }: TreeProps) {
-  const [board, setBoard] = useState<GrowthStickerBoard | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAttaching, setIsAttaching] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadBoard = async (showError = true) => {
-      try {
-        setIsLoading(true);
-        const nextBoard = await getGrowthStickerBoard();
-
-        if (cancelled) {
-          return;
-        }
-
-        setBoard(nextBoard);
-      } catch (error) {
-        if (!cancelled && showError) {
-          const message =
-            error instanceof Error ? error.message : '스티커판을 불러오지 못했습니다.';
-          Alert.alert('불러오기 실패', message);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadBoard();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const reloadBoard = useCallback(async () => {
-    const nextBoard = await getGrowthStickerBoard();
-    setBoard(nextBoard);
-  }, []);
+  const { data: board, isLoading, error, refetch } = useGrowthStickerBoard();
+  const attachStickerMutation = useAttachGrowthSticker();
 
   const resolvedBoardName = board?.title ?? boardName;
   const resolvedReward = board?.rewardText ?? reward;
@@ -226,7 +183,7 @@ export default function GrowthTree({
 
   const handleAttachSticker = useCallback(
     async (cellId: number, mission: Mission, stickerIdx: number) => {
-      if (isAttaching) {
+      if (attachStickerMutation.isPending) {
         return;
       }
 
@@ -234,19 +191,15 @@ export default function GrowthTree({
       setUsedStickerIndices((prev) => (prev.includes(stickerIdx) ? prev : [...prev, stickerIdx]));
 
       try {
-        setIsAttaching(true);
-        const nextBoard = await attachGrowthSticker(cellId);
-        setBoard(nextBoard);
+        await attachStickerMutation.mutateAsync(cellId);
       } catch (error) {
-        await reloadBoard().catch(() => undefined);
+        await refetch().catch(() => undefined);
         const message =
           error instanceof Error ? error.message : '스티커 부착에 실패했습니다.';
         Alert.alert('부착 실패', message);
-      } finally {
-        setIsAttaching(false);
       }
     },
-    [isAttaching, placeSticker, reloadBoard],
+    [attachStickerMutation, placeSticker, refetch],
   );
 
   const getFirstAvailableCellId = useCallback(() => {
@@ -411,7 +364,9 @@ export default function GrowthTree({
         </Text>
         </View>
 
-        {isLoading ? (
+        {error ? (
+          <Text style={styles.progressText}>{error.message}</Text>
+        ) : isLoading ? (
           <Text style={styles.progressText}>스티커판을 불러오는 중이에요.</Text>
         ) : (
           <StickerGridBoard
@@ -473,7 +428,7 @@ export default function GrowthTree({
         </View>
 
         <Text style={styles.stickerCountText}>
-          {isAttaching
+          {attachStickerMutation.isPending
             ? '스티커를 붙이는 중이에요...'
             : `붙일 수 있는 스티커를 ${placedCount}개 가지고 있어요!`}
         </Text>

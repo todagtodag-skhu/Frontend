@@ -1,6 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   Animated,
   Dimensions,
   Modal,
@@ -22,7 +21,7 @@ import { StickerInfoCard } from '@/components/growth/StickerInfoCard';
 import { StickerGridBoard, type GridCell } from '@/components/growth/StickerGridBoard';
 import { fontFamily } from '@/constants/fonts';
 import { type CompletedStickerBoard } from '@/mocks/data';
-import { getCompletedGrowthStickerBoards } from '@/features/growth/api';
+import { useCompletedGrowthStickerBoards } from '@/features/growth/hooks';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -125,44 +124,9 @@ function CompletedBoardCarouselCard({ board }: { board: CompletedStickerBoard })
 
 const MemoryStorageScreen: React.FC = () => {
   const scrollRef = useRef<ScrollView>(null);
-  const [boards, setBoards] = useState<CompletedStickerBoard[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: boards = [], isLoading, error } = useCompletedGrowthStickerBoards();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const currentBoard = boards[selectedIndex] ?? boards[0];
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadBoards = async () => {
-      try {
-        setIsLoading(true);
-        const nextBoards = await getCompletedGrowthStickerBoards();
-
-        if (cancelled) {
-          return;
-        }
-
-        setBoards(nextBoards);
-        setSelectedIndex(0);
-      } catch (error) {
-        if (!cancelled) {
-          const message =
-            error instanceof Error ? error.message : '완성된 스티커판을 불러오지 못했습니다.';
-          Alert.alert('불러오기 실패', message);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadBoards();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const swipeResponder = useMemo(
     () =>
@@ -246,7 +210,9 @@ const MemoryStorageScreen: React.FC = () => {
         </View>
 
         <Text style={styles.sectionTitle}>스티커판 완료 보상 내용</Text>
-        {isLoading ? (
+        {error ? (
+          <Text style={styles.sectionTitle}>{error.message}</Text>
+        ) : isLoading ? (
           <Text style={styles.sectionTitle}>완성된 스티커판을 불러오는 중이에요.</Text>
         ) : currentBoard ? (
           <GiftCard label={currentBoard.reward} status="열기전" onPress={() => undefined} />
