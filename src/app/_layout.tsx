@@ -2,13 +2,23 @@ import { Stack, useRouter } from 'expo-router';
 import { Pressable } from 'react-native';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
+import { QueryClientProvider } from '@tanstack/react-query';
 
 import { Text } from '@/components/ui/Text';
 import { colors } from '@/constants/colors';
 import { fontFamily } from '@/constants/fonts';
 import { GrowthProvider } from '@/contexts/GrowthContext';
+import { queryClient } from '@/lib/queryClient';
 
 export default function RootLayout() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RootApp />
+    </QueryClientProvider>
+  );
+}
+
+function RootApp() {
   const router = useRouter();
   const [fontsLoaded] = useFonts({
     GangwonEduAllLight: require('../../assets/fonts/GangwonEduAll-Light.otf'),
