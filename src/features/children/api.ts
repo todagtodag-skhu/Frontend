@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { ChildProfile } from '@/components/todagi/types';
 import { MOCK_CHILDREN } from '@/mocks/data';
 import { getAuthSession, saveAuthSession } from '@/features/auth/session';
@@ -43,6 +44,22 @@ function normalizeBirthday(value: string) {
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
+function parseJsonMaybe(value: unknown) {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return null;
+  }
+}
+
 function getApiBaseUrl() {
   if (!API_BASE_URL) {
     throw new Error('EXPO_PUBLIC_API_URL이 설정되어 있지 않습니다.');
@@ -52,19 +69,19 @@ function getApiBaseUrl() {
 }
 
 async function getFirstRelationId(accessToken: string): Promise<string | null> {
-  const response = await fetch(`${getApiBaseUrl()}/relation/todak`, {
-    method: 'GET',
+  const response = await axios.get(`${getApiBaseUrl()}/relation/todak`, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
+    validateStatus: () => true,
   });
 
-  if (!response.ok) {
+  if (response.status < 200 || response.status >= 300) {
     return null;
   }
 
-  const data = (await response.json()) as RelationListResponse;
+  const data = parseJsonMaybe(response.data) as RelationListResponse | null;
   const first = data?.relations?.[0];
 
   if (!first?.relationId) {
@@ -81,23 +98,23 @@ export async function getChildren(): Promise<ChildProfile[]> {
   }
 
   try {
-    const response = await fetch(`${getApiBaseUrl()}/relation/todak`, {
-      method: 'GET',
+    const response = await axios.get(`${getApiBaseUrl()}/relation/todak`, {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session.accessToken}`,
       },
+      validateStatus: () => true,
     });
 
-    if (!response.ok) {
+    if (response.status < 200 || response.status >= 300) {
       console.error('아이 목록을 불러오지 못했습니다:', response.status);
       return structuredClone(MOCK_CHILDREN);
     }
 
-    const data = await response.json();
+    const data = parseJsonMaybe(response.data) as RelationListResponse | null;
     
     // API 응답 형식을 ChildProfile[]로 변환
-    if (data.relations && Array.isArray(data.relations)) {
+    if (data?.relations && Array.isArray(data.relations)) {
       return data.relations.map((rel: any) => ({
         id: rel.relationId?.toString() || `relation-${rel.relationId}`,
         name: rel.sungjangName || '성장이',
@@ -128,22 +145,25 @@ export async function createChild(input: CreateChildInput): Promise<ChildProfile
 
   try {
     // 토닥이 관계 연결
-    const response = await fetch(`${getApiBaseUrl()}/relation/connect/todak`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-      body: JSON.stringify({
+    const response = await axios.post(
+      `${getApiBaseUrl()}/relation/connect/todak`,
+      {
         code: input.inviteCode,
-      }),
-    });
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        validateStatus: () => true,
+      }
+    );
 
     let relationId: string | null = null;
     let accessTokenForUpdate = session.accessToken;
 
-    if (response.ok) {
-      const data = (await response.json()) as RelationConnectResponse;
+    if (response.status >= 200 && response.status < 300) {
+      const data = parseJsonMaybe(response.data) as RelationConnectResponse | null;
 
       if (data?.accessToken && data?.refreshToken && data?.role) {
         await saveAuthSession({
@@ -172,19 +192,22 @@ export async function createChild(input: CreateChildInput): Promise<ChildProfile
 
     // 성장이 정보 업데이트
     const normalizedBirthday = normalizeBirthday(input.birthday);
-    const updateResponse = await fetch(`${getApiBaseUrl()}/relation/${relationId}/sungjang-info`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessTokenForUpdate}`,
-      },
-      body: JSON.stringify({
+    const updateResponse = await axios.post(
+      `${getApiBaseUrl()}/relation/${relationId}/sungjang-info`,
+      {
         sungjangName: input.name,
         sungjangBirthday: normalizedBirthday,
-      }),
-    });
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessTokenForUpdate}`,
+        },
+        validateStatus: () => true,
+      }
+    );
 
-    if (!updateResponse.ok) {
+    if (updateResponse.status < 200 || updateResponse.status >= 300) {
       console.error('성장이 정보 업데이트에 실패했습니다:', updateResponse.status);
     }
 
@@ -223,19 +246,22 @@ export async function updateChild(
   }
 
   try {
-    const response = await fetch(`${getApiBaseUrl()}/relation/${childId}/sungjang-info`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-      body: JSON.stringify({
+    const response = await axios.post(
+      `${getApiBaseUrl()}/relation/${childId}/sungjang-info`,
+      {
         sungjangName: input.name,
         sungjangBirthday: normalizeBirthday(input.birthday),
-      }),
-    });
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        validateStatus: () => true,
+      }
+    );
 
-    if (!response.ok) {
+    if (response.status < 200 || response.status >= 300) {
       throw new Error(`아이 정보 업데이트에 실패했습니다: ${response.status}`);
     }
 

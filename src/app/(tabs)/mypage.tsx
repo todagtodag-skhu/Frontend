@@ -21,20 +21,28 @@ export default function MyPageScreen() {
 
   const handleLogout = async () => {
     if (isProcessing) return;
-    try {
-      setIsProcessing(true);
-      await authApi.logout();
-      router.replace('/login');
-    } catch (error) {
-      Alert.alert('오류', error instanceof Error ? error.message : '로그아웃에 실패했습니다.');
-    } finally {
-      setIsProcessing(false);
-    }
+    Alert.alert('로그아웃', '로그아웃을 하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '확인',
+        onPress: async () => {
+          try {
+            setIsProcessing(true);
+            await authApi.logout();
+            router.replace('/login');
+          } catch (error) {
+            Alert.alert('오류', error instanceof Error ? error.message : '로그아웃에 실패했습니다.');
+          } finally {
+            setIsProcessing(false);
+          }
+        },
+      },
+    ]);
   };
 
   const confirmWithdraw = () => {
     if (isProcessing) return;
-    Alert.alert('회원 탈퇴', '정말 탈퇴하시겠어요?', [
+    Alert.alert('회원 탈퇴', '회원탈퇴를 하시겠습니까?', [
       { text: '취소', style: 'cancel' },
       {
         text: '탈퇴',

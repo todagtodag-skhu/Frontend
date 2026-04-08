@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { clearAuthSession, getAuthSession, saveAuthSession } from '@/features/auth/session';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -33,6 +34,38 @@ const DEFAULT_LOGIN_ERROR_MESSAGE: Record<number, string> = {
   502: '소셜 로그인 서버와 통신하지 못했습니다. 잠시 후 다시 시도해주세요.',
 };
 
+function parseJsonMaybe(value: unknown) {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function extractApiErrorMessage(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  if ('message' in payload && typeof payload.message === 'string') {
+    return payload.message;
+  }
+
+  if ('error' in payload && typeof payload.error === 'string') {
+    return payload.error;
+  }
+
+  return null;
+}
+
 function isSocialLoginData(value: unknown): value is SocialLoginData {
   if (!value || typeof value !== 'object') {
     return false;
@@ -57,26 +90,16 @@ function getApiBaseUrl() {
 }
 
 async function socialLogin(provider: LoginProvider, payload: SocialLoginRequest) {
-  const response = await fetch(`${getApiBaseUrl()}/api/auth/login/${provider}`, {
-    method: 'POST',
+  const response = await axios.post(`${getApiBaseUrl()}/api/auth/login/${provider}`, payload, {
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(payload),
+    validateStatus: () => true,
   });
 
-  const rawBody = await response.text();
-  let parsedBody: SocialLoginResponse | ApiErrorPayload | null = null;
+  const parsedBody = parseJsonMaybe(response.data) as SocialLoginResponse | ApiErrorPayload | null;
 
-  if (rawBody) {
-    try {
-      parsedBody = JSON.parse(rawBody) as SocialLoginResponse | ApiErrorPayload;
-    } catch {
-      parsedBody = null;
-    }
-  }
-
-  if (!response.ok) {
+  if (response.status < 200 || response.status >= 300) {
     let errorMessage: string | null = null;
 
     if (parsedBody && typeof parsedBody === 'object') {
@@ -88,7 +111,9 @@ async function socialLogin(provider: LoginProvider, payload: SocialLoginRequest)
     }
 
     throw new Error(
-      errorMessage || DEFAULT_LOGIN_ERROR_MESSAGE[response.status] || `로그인에 실패했습니다. (${response.status})`
+      errorMessage ||
+        DEFAULT_LOGIN_ERROR_MESSAGE[response.status] ||
+        `로그인에 실패했습니다. (${response.status})`
     );
   }
 
@@ -148,23 +173,21 @@ function isOnboardingConnectionData(value: unknown): value is OnboardingConnecti
 
 // Growth (성장이) - request invite code
 export async function requestInviteCode(accessToken: string): Promise<OnboardingInviteCodeResponse> {
-  const response = await fetch(`${getApiBaseUrl()}/users/onboarding/sungjang/invite-code`, {
-    method: 'POST',
+  const response = await axios.post(`${getApiBaseUrl()}/users/onboarding/sungjang/invite-code`, null, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
+    validateStatus: () => true,
   });
 
-  const body = await response.json();
+  const body = parseJsonMaybe(response.data) as OnboardingInviteCodeResponse | ApiErrorPayload | null;
 
-  if (!response.ok) {
-    throw new Error(
-      body?.message || body?.error || '초대코드를 발급 받는데 실패했습니다.'
-    );
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error(extractApiErrorMessage(body) || '초대코드를 발급 받는데 실패했습니다.');
   }
 
-  return body;
+  return body as OnboardingInviteCodeResponse;
 }
 
 // Todagi (토닥이) - connect with invite code
@@ -172,31 +195,25 @@ export async function connectWithInviteCode(
   accessToken: string,
   inviteCode: string
 ): Promise<OnboardingConnectionData> {
-  const response = await fetch(`${getApiBaseUrl()}/users/onboarding/todak`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({ inviteCode } as OnboardingConnectionRequest),
-  });
-
-  const rawBody = await response.text();
-  let body: OnboardingConnectionResponse | ApiErrorPayload | null = null;
-
-  if (rawBody) {
-    try {
-      body = JSON.parse(rawBody);
-    } catch {
-      body = null;
+  const response = await axios.post(
+    `${getApiBaseUrl()}/users/onboarding/todak`,
+    { inviteCode } as OnboardingConnectionRequest,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      validateStatus: () => true,
     }
-  }
+  );
 
-  if (!response.ok) {
+  const body = parseJsonMaybe(response.data) as OnboardingConnectionResponse | ApiErrorPayload | null;
+
+  if (response.status < 200 || response.status >= 300) {
     const errorMessage = 
       (body && typeof body === 'object' && 'message' in body && typeof body.message === 'string')
         ? body.message
-        : (body && typeof body === 'object' && 'error' in body && typeof body.error === 'string')
+      : (body && typeof body === 'object' && 'error' in body && typeof body.error === 'string')
         ? body.error
         : '초대코드 연결에 실패했습니다.';
 
@@ -228,19 +245,22 @@ export async function refreshAccessToken(): Promise<string> {
     throw new Error('리프레시 토큰이 없습니다.');
   }
 
-  const response = await fetch(`${getApiBaseUrl()}/auth/refresh`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ refreshToken: session.refreshToken }),
-  });
+  const response = await axios.post(
+    `${getApiBaseUrl()}/auth/refresh`,
+    { refreshToken: session.refreshToken },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      validateStatus: () => true,
+    }
+  );
 
-  if (!response.ok) {
+  if (response.status < 200 || response.status >= 300) {
     throw new Error(`토큰 재발급에 실패했습니다. (${response.status})`);
   }
 
-  const data = (await response.json()) as RefreshResponse;
+  const data = parseJsonMaybe(response.data) as RefreshResponse | null;
 
   if (!data?.accessToken || !data?.refreshToken) {
     throw new Error('토큰 재발급 응답이 올바르지 않습니다.');
@@ -260,11 +280,11 @@ export async function logout(): Promise<void> {
 
   try {
     if (session?.accessToken) {
-      await fetch(`${getApiBaseUrl()}/users/logout`, {
-        method: 'POST',
+      await axios.post(`${getApiBaseUrl()}/users/logout`, null, {
         headers: {
           Authorization: `Bearer ${session.accessToken}`,
         },
+        validateStatus: () => true,
       });
     }
   } finally {
@@ -277,11 +297,11 @@ export async function withdraw(): Promise<void> {
 
   try {
     if (session?.accessToken) {
-      await fetch(`${getApiBaseUrl()}/users/withdraw`, {
-        method: 'DELETE',
+      await axios.delete(`${getApiBaseUrl()}/users/withdraw`, {
         headers: {
           Authorization: `Bearer ${session.accessToken}`,
         },
+        validateStatus: () => true,
       });
     }
   } finally {
