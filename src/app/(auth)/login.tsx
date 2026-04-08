@@ -40,7 +40,8 @@ export default function LoginRoute() {
         role: result.role,
       });
 
-      router.replace(getPostLoginRoute(result.role));
+      const nextRoute = result.isNewUser ? '/onboarding' : getPostLoginRoute(result.role);
+      router.replace(nextRoute);
     } catch (error) {
       if (
         typeof error === 'object' &&

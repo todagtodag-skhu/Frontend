@@ -1,5 +1,6 @@
 import { Stack, useRouter } from 'expo-router';
 import { Pressable } from 'react-native';
+import { useEffect } from 'react';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 
@@ -7,6 +8,8 @@ import { Text } from '@/components/ui/Text';
 import { colors } from '@/constants/colors';
 import { fontFamily } from '@/constants/fonts';
 import { GrowthProvider } from '@/contexts/GrowthContext';
+import { refreshAccessToken } from '@/features/auth/api';
+import { getAuthSession } from '@/features/auth/session';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -14,6 +17,31 @@ export default function RootLayout() {
     GangwonEduAllLight: require('../../assets/fonts/GangwonEduAll-Light.otf'),
     GangwonEduAllBold: require('../../assets/fonts/GangwonEduAll-Bold.otf'),
   });
+
+  useEffect(() => {
+    let isActive = true;
+
+    const validateSession = async () => {
+      const session = await getAuthSession();
+      if (!session) {
+        return;
+      }
+
+      try {
+        await refreshAccessToken();
+      } catch {
+        if (isActive) {
+          router.replace('/login');
+        }
+      }
+    };
+
+    validateSession();
+
+    return () => {
+      isActive = false;
+    };
+  }, [router]);
 
   if (!fontsLoaded) {
     return null;

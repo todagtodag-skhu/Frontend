@@ -1,8 +1,9 @@
 import axios, { AxiosHeaders, type InternalAxiosRequestConfig } from 'axios';
+import { router } from 'expo-router';
 import { ChildProfile } from '@/components/todagi/types';
 import { MOCK_CHILDREN } from '@/mocks/data';
 import { refreshAccessToken } from '@/features/auth/api';
-import { getAuthSession, saveAuthSession } from '@/features/auth/session';
+import { clearAuthSession, getAuthSession, saveAuthSession } from '@/features/auth/session';
 
 // 실제 API 연동
 
@@ -134,6 +135,8 @@ function getApiClient() {
 
       return await client.request(originalRequest);
     } catch {
+      await clearAuthSession();
+      router.replace('/login');
       return response;
     }
   });

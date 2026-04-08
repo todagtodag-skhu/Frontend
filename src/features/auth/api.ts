@@ -242,6 +242,7 @@ export async function refreshAccessToken(): Promise<string> {
   const session = await getAuthSession();
 
   if (!session?.refreshToken) {
+    await clearAuthSession();
     throw new Error('리프레시 토큰이 없습니다.');
   }
 
@@ -257,12 +258,14 @@ export async function refreshAccessToken(): Promise<string> {
   );
 
   if (response.status < 200 || response.status >= 300) {
+    await clearAuthSession();
     throw new Error(`토큰 재발급에 실패했습니다. (${response.status})`);
   }
 
   const data = parseJsonMaybe(response.data) as RefreshResponse | null;
 
   if (!data?.accessToken || !data?.refreshToken) {
+    await clearAuthSession();
     throw new Error('토큰 재발급 응답이 올바르지 않습니다.');
   }
 

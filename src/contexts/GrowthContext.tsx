@@ -55,6 +55,13 @@ export function GrowthProvider({ children }: { children: ReactNode }) {
       const session = await getAuthSession();
       const isGrowthRoute = segments[0] === '(growth)';
 
+      if (session?.role === 'PENDING') {
+        if (segments[0] !== 'onboarding') {
+          router.replace('/onboarding');
+        }
+        return;
+      }
+
       if (session?.role === 'SUNGJANG') {
         if (!isGrowthRoute) {
           router.replace('/(growth)/tree');
