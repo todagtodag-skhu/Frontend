@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Alert, Share } from 'react-native';
 
@@ -7,6 +7,7 @@ import { CommonOnboardingScreen } from '@/components/onboarding/CommonOnboarding
 import { InviteCodeStep } from '@/components/onboarding/InviteCodeStep';
 import { InviteShareStep } from '@/components/onboarding/InviteShareStep';
 import { OnboardingInfoStep } from '@/components/onboarding/OnboardingInfoStep';
+import { OnboardingLoadingStep } from '@/components/onboarding/OnboardingLoadingStep';
 import { RoleSelectStep } from '@/components/onboarding/RoleSelectStep';
 import { CalendarModal } from '@/components/todagi/CalendarModal';
 import * as authApi from '@/features/auth/api';
@@ -28,7 +29,8 @@ export default function OnboardingScreen() {
 
   const isTodagi = selectedRole === 'todagi';
   const isGrowth = selectedRole === 'growth';
-  const totalSteps = isGrowth ? 3 : 5;
+  const isGrowthLoadingStep = isGrowth && step === 3;
+  const totalSteps = isGrowth ? 4 : 5;
 
   const confirmLabel =
     (isGrowth && step === 2)
@@ -38,6 +40,50 @@ export default function OnboardingScreen() {
       : '다음';
 
   const routeToTodagiHome = () => router.replace('/(tabs)/children');
+
+  useEffect(() => {
+    if (!isGrowthLoadingStep) {
+      return;
+    }
+
+    let isActive = true;
+
+    const verifyGrowthConnection = async () => {
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 900));
+        await authApi.refreshAccessToken();
+        const session = await getAuthSession();
+
+        if (!isActive) {
+          return;
+        }
+
+        if (session?.role !== 'SUNGJANG') {
+          Alert.alert(
+            '아직 연결 전이에요',
+            '토닥이가 아직 초대코드를 입력하지 않았어요.\n초대코드를 공유하고 기다려주세요.'
+          );
+          setStep(2);
+        }
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        Alert.alert(
+          '확인 실패',
+          '연결 상태를 확인하지 못했어요. 잠시 후 다시 시도해주세요.'
+        );
+        setStep(2);
+      }
+    };
+
+    void verifyGrowthConnection();
+
+    return () => {
+      isActive = false;
+    };
+  }, [isGrowthLoadingStep]);
 
   const handleShareInviteCode = async () => {
     if (!inviteCode) return;
@@ -87,22 +133,7 @@ export default function OnboardingScreen() {
 
       if (step === 2) {
         if (isGrowth) {
-          try {
-            await authApi.refreshAccessToken();
-            const session = await getAuthSession();
-
-            if (session?.role !== 'SUNGJANG') {
-              Alert.alert(
-                '아직 연결 전이에요',
-                '토닥이가 아직 초대코드를 입력하지 않았어요.\n초대코드를 공유하고 기다려주세요.'
-              );
-            }
-          } catch {
-            Alert.alert(
-              '확인 실패',
-              '연결 상태를 확인하지 못했어요. 잠시 후 다시 시도해주세요.'
-            );
-          }
+          setStep(3);
           return;
         }
 
@@ -195,7 +226,7 @@ export default function OnboardingScreen() {
   };
 
   const handleBack = () => {
-    if (isLoading || step === 0) return;
+    if (isLoading || isGrowthLoadingStep || step === 0) return;
     if (step === 4) {
       setChildName('');
       setBirthday('');
@@ -247,6 +278,15 @@ export default function OnboardingScreen() {
       );
     }
 
+    if (step === 3 && isGrowth) {
+      return (
+        <OnboardingLoadingStep
+          title={'연결 상태를\n확인하고 있어요'}
+          description={'토닥이가 초대코드를 입력했는지 확인 중이에요.\n잠시만 기다려주세요.'}
+        />
+      );
+    }
+
     if (step === 3) {
       return (
         <InviteCodeStep
@@ -276,6 +316,7 @@ export default function OnboardingScreen() {
         onBack={handleBack}
         confirmLabel={confirmLabel}
         onConfirm={handleConfirm}
+        hideButtons={isGrowthLoadingStep}
       >
         {renderStep()}
       </CommonOnboardingScreen>

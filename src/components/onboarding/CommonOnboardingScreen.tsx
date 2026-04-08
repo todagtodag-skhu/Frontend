@@ -12,6 +12,7 @@ type CommonOnboardingScreenProps = {
   onConfirm: () => void;
   step: number;
   totalSteps: number;
+  hideButtons?: boolean;
 };
 
 export function CommonOnboardingScreen({
@@ -21,6 +22,7 @@ export function CommonOnboardingScreen({
   onConfirm,
   step,
   totalSteps,
+  hideButtons = false,
 }: CommonOnboardingScreenProps) {
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -28,19 +30,21 @@ export function CommonOnboardingScreen({
 
         {children}
 
-        <View style={styles.buttonRow}>
-          {(step > 0 && onBack) &&(
+        {!hideButtons ? (
+          <View style={styles.buttonRow}>
+            {(step > 0 && onBack) &&(
+              <Button
+                title="이전"
+                onPress={onBack}
+                variant="secondary"
+              />
+            )}
             <Button
-              title="이전"
-              onPress={onBack}
-              variant="secondary"
+              title={confirmLabel}
+              onPress={onConfirm}
             />
-          )}
-          <Button
-            title={confirmLabel}
-            onPress={onConfirm}
-          />
-        </View>
+          </View>
+        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -84,6 +88,12 @@ export const onboardingStyles = StyleSheet.create({
     lineHeight: 34,
     textAlign: 'center',
     color: colors.grayscale[800],
+  },
+  loadingWrap: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 32,
   },
   codeInput: {
     width: '100%',
