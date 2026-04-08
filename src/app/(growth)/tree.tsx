@@ -1,5 +1,6 @@
-import React, { useMemo, useState, useRef, useCallback } from 'react';
+import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import {
+  Alert,
   View,
   Text,
   TouchableOpacity,
@@ -16,9 +17,12 @@ import { StickerGridBoard, type GridCell } from '@/components/growth/StickerGrid
 import { StickerInfoCard } from '@/components/growth/StickerInfoCard';
 import { fontFamily } from '@/constants/fonts';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useGrowth } from '@/contexts/GrowthContext';
-import { getDefaultTreeMissions } from '@/features/growth/data';
 import { type TreeMission } from '@/mocks/data';
+import {
+  attachGrowthSticker,
+  getGrowthStickerBoard,
+  type GrowthStickerBoard,
+} from '@/features/growth/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -36,8 +40,6 @@ interface TreeProps {
   missions?: Mission[];
   onRequestSticker?: () => void;
 }
-
-const DEFAULT_MISSIONS: Mission[] = getDefaultTreeMissions();
 
 const BG_COLOR = '#FFF9EE';
 const BLUE_TEXT = '#4C84FF';
@@ -62,23 +64,62 @@ function FloatingStickerIcon({ emoji }: { emoji?: string }) {
 export default function GrowthTree({
   boardName = '유진이의 스티커판',
   reward = '닌텐도 DS 1시간 사용',
-  missions = DEFAULT_MISSIONS,
+  missions = [],
 }: TreeProps) {
-  const { activeStickerBoard } = useGrowth();
-  const activeBoard = activeStickerBoard;
+  const [board, setBoard] = useState<GrowthStickerBoard | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAttaching, setIsAttaching] = useState(false);
 
-  const resolvedBoardName = activeBoard?.title ?? boardName;
-  const resolvedReward = activeBoard?.rewardText ?? reward;
-  const resolvedBoardDesign = activeBoard?.boardDesign;
-  const resolvedMissions = activeBoard
-    ? activeBoard.missions.map((mission) => ({
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadBoard = async (showError = true) => {
+      try {
+        setIsLoading(true);
+        const nextBoard = await getGrowthStickerBoard();
+
+        if (cancelled) {
+          return;
+        }
+
+        setBoard(nextBoard);
+      } catch (error) {
+        if (!cancelled && showError) {
+          const message =
+            error instanceof Error ? error.message : '스티커판을 불러오지 못했습니다.';
+          Alert.alert('불러오기 실패', message);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadBoard();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const reloadBoard = useCallback(async () => {
+    const nextBoard = await getGrowthStickerBoard();
+    setBoard(nextBoard);
+  }, []);
+
+  const resolvedBoardName = board?.title ?? boardName;
+  const resolvedReward = board?.rewardText ?? reward;
+  const resolvedBoardDesign = board?.boardDesign;
+  const resolvedMissions = board
+    ? board.missions.map((mission) => ({
         id: mission.id,
         emoji: mission.emoji,
         title: mission.title,
         completed: false,
       }))
     : missions;
-  const totalSpots = Number.parseInt(activeBoard?.stickerCount ?? '', 10) || 20;
+  const totalSpots = board?.totalSpots || 20;
 
   const gridCells: GridCell[] = useMemo(() => {
     const cells: GridCell[] = [];
@@ -113,6 +154,37 @@ export default function GrowthTree({
   const scaleAnims = useRef<Record<number, Animated.Value>>({});
   const placedStickersRef = useRef(placedStickers);
   placedStickersRef.current = placedStickers;
+
+  useEffect(() => {
+    if (!board) {
+      setPlacedStickers({});
+      setUsedStickerIndices([]);
+      return;
+    }
+
+    const missionIndexMap = new Map(board.missions.map((mission, index) => [mission.id, index]));
+    const nextPlacedStickers = board.placedStickers.reduce<Record<number, StickerInfo>>((acc, sticker) => {
+      acc[sticker.cellId] = {
+        placedAt: new Date(),
+        mission: {
+          id: sticker.missionId,
+          emoji: sticker.emoji,
+          title: sticker.title,
+          completed: true,
+        },
+        stickerIdx: missionIndexMap.get(sticker.missionId) ?? 0,
+      };
+
+      return acc;
+    }, {});
+
+    setPlacedStickers(nextPlacedStickers);
+    setUsedStickerIndices(
+      board.placedStickers
+        .map((sticker) => missionIndexMap.get(sticker.missionId))
+        .filter((value): value is number => typeof value === 'number'),
+    );
+  }, [board]);
 
   const getScaleAnim = (id: number) => {
     if (!scaleAnims.current[id]) {
@@ -151,6 +223,31 @@ export default function GrowthTree({
       },
     }));
   }, []);
+
+  const handleAttachSticker = useCallback(
+    async (cellId: number, mission: Mission, stickerIdx: number) => {
+      if (isAttaching) {
+        return;
+      }
+
+      placeSticker(cellId, mission, stickerIdx);
+      setUsedStickerIndices((prev) => (prev.includes(stickerIdx) ? prev : [...prev, stickerIdx]));
+
+      try {
+        setIsAttaching(true);
+        const nextBoard = await attachGrowthSticker(cellId);
+        setBoard(nextBoard);
+      } catch (error) {
+        await reloadBoard().catch(() => undefined);
+        const message =
+          error instanceof Error ? error.message : '스티커 부착에 실패했습니다.';
+        Alert.alert('부착 실패', message);
+      } finally {
+        setIsAttaching(false);
+      }
+    },
+    [isAttaching, placeSticker, reloadBoard],
+  );
 
   const getFirstAvailableCellId = useCallback(() => {
     for (const cell of gridCells) {
@@ -246,8 +343,7 @@ export default function GrowthTree({
 
               if (firstCellId === null) return;
 
-              placeSticker(firstCellId, mission, idx);
-              setUsedStickerIndices((prev) => (prev.includes(idx) ? prev : [...prev, idx]));
+              void handleAttachSticker(firstCellId, mission, idx);
               return;
             }
 
@@ -255,8 +351,7 @@ export default function GrowthTree({
 
             if (cellId === null) return;
 
-            placeSticker(cellId, mission, idx);
-            setUsedStickerIndices((prev) => (prev.includes(idx) ? prev : [...prev, idx]));
+            void handleAttachSticker(cellId, mission, idx);
           },
 
           onPanResponderTerminate: () => {
@@ -270,7 +365,7 @@ export default function GrowthTree({
 
       return panHandlersMap.current[idx];
     },
-    [getFirstAvailableCellId, getGridCellFromPoint, measureBoard, placeSticker, resolvedMissions],
+    [getFirstAvailableCellId, getGridCellFromPoint, handleAttachSticker, measureBoard, resolvedMissions],
   );
 
   const handleCellPress = (id: number) => {
@@ -316,17 +411,21 @@ export default function GrowthTree({
         </Text>
         </View>
 
-        <StickerGridBoard
-          width={BOARD_WIDTH}
-          height={BOARD_HEIGHT}
-          cells={gridCells}
-          placedStickers={placedStickers}
-          getScaleAnim={getScaleAnim}
-          onCellPress={handleCellPress}
-          onLayoutBoard={measureBoard}
-          onScrollOffsetChange={setBoardScrollOffsetY}
-          boardDesign={resolvedBoardDesign}
-        />
+        {isLoading ? (
+          <Text style={styles.progressText}>스티커판을 불러오는 중이에요.</Text>
+        ) : (
+          <StickerGridBoard
+            width={BOARD_WIDTH}
+            height={BOARD_HEIGHT}
+            cells={gridCells}
+            placedStickers={placedStickers}
+            getScaleAnim={getScaleAnim}
+            onCellPress={handleCellPress}
+            onLayoutBoard={measureBoard}
+            onScrollOffsetChange={setBoardScrollOffsetY}
+            boardDesign={resolvedBoardDesign}
+          />
+        )}
 
         <View style={styles.stickerPickerWrap}>
           <TouchableOpacity
@@ -374,7 +473,9 @@ export default function GrowthTree({
         </View>
 
         <Text style={styles.stickerCountText}>
-          붙일 수 있는 스티커를 {placedCount}개 가지고 있어요!
+          {isAttaching
+            ? '스티커를 붙이는 중이에요...'
+            : `붙일 수 있는 스티커를 ${placedCount}개 가지고 있어요!`}
         </Text>
 
       </View>

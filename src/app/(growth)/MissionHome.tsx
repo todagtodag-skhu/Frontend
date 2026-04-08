@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   View,
   Text,
   ScrollView,
@@ -15,19 +16,56 @@ import { StickerRequestButton } from '@/components/growth/StickerRequestButton';
 import { fontFamily } from '@/constants/fonts';
 import { colors } from '@/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
-import { useGrowth } from '@/contexts/GrowthContext';
 import { Mission } from '@/components/todagi/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getGrowthStickerBoard, requestMissionSticker, type GrowthStickerBoard } from '@/features/growth/api';
 
 const PROGRESS_TOTAL = 20;
 
 const MissionListScreen: React.FC = () => {
-  const { activeStickerBoard } = useGrowth();
-  const activeBoard = activeStickerBoard;
+  const [board, setBoard] = useState<GrowthStickerBoard | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRequesting, setIsRequesting] = useState(false);
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [selectedMissionId, setSelectedMissionId] = useState<string | null>(null);
   const [showSelectMissionNotice, setShowSelectMissionNotice] = useState(false);
   const [showRequestCompleteNotice, setShowRequestCompleteNotice] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadBoard = async () => {
+      try {
+        setIsLoading(true);
+        const nextBoard = await getGrowthStickerBoard();
+
+        if (cancelled) {
+          return;
+        }
+
+        setBoard(nextBoard);
+        setSelectedMissionId((prev) =>
+          prev && nextBoard.missions.some((mission) => mission.id === prev) ? prev : null,
+        );
+      } catch (error) {
+        if (!cancelled) {
+          const message =
+            error instanceof Error ? error.message : '미션 목록을 불러오지 못했습니다.';
+          Alert.alert('불러오기 실패', message);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadBoard();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const swipeResponder = useMemo(
     () =>
@@ -67,12 +105,24 @@ const MissionListScreen: React.FC = () => {
       return;
     }
 
-    setSelectedMission(null);
-    setShowRequestCompleteNotice(true);
+    void (async () => {
+      try {
+        setIsRequesting(true);
+        await requestMissionSticker(selectedMissionId);
+        setSelectedMission(null);
+        setShowRequestCompleteNotice(true);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : '스티커 요청에 실패했습니다.';
+        Alert.alert('요청 실패', message);
+      } finally {
+        setIsRequesting(false);
+      }
+    })();
   };
 
   const handleRequestStickerPress = () => {
-    if (!activeBoard?.missions.length) {
+    if (!board?.missions.length) {
       return;
     }
 
@@ -82,18 +132,20 @@ const MissionListScreen: React.FC = () => {
     }
 
     const missionToOpen =
-      activeBoard.missions.find((mission) => mission.id === selectedMissionId) ?? activeBoard.missions[0];
+      board.missions.find((mission) => mission.id === selectedMissionId) ?? board.missions[0];
 
     setSelectedMission(missionToOpen);
   };
 
-  const hasMissions = Boolean(activeBoard?.missions.length);
+  const hasMissions = Boolean(board?.missions.length);
+  const progressTotal = board?.totalSpots || PROGRESS_TOTAL;
+  const placedCount = board?.placedStickers.length ?? 0;
 
   return (
     <SafeAreaView style={styles.safe} {...swipeResponder.panHandlers}>
       <View style={styles.container}>
         <Text style={styles.header}>
-          {activeBoard ? `${activeBoard.title} 미션 목록` : '유진이의 미션 목록'}
+          {board ? `${board.title} 미션 목록` : '유진이의 미션 목록'}
         </Text>
 
         <Text style={styles.headerGuide}>
@@ -101,23 +153,27 @@ const MissionListScreen: React.FC = () => {
         </Text>
 
         <Text style={styles.progressText}>
-          완성까지 0/{PROGRESS_TOTAL} 개
+          완성까지 {placedCount}/{progressTotal} 개
         </Text>
 
         <View style={styles.page}>
-          {hasMissions ? (
+          {isLoading ? (
+            <View style={styles.emptyStateCard}>
+              <Text style={styles.emptyStateTitle}>미션 목록을 불러오는 중이에요.</Text>
+            </View>
+          ) : hasMissions ? (
             <>
               <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.missionList}
               >
-                {activeBoard?.missions.map((mission) => (
+                {board?.missions.map((mission) => (
                   <MissionCard
                     key={mission.id}
                     emoji={mission.emoji}
                     title={mission.title}
                     frequency={mission.frequency}
-                    reward={activeBoard.rewardText || '스티커 1개'}
+                    reward={board.rewardText || '스티커 1개'}
                     isSelected={selectedMissionId === mission.id}
                     onPress={() => handleMissionPress(mission.id)}
                     onManagePress={() => handleManageOpen(mission)}
@@ -128,9 +184,12 @@ const MissionListScreen: React.FC = () => {
               <TouchableOpacity
                 style={styles.requestButton}
                 onPress={handleRequestStickerPress}
+                disabled={isRequesting}
                 activeOpacity={0.85}
               >
-                <Text style={styles.requestButtonText}>스티커 주세요</Text>
+                <Text style={styles.requestButtonText}>
+                  {isRequesting ? '요청 중...' : '스티커 주세요'}
+                </Text>
               </TouchableOpacity>
             </>
           ) : (
