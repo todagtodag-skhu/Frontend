@@ -4,7 +4,7 @@ import { useRouter, useSegments } from 'expo-router';
 import { Mission, StickerBoard, ChildProfile } from '@/components/todagi/types';
 import * as childrenApi from '@/features/children/api';
 import * as stickerBoardApi from '@/features/stickerboard/api';
-import { getAuthSession } from '@/features/auth/session';
+import { useAuthSession } from '@/features/auth/session';
 
 type AddChildInput = {
   inviteCode: string;
@@ -44,6 +44,7 @@ const GrowthContext = createContext<GrowthContextValue | undefined>(undefined);
 export function GrowthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const segments = useSegments();
+  const { data: session } = useAuthSession();
   const [childProfiles, setChildProfiles] = useState<ChildProfile[]>([]);
   const [boards, setBoards] = useState<StickerBoard[]>([]);
   const [activeBoardId, setActiveBoardId] = useState<string | undefined>(undefined);
@@ -52,7 +53,6 @@ export function GrowthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     const loadGrowthData = async () => {
-      const session = await getAuthSession();
       const isGrowthRoute = segments[0] === '(growth)';
 
       if (session?.role === 'PENDING') {
@@ -69,18 +69,26 @@ export function GrowthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const [fetchedChildren, fetchedBoards] = await Promise.all([
-        childrenApi.getChildren(),
-        stickerBoardApi.getStickerBoards(),
-      ]);
-
-      if (cancelled) {
+      if (session?.role !== 'TODAGI') {
         return;
       }
 
-      setChildProfiles(fetchedChildren);
-      setBoards(fetchedBoards);
-      setActiveBoardId((prev) => prev ?? fetchedBoards[0]?.id);
+      try {
+        const [fetchedChildren, fetchedBoards] = await Promise.all([
+          childrenApi.getChildren(),
+          stickerBoardApi.getStickerBoards(),
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        setChildProfiles(fetchedChildren);
+        setBoards(fetchedBoards);
+        setActiveBoardId((prev) => prev ?? fetchedBoards[0]?.id);
+      } catch (error) {
+        console.error('데이터 로딩 실패:', error);
+      }
     };
 
     loadGrowthData();
@@ -88,7 +96,7 @@ export function GrowthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [router, segments]);
+  }, [router, segments, session]);
 
   const value = useMemo<GrowthContextValue>(() => ({
     children: childProfiles,
