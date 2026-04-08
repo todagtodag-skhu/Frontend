@@ -97,6 +97,22 @@ function asNumber(value: unknown, fallback = 0): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
+function parseCountValue(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const matched = value.match(/\d+/);
+
+    if (matched) {
+      return Number.parseInt(matched[0], 10);
+    }
+  }
+
+  return 0;
+}
+
 function getApiBaseUrl() {
   const baseUrl = process.env.EXPO_PUBLIC_API_URL;
 
@@ -294,11 +310,11 @@ function normalizeGrowthBoard(value: unknown): GrowthStickerBoard | null {
     record.todoMissions;
   const missions = asArray(missionSource).map(normalizeMission);
   const totalSpots =
-    asNumber(record.totalSpots) ||
-    asNumber(record.stickerCount) ||
-    asNumber(record.maxStickerCount) ||
-    asNumber(record.goalCount) ||
-    20;
+    parseCountValue(record.totalSpots) ||
+    parseCountValue(record.stickerCount) ||
+    parseCountValue(record.stickerCountLabel) ||
+    parseCountValue(record.maxStickerCount) ||
+    parseCountValue(record.goalCount);
 
   return {
     id:

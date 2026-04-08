@@ -17,6 +17,15 @@ import { StickerGridBoard, type GridCell } from '@/components/growth/StickerGrid
 import { StickerInfoCard } from '@/components/growth/StickerInfoCard';
 import { fontFamily } from '@/constants/fonts';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  GROWTH_BOARD_VERTICAL_EDGE_INSET,
+  GROWTH_GRID_COLS,
+  GROWTH_GRID_ROWS,
+  GROWTH_STICKER_PAGE_SIZE,
+  GROWTH_STICKER_TAP_MOVE_THRESHOLD,
+  getGrowthBoardHeight,
+  getGrowthBoardWidth,
+} from '@/features/growth/constants';
 import { type TreeMission } from '@/mocks/data';
 import { useAttachGrowthSticker, useGrowthStickerBoard } from '@/features/growth/hooks';
 
@@ -39,14 +48,8 @@ interface TreeProps {
 
 const BG_COLOR = '#FFF9EE';
 const BLUE_TEXT = '#4C84FF';
-const BOARD_WIDTH = Math.min(SCREEN_WIDTH - 44, 320);
-const BOARD_HEIGHT = BOARD_WIDTH * 1.08;
-const STICKERS_PER_PAGE = 4;
-
-const GRID_ROWS = 4;
-const GRID_COLS = 5;
-const BOARD_VERTICAL_EDGE_INSET = 53;
-const TAP_MOVE_THRESHOLD = 8;
+const BOARD_WIDTH = getGrowthBoardWidth(SCREEN_WIDTH);
+const BOARD_HEIGHT = getGrowthBoardHeight(SCREEN_WIDTH);
 
 function FloatingStickerIcon({ emoji }: { emoji?: string }) {
   return (
@@ -58,15 +61,15 @@ function FloatingStickerIcon({ emoji }: { emoji?: string }) {
 }
 
 export default function GrowthTree({
-  boardName = '유진이의 스티커판',
-  reward = '닌텐도 DS 1시간 사용',
+  boardName,
+  reward,
   missions = [],
 }: TreeProps) {
   const { data: board, isLoading, error, refetch } = useGrowthStickerBoard();
   const attachStickerMutation = useAttachGrowthSticker();
 
-  const resolvedBoardName = board?.title ?? boardName;
-  const resolvedReward = board?.rewardText ?? reward;
+  const resolvedBoardName = board?.title ?? boardName ?? '';
+  const resolvedReward = board?.rewardText ?? reward ?? '';
   const resolvedBoardDesign = board?.boardDesign;
   const resolvedMissions = board
     ? board.missions.map((mission) => ({
@@ -76,21 +79,21 @@ export default function GrowthTree({
         completed: false,
       }))
     : missions;
-  const totalSpots = board?.totalSpots || 20;
+  const totalSpots = board?.totalSpots ?? 0;
 
   const gridCells: GridCell[] = useMemo(() => {
     const cells: GridCell[] = [];
 
     for (let index = 0; index < totalSpots; index++) {
-      const row = Math.floor(index / GRID_COLS);
-      const col = index % GRID_COLS;
+      const row = Math.floor(index / GROWTH_GRID_COLS);
+      const col = index % GROWTH_GRID_COLS;
 
       cells.push({
         id: index + 1,
         row,
         col,
-        x: (col + 0.5) / GRID_COLS,
-        y: (row + 0.5) / GRID_ROWS,
+        x: (col + 0.5) / GROWTH_GRID_COLS,
+        y: (row + 0.5) / GROWTH_GRID_ROWS,
       });
     }
 
@@ -152,10 +155,13 @@ export default function GrowthTree({
 
   const placedCount = Object.keys(placedStickers).length;
 
-  const totalPages = Math.ceil(resolvedMissions.length / STICKERS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(resolvedMissions.length / GROWTH_STICKER_PAGE_SIZE));
   const pagedIndices = Array.from({ length: resolvedMissions.length })
     .map((_, i) => i)
-    .slice(stickerPage * STICKERS_PER_PAGE, stickerPage * STICKERS_PER_PAGE + STICKERS_PER_PAGE);
+    .slice(
+      stickerPage * GROWTH_STICKER_PAGE_SIZE,
+      stickerPage * GROWTH_STICKER_PAGE_SIZE + GROWTH_STICKER_PAGE_SIZE,
+    );
 
   const measureBoard = useCallback((layout: { x: number; y: number; width: number; height: number }) => {
     boardLayoutRef.current = layout;
@@ -220,9 +226,11 @@ export default function GrowthTree({
     }
 
     const totalRows = Math.max(...gridCells.map((cell) => cell.row)) + 1;
-    const visibleRows = Math.min(totalRows, GRID_ROWS);
+    const visibleRows = Math.min(totalRows, GROWTH_GRID_ROWS);
     const rowGap =
-      visibleRows === 1 ? 0 : (height - BOARD_VERTICAL_EDGE_INSET * 2) / (visibleRows - 1);
+      visibleRows === 1
+        ? 0
+        : (height - GROWTH_BOARD_VERTICAL_EDGE_INSET * 2) / (visibleRows - 1);
 
     const relativeX = absoluteX - x;
     const relativeY = absoluteY - y + boardScrollOffsetY;
@@ -231,17 +239,17 @@ export default function GrowthTree({
       return null;
     }
 
-    const col = Math.floor((relativeX / width) * GRID_COLS);
+    const col = Math.floor((relativeX / width) * GROWTH_GRID_COLS);
     const row =
       totalRows === 1
         ? 0
-        : Math.round((relativeY - BOARD_VERTICAL_EDGE_INSET) / rowGap);
+        : Math.round((relativeY - GROWTH_BOARD_VERTICAL_EDGE_INSET) / rowGap);
 
-    if (row < 0 || row >= totalRows || col < 0 || col >= GRID_COLS) {
+    if (row < 0 || row >= totalRows || col < 0 || col >= GROWTH_GRID_COLS) {
       return null;
     }
 
-    const cellId = row * GRID_COLS + col + 1;
+    const cellId = row * GROWTH_GRID_COLS + col + 1;
 
     if (placedStickersRef.current[cellId]) return null;
 
@@ -284,7 +292,9 @@ export default function GrowthTree({
             const mission = resolvedMissions[idx];
             const moveX = Math.abs(gestureState.dx);
             const moveY = Math.abs(gestureState.dy);
-            const isTapLike = moveX < TAP_MOVE_THRESHOLD && moveY < TAP_MOVE_THRESHOLD;
+            const isTapLike =
+              moveX < GROWTH_STICKER_TAP_MOVE_THRESHOLD &&
+              moveY < GROWTH_STICKER_TAP_MOVE_THRESHOLD;
 
             setDraggingStickerIdx(null);
             setDragPos(null);
@@ -351,11 +361,13 @@ export default function GrowthTree({
     <SafeAreaView style={styles.container} {...swipeResponder.panHandlers}>
       <View style={styles.content}>
         <View style={styles.topSection}>
-          <Text style={styles.title}>{resolvedBoardName}</Text>
-          <View style={styles.rewardRow}>
-            <Text style={styles.rewardLabel}>보상 :</Text>
-            <Text style={styles.rewardValue}>{resolvedReward}</Text>
-          </View>
+          {resolvedBoardName ? <Text style={styles.title}>{resolvedBoardName}</Text> : null}
+          {resolvedReward ? (
+            <View style={styles.rewardRow}>
+              <Text style={styles.rewardLabel}>보상 :</Text>
+              <Text style={styles.rewardValue}>{resolvedReward}</Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={{ marginBottom: 10, alignItems: 'center' }}>
@@ -411,7 +423,7 @@ export default function GrowthTree({
               );
             })}
 
-            {Array.from({ length: STICKERS_PER_PAGE - pagedIndices.length }).map((_, i) => (
+            {Array.from({ length: GROWTH_STICKER_PAGE_SIZE - pagedIndices.length }).map((_, i) => (
               <View key={`dummy-${i}`} style={styles.bigStickerOption} />
             ))}
           </View>

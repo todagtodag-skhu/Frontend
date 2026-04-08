@@ -20,8 +20,6 @@ import { Mission } from '@/components/todagi/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGrowthStickerBoard, useRequestMissionSticker } from '@/features/growth/hooks';
 
-const PROGRESS_TOTAL = 20;
-
 const MissionListScreen: React.FC = () => {
   const { data: board, isLoading, error } = useGrowthStickerBoard();
   const requestStickerMutation = useRequestMissionSticker();
@@ -98,7 +96,7 @@ const MissionListScreen: React.FC = () => {
   };
 
   const hasMissions = Boolean(board?.missions.length);
-  const progressTotal = board?.totalSpots || PROGRESS_TOTAL;
+  const progressTotal = board?.totalSpots ?? 0;
   const placedCount = board?.placedStickers.length ?? 0;
   const isRequesting = requestStickerMutation.isPending;
 
@@ -106,7 +104,7 @@ const MissionListScreen: React.FC = () => {
     <SafeAreaView style={styles.safe} {...swipeResponder.panHandlers}>
       <View style={styles.container}>
         <Text style={styles.header}>
-          {board ? `${board.title} 미션 목록` : '유진이의 미션 목록'}
+          {board?.title ? `${board.title} 미션 목록` : '미션 목록'}
         </Text>
 
         <Text style={styles.headerGuide}>
