@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable } from 'react-native';
+import { Alert, Pressable } from 'react-native';
 
 import { MOCK_PREVIOUS_STICKER_REQUESTS, MOCK_STICKER_REQUESTS } from '@/mocks/data';
 
@@ -15,13 +15,33 @@ import { StickerBoardSummaryCard } from '@/components/children/StickerBoardSumma
 import { StickerRequestModal } from '@/components/children/StickerRequestModal';
 import { childrenStyles as styles } from '@/components/children/styles';
 import { AppScreen } from '@/components/layout/AppScreen';
+import { ChildProfile } from '@/components/todagi/types';
 import { Text } from '@/components/ui/Text';
+import { useTodakRelations, useUpdateSungjangInfo } from '@/features/relation/hooks';
+import { toISODate } from '@/lib/dateUtils';
 import { useGrowth } from '@/contexts/GrowthContext';
 
 export default function ChildrenScreen() {
   const router = useRouter();
   const { focusChildId } = useLocalSearchParams<{ focusChildId?: string }>();
-  const { children, getBoardsByChildId, addStickerBoard, updateChild, updateStickerBoard } = useGrowth();
+  const { getBoardsByChildId, addStickerBoard, updateStickerBoard } = useGrowth();
+
+  const { data: relationsData, isLoading } = useTodakRelations();
+  const updateSungjangInfo = useUpdateSungjangInfo();
+
+  // 서버 데이터 + 로컬 생일 오버레이 관리
+  const [localBirthdays, setLocalBirthdays] = useState<Record<string, string>>({});
+
+  const children: ChildProfile[] = useMemo(
+    () =>
+      (relationsData?.relations ?? []).map((r) => ({
+        id: r.relationId.toString(),
+        name: r.sungjangName,
+        birthday: localBirthdays[r.relationId.toString()] ?? '',
+        inviteCode: '',
+      })),
+    [relationsData, localBirthdays],
+  );
 
   const [selectedChildId, setSelectedChildId] = useState<string | undefined>(focusChildId);
   const [editChildVisible, setEditChildVisible] = useState(false);
@@ -41,7 +61,6 @@ export default function ChildrenScreen() {
       setSelectedChildId(focusChildId);
       return;
     }
-
     setSelectedChildId((prev) => prev ?? children[0]?.id);
   }, [children, focusChildId]);
 
@@ -58,7 +77,9 @@ export default function ChildrenScreen() {
   const activeBoard = selectedBoards[0];
   const totalStickerCount = Number.parseInt(activeBoard?.stickerCount ?? '0', 10) || 0;
   const currentStickerCount = givenStickerCount;
-  const remainingMissionCount = (activeBoard?.missions ?? []).filter((m) => !dismissedMissionIds.has(m.id)).length;
+  const remainingMissionCount = (activeBoard?.missions ?? []).filter(
+    (m) => !dismissedMissionIds.has(m.id),
+  ).length;
   const showNotification = selectedChild?.id === focusChildId || remainingMissionCount > 0;
 
   useEffect(() => {
@@ -97,7 +118,12 @@ export default function ChildrenScreen() {
     }
   };
 
-  const handleCreateBoard = async (title: string, stickerCount: string, boardDesign: string, rewardText: string) => {
+  const handleCreateBoard = async (
+    title: string,
+    stickerCount: string,
+    boardDesign: string,
+    rewardText: string,
+  ) => {
     if (!selectedChild) return;
     const boardId = await addStickerBoard({
       childId: selectedChild.id,
@@ -116,15 +142,32 @@ export default function ChildrenScreen() {
 
   const handleSaveChild = (name: string, birthday: string) => {
     if (!selectedChild) return;
-    updateChild(selectedChild.id, {
-      inviteCode: selectedChild.inviteCode,
-      name,
-      birthday,
-    });
-    setEditChildVisible(false);
+    const relationId = parseInt(selectedChild.id, 10);
+
+    updateSungjangInfo.mutate(
+      {
+        relationId,
+        sungjangName: name,
+        sungjangBirthday: toISODate(birthday),
+      },
+      {
+        onSuccess: () => {
+          setLocalBirthdays((prev) => ({ ...prev, [selectedChild.id]: birthday }));
+          setEditChildVisible(false);
+        },
+        onError: () => {
+          Alert.alert('오류', '성장이 정보 수정에 실패했습니다.');
+        },
+      },
+    );
   };
 
-  const handleSaveBoard = (title: string, stickerCount: string, boardDesign: string, rewardText: string) => {
+  const handleSaveBoard = (
+    title: string,
+    stickerCount: string,
+    boardDesign: string,
+    rewardText: string,
+  ) => {
     if (!activeBoard || !selectedChild) return;
     updateStickerBoard(activeBoard.id, {
       childId: selectedChild.id,
@@ -136,6 +179,10 @@ export default function ChildrenScreen() {
     });
     setEditBoardVisible(false);
   };
+
+  if (isLoading) {
+    return <AppScreen bodyStyle={styles.content}>{null}</AppScreen>;
+  }
 
   return (
     <>

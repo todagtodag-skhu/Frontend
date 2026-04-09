@@ -1,7 +1,9 @@
+import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 export interface AuthSession {
   accessToken: string;
+  refreshToken: string;
   role: string;
 }
 
@@ -12,13 +14,12 @@ interface StorageAdapter {
 }
 
 const ACCESS_TOKEN_KEY = 'auth.accessToken';
+const REFRESH_TOKEN_KEY = 'auth.refreshToken';
 const ROLE_KEY = 'auth.role';
 
 const memoryStorage = new Map<string, string>();
 
-let storageAdapterPromise: Promise<StorageAdapter> | null = null;
-
-function createMemoryStorageAdapter(): StorageAdapter {
+function createMemoryAdapter(): StorageAdapter {
   return {
     async getItem(key) {
       return memoryStorage.get(key) ?? null;
@@ -32,63 +33,79 @@ function createMemoryStorageAdapter(): StorageAdapter {
   };
 }
 
-async function createStorageAdapter(): Promise<StorageAdapter> {
+function createSecureStoreAdapter(): StorageAdapter {
+  return {
+    getItem: (key) => SecureStore.getItemAsync(key),
+    setItem: (key, value) => SecureStore.setItemAsync(key, value),
+    deleteItem: (key) => SecureStore.deleteItemAsync(key),
+  };
+}
+
+function createWebAdapter(): StorageAdapter {
+  return {
+    async getItem(key) {
+      return window.localStorage.getItem(key);
+    },
+    async setItem(key, value) {
+      window.localStorage.setItem(key, value);
+    },
+    async deleteItem(key) {
+      window.localStorage.removeItem(key);
+    },
+  };
+}
+
+let _adapter: StorageAdapter | null = null;
+
+function getAdapter(): StorageAdapter {
+  if (_adapter) return _adapter;
+
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
-    return {
-      async getItem(key) {
-        return window.localStorage.getItem(key);
-      },
-      async setItem(key, value) {
-        window.localStorage.setItem(key, value);
-      },
-      async deleteItem(key) {
-        window.localStorage.removeItem(key);
-      },
-    };
+    _adapter = createWebAdapter();
+  } else if (Platform.OS !== 'web') {
+    _adapter = createSecureStoreAdapter();
+  } else {
+    _adapter = createMemoryAdapter();
   }
 
-  return createMemoryStorageAdapter();
+  return _adapter;
 }
 
-async function getStorageAdapter() {
-  if (!storageAdapterPromise) {
-    storageAdapterPromise = createStorageAdapter();
-  }
-
-  return storageAdapterPromise;
-}
-
-export async function saveAuthSession(session: AuthSession) {
-  const storage = await getStorageAdapter();
-
+export async function saveAuthSession(session: AuthSession): Promise<void> {
+  const adapter = getAdapter();
   await Promise.all([
-    storage.setItem(ACCESS_TOKEN_KEY, session.accessToken),
-    storage.setItem(ROLE_KEY, session.role),
+    adapter.setItem(ACCESS_TOKEN_KEY, session.accessToken),
+    adapter.setItem(REFRESH_TOKEN_KEY, session.refreshToken),
+    adapter.setItem(ROLE_KEY, session.role),
   ]);
 }
 
 export async function getAuthSession(): Promise<AuthSession | null> {
-  const storage = await getStorageAdapter();
-  const [accessToken, role] = await Promise.all([
-    storage.getItem(ACCESS_TOKEN_KEY),
-    storage.getItem(ROLE_KEY),
+  const adapter = getAdapter();
+  const [accessToken, refreshToken, role] = await Promise.all([
+    adapter.getItem(ACCESS_TOKEN_KEY),
+    adapter.getItem(REFRESH_TOKEN_KEY),
+    adapter.getItem(ROLE_KEY),
   ]);
 
-  if (!accessToken || !role) {
-    return null;
-  }
+  if (!accessToken || !refreshToken || !role) return null;
 
-  return {
-    accessToken,
-    role,
-  };
+  return { accessToken, refreshToken, role };
 }
 
-export async function clearAuthSession() {
-  const storage = await getStorageAdapter();
-
+export async function updateTokens(accessToken: string, refreshToken: string): Promise<void> {
+  const adapter = getAdapter();
   await Promise.all([
-    storage.deleteItem(ACCESS_TOKEN_KEY),
-    storage.deleteItem(ROLE_KEY),
+    adapter.setItem(ACCESS_TOKEN_KEY, accessToken),
+    adapter.setItem(REFRESH_TOKEN_KEY, refreshToken),
+  ]);
+}
+
+export async function clearAuthSession(): Promise<void> {
+  const adapter = getAdapter();
+  await Promise.all([
+    adapter.deleteItem(ACCESS_TOKEN_KEY),
+    adapter.deleteItem(REFRESH_TOKEN_KEY),
+    adapter.deleteItem(ROLE_KEY),
   ]);
 }
