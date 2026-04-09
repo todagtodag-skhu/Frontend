@@ -1,0 +1,284 @@
+import { useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
+
+import { Button } from '@/components/common/Button';
+import { TextInput } from '@/components/common/TextInput';
+import { AppScreen } from '@/components/layout/AppScreen';
+import { CalendarModal } from '@/components/todagi/CalendarModal';
+import { Section } from '@/components/todagi/Section';
+import { todagiStyles } from '@/components/todagi/styles';
+import { Text } from '@/components/ui/Text';
+import { useTodakRelations, useUpdateSungjangInfo } from '@/features/relation/hooks';
+import { toISODate } from '@/lib/dateUtils';
+import { useGrowth } from '@/contexts/GrowthContext';
+
+export default function ChildDetailScreen() {
+  const router = useRouter();
+  const { childId } = useLocalSearchParams<{ childId?: string }>();
+  const { getBoardByChildId, deleteStickerBoard } = useGrowth();
+
+  const { data: relationsData } = useTodakRelations();
+  const updateSungjangInfo = useUpdateSungjangInfo();
+
+  const relation = relationsData?.relations.find(
+    (r) => r.relationId.toString() === childId,
+  );
+  const activeBoard = getBoardByChildId(childId);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState('');
+  const [birthday, setBirthday] = useState('');
+  const [birthdayModalVisible, setBirthdayModalVisible] = useState(false);
+
+  useEffect(() => {
+    if (relation) {
+      setName(relation.sungjangName);
+    }
+  }, [relation]);
+
+  const handleSave = () => {
+    if (!childId || !relation) return;
+
+    if (!name.trim()) {
+      Alert.alert('알림', '이름을 입력해주세요.');
+      return;
+    }
+
+    const relationId = parseInt(childId, 10);
+
+    updateSungjangInfo.mutate(
+      {
+        relationId,
+        sungjangName: name.trim(),
+        sungjangBirthday: birthday.trim() ? toISODate(birthday.trim()) : toISODate(new Date().toISOString().slice(0, 10).replace(/-/g, '.')),
+      },
+      {
+        onSuccess: () => {
+          setIsEditing(false);
+        },
+        onError: () => {
+          Alert.alert('오류', '성장이 정보 수정에 실패했습니다.');
+        },
+      },
+    );
+  };
+
+  const handleCancelEdit = () => {
+    if (relation) {
+      setName(relation.sungjangName);
+    }
+    setIsEditing(false);
+  };
+
+  return (
+    <>
+      <AppScreen
+        bodyStyle={todagiStyles.scrollView}
+        contentContainerStyle={styles.scrollView}
+      >
+        <Section title="성장이 정보">
+          <View style={styles.list}>
+            <View style={todagiStyles.card}>
+              {isEditing ? (
+                <View style={styles.editForm}>
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>이름</Text>
+                    <TextInput
+                      value={name}
+                      onChangeText={setName}
+                      placeholder="성장이 이름"
+                      align="left"
+                      size="md"
+                      style={styles.fieldInput}
+                    />
+                  </View>
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>생일</Text>
+                    <Pressable
+                      style={[styles.dateField, !birthday && styles.dateFieldEmpty]}
+                      onPress={() => setBirthdayModalVisible(true)}
+                    >
+                      <Text style={[styles.dateFieldText, !birthday && styles.dateFieldPlaceholder]}>
+                        {birthday || '생년월일을 선택해주세요'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                  <View style={styles.actionRow}>
+                    <Button
+                      title="취소"
+                      onPress={handleCancelEdit}
+                      variant="secondary"
+                      size="sm"
+                      style={styles.actionButton}
+                    />
+                    <Button
+                      title="저장"
+                      onPress={handleSave}
+                      variant="chip"
+                      size="sm"
+                      style={styles.actionButton}
+                      disabled={updateSungjangInfo.isPending}
+                    />
+                  </View>
+                </View>
+              ) : (
+                <>
+                  <Text weight="bold" style={styles.itemTitle}>
+                    {relation?.sungjangName ?? '성장이'}
+                  </Text>
+                  <Text style={styles.itemSub}>현재 스티커판 {activeBoard ? '생성됨' : '없음'}</Text>
+                  <View style={styles.actionRow}>
+                    <Button
+                      title="수정"
+                      onPress={() => setIsEditing(true)}
+                      variant="chip"
+                      size="sm"
+                      style={styles.actionButton}
+                    />
+                  </View>
+                </>
+              )}
+            </View>
+          </View>
+        </Section>
+
+        <Section title="현재 스티커판">
+          <View style={styles.list}>
+            {activeBoard ? (
+              <Pressable style={todagiStyles.card}>
+                <Text weight="bold" style={styles.itemTitle}>
+                  {activeBoard.title}
+                </Text>
+                <Text style={styles.itemSub}>
+                  {activeBoard.boardDesign} · {activeBoard.stickerCount}
+                </Text>
+                <Text style={styles.itemSub}>미션 {activeBoard.missions.length}개</Text>
+                <View style={styles.actionRow}>
+                  <Button
+                    title="수정"
+                    onPress={() =>
+                      router.push({
+                        pathname: '/create-sticker',
+                        params: { childId, boardId: activeBoard.id, returnTo: 'child-detail' },
+                      })
+                    }
+                    variant="chip"
+                    size="sm"
+                    style={styles.actionButton}
+                  />
+                  <Button
+                    title="삭제"
+                    onPress={() =>
+                      Alert.alert('스티커판 삭제', `"${activeBoard.title}"을 삭제할까요?`, [
+                        { text: '취소', style: 'cancel' },
+                        {
+                          text: '삭제',
+                          style: 'destructive',
+                          onPress: () => deleteStickerBoard(activeBoard.id),
+                        },
+                      ])
+                    }
+                    variant="chipDanger"
+                    size="sm"
+                    style={styles.actionButton}
+                  />
+                </View>
+              </Pressable>
+            ) : (
+              <View style={todagiStyles.card}>
+                <Text style={styles.emptyText}>아직 활성 스티커판이 없습니다.</Text>
+              </View>
+            )}
+          </View>
+        </Section>
+
+        {!activeBoard ? (
+          <Button
+            title="스티커판 만들기"
+            onPress={() =>
+              router.push({
+                pathname: '/create-sticker',
+                params: { childId, returnTo: 'child-detail' },
+              })
+            }
+            style={styles.createButton}
+          />
+        ) : null}
+      </AppScreen>
+
+      <CalendarModal
+        visible={birthdayModalVisible}
+        value={birthday}
+        title="생일 선택"
+        onConfirm={setBirthday}
+        onClose={() => setBirthdayModalVisible(false)}
+      />
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  scrollView: {
+    paddingBottom: 36,
+  },
+  list: {
+    gap: 10,
+  },
+  itemTitle: {
+    fontSize: 20,
+  },
+  itemSub: {
+    fontSize: 13,
+    color: '#888888',
+  },
+  editForm: {
+    gap: 12,
+  },
+  field: {
+    gap: 6,
+  },
+  fieldLabel: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  fieldInput: {
+    fontSize: 18,
+    paddingVertical: 14,
+  },
+  dateField: {
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  dateFieldEmpty: {
+    backgroundColor: '#FFFFFF',
+  },
+  dateFieldText: {
+    fontSize: 18,
+    color: '#222222',
+  },
+  dateFieldPlaceholder: {
+    color: '#999999',
+  },
+  emptyText: {
+    fontSize: 15,
+    color: '#888888',
+    textAlign: 'center',
+  },
+  createButton: {
+    width: '100%',
+    marginTop: 0,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'flex-end',
+  },
+  actionButton: {
+    flex: 0,
+    marginTop: 0,
+  },
+});

@@ -1,0 +1,268 @@
+import { StyleSheet } from 'react-native';
+
+import { borderWidth } from '@/constants/borders';
+import { colors } from '@/constants/colors';
+
+export const childrenStyles = StyleSheet.create({
+  content: {
+    gap: 22,
+  },
+  section: {
+    gap: 12,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sectionTitle: {
+    fontSize: 20,
+    lineHeight: 26,
+    color: colors.grayscale[1000],
+  },
+  selectorScrollContent: {
+    paddingRight: 24,
+    gap: 10,
+  },
+  childChip: {
+    minWidth: 104,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: colors.grayscale[100],
+    borderWidth: borderWidth.emphasis,
+    borderColor: colors.grayscale[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  childChipSelected: {
+    backgroundColor: '#FFF3DA',
+    borderColor: '#FFCF7D',
+  },
+  childChipText: {
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.grayscale[1000],
+  },
+  addChildChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: colors.grayscale[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addChildChipText: {
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.grayscale[1000],
+  },
+  boardCardWrapper: {
+    gap: 8,
+  },
+  boardCard: {
+    borderRadius: 16,
+    backgroundColor: colors.grayscale[100],
+    padding: 16,
+    borderWidth: borderWidth.hairline,
+    borderColor: '#F5EAD5',
+    gap: 14,
+  },
+  boardCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  boardCardTitle: {
+    flex: 1,
+    fontSize: 20,
+    lineHeight: 26,
+    color: colors.grayscale[1000],
+  },
+  stickerBadge: {
+    backgroundColor: '#FFF3DA',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderWidth: borderWidth.strong,
+    borderColor: '#FFCF7D',
+  },
+  stickerBadgeText: {
+    fontSize: 15,
+    color: '#8B5E1A',
+  },
+  boardCardMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  boardMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 1,
+  },
+  boardMetaIcon: {
+    color: '#6D665E',
+  },
+  boardCardMetaText: {
+    fontSize: 15,
+    color: '#6D665E',
+    flexShrink: 1,
+  },
+  boardCardMetaDivider: {
+    fontSize: 15,
+    color: '#C1B9B0',
+  },
+  boardCardDivider: {
+    height: 1,
+    backgroundColor: '#F0E8DA',
+  },
+  stickerGiveButtonWrapper: {
+    flex: 1,
+    position: 'relative',
+  },
+  stickerGiveButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 12,
+    backgroundColor: '#FFF3DA',
+    borderWidth: borderWidth.emphasis,
+    borderColor: '#FFCF7D',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  stickerGiveButtonIcon: {
+    color: colors.grayscale[1000],
+  },
+  stickerGiveButtonText: {
+    fontSize: 16,
+    color: colors.grayscale[1000],
+  },
+  editBoardButton: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 10,
+    backgroundColor: '#FFF3DA',
+    borderWidth: borderWidth.strong,
+    borderColor: '#FFCF7D',
+  },
+  editBoardButtonText: {
+    fontSize: 14,
+    color: '#8B5E1A',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -9,
+    right: -9,
+    width: 22,
+    height: 22,
+    borderRadius: 999,
+    backgroundColor: '#FF3B30',
+    borderWidth: borderWidth.emphasis,
+    borderColor: '#F5EAD5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  notificationBadgeText: {
+    fontSize: 11,
+    color: '#FFFFFF',
+    lineHeight: 14,
+  },
+  missionList: {
+    gap: 12,
+  },
+  missionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    borderRadius: 16,
+    backgroundColor: colors.grayscale[100],
+    borderWidth: borderWidth.strong,
+    borderColor: '#E8E3DC',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  missionEmoji: {
+    fontSize: 32,
+    lineHeight: 36,
+  },
+  missionCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  missionTitle: {
+    fontSize: 20,
+    lineHeight: 26,
+    color: colors.grayscale[1000],
+  },
+  missionMeta: {
+    fontSize: 16,
+    lineHeight: 21,
+    color: '#4F4A44',
+  },
+  emptyCard: {
+    borderRadius: 16,
+    backgroundColor: colors.grayscale[100],
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  emptyBoardCard: {
+    borderRadius: 16,
+    backgroundColor: colors.grayscale[100],
+    paddingHorizontal: 16,
+    paddingVertical: 36,
+    gap: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyBoardText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.grayscale[1000],
+    textAlign: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#6D665E',
+    textAlign: 'center',
+  },
+  primaryButton: {
+    borderRadius: 12,
+    backgroundColor: '#FFF3DA',
+    borderWidth: borderWidth.emphasis,
+    borderColor: '#FFCF7D',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  primaryButtonText: {
+    fontSize: 22,
+    lineHeight: 28,
+    color: colors.grayscale[1000],
+  },
+  editLink: {
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#5A5146',
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
+  emptyState: {
+    gap: 16,
+    paddingTop: 40,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    lineHeight: 24,
+    textAlign: 'center',
+    color: '#5A5146',
+  },
+});
