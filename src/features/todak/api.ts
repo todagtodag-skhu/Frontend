@@ -34,6 +34,27 @@ export const STICKER_COUNT_TO_API: Record<string, StickerCountApi> = {
   '50개': 'FIFTY',
 };
 
+export const STICKER_COUNT_FROM_API: Record<StickerCountApi, string> = {
+  TWENTY: '20개',
+  THIRTY: '30개',
+  FIFTY: '50개',
+};
+
+export function formatStickerCountLabel(value?: string | null): string {
+  if (!value) return '';
+
+  if (value in STICKER_COUNT_FROM_API) {
+    return STICKER_COUNT_FROM_API[value as StickerCountApi];
+  }
+
+  if (value.endsWith('개')) {
+    return value;
+  }
+
+  const numericValue = value.replace(/[^0-9]/g, '');
+  return numericValue ? `${numericValue}개` : value;
+}
+
 // ─── Adapter functions ─────────────────────────────────────────────────────────
 
 export function adaptApiMission(m: ApiMission): Mission {
@@ -53,7 +74,7 @@ export function adaptApiStickerBoard(board: ApiStickerBoard, relationId: number)
     id: board.stickerBoardId.toString(),
     childId: relationId.toString(),
     title: board.name,
-    stickerCount: board.remainingStickerCount,
+    stickerCount: formatStickerCountLabel(board.remainingStickerCount),
     boardDesign: BOARD_DESIGN_FROM_API[board.boardDesign] ?? board.boardDesign,
     rewardText: board.finalReward,
     missions: board.missions.map(adaptApiMission),

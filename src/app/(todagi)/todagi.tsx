@@ -36,6 +36,7 @@ import {
   createTodakMission,
   updateTodakMission,
   deleteTodakMission,
+  formatStickerCountLabel,
   missionToApiInput,
 } from '@/features/todak/api';
 
@@ -134,7 +135,7 @@ export default function TodagiScreen() {
     if (!boardFromApi || !boardId) return;
 
     setBoardTitle(boardFromApi.title);
-    setStickerCount(boardFromApi.stickerCount || '30개');
+    setStickerCount(formatStickerCountLabel(boardFromApi.stickerCount) || '30개');
     setBoardDesign(boardFromApi.boardDesign);
     setRewardText(boardFromApi.rewardText);
     setMissions(boardFromApi.missions);

@@ -9,6 +9,7 @@ import { StickerBoard } from '@/components/todagi/types';
 import { Text } from '@/components/ui/Text';
 import { borderWidth } from '@/constants/borders';
 import { colors } from '@/constants/colors';
+import { formatStickerCountLabel } from '@/features/todak/api';
 
 type EditStickerBoardModalProps = {
   visible: boolean;
@@ -28,7 +29,7 @@ export function EditStickerBoardModal({ visible, board, mode = 'edit', onSave, o
     if (visible) {
       if (board) {
         setTitle(board.title);
-        setStickerCount(board.stickerCount.replace(/[^0-9]/g, ''));
+        setStickerCount(formatStickerCountLabel(board.stickerCount));
         setBoardDesign(board.boardDesign);
         setRewardText(board.rewardText);
       } else {
