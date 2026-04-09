@@ -18,6 +18,12 @@ export type GrowthAvailableSticker = {
   missionId: string;
   emoji: string;
   title: string;
+  pendingStickerId: number | null;
+};
+
+export type AttachGrowthStickerInput = {
+  pendingStickerId: number;
+  position: number;
 };
 
 export type GrowthStickerBoard = {
@@ -320,11 +326,18 @@ function normalizePlacedStickers(value: unknown, missions: Mission[]): GrowthSti
           asString(record?.emoji) ||
           asString(record?.stickerEmoji) ||
           asString(record?.missionEmoji) ||
+          asString(record?.emoticon) ||
+          asString(nestedMission?.emoji) ||
+          asString(nestedMission?.emoticon) ||
           mission?.emoji ||
-          '⭐',
+          '',
         title:
           asString(record?.title) ||
           asString(record?.missionTitle) ||
+          asString(record?.missionName) ||
+          asString(record?.content) ||
+          asString(nestedMission?.title) ||
+          asString(nestedMission?.name) ||
           mission?.title ||
           `스티커 ${index + 1}`,
       };
@@ -355,6 +368,7 @@ function normalizeAvailableStickers(value: unknown, missions: Mission[]): Growth
       return {
         id:
           asIdentifier(record?.stickerId) ||
+          asIdentifier(record?.pendingStickerId) ||
           asIdentifier(record?.id) ||
           asIdentifier(record?.missionRequestId) ||
           `available-sticker-${index + 1}`,
@@ -369,9 +383,14 @@ function normalizeAvailableStickers(value: unknown, missions: Mission[]): Growth
         title:
           asString(record?.title) ||
           asString(record?.missionTitle) ||
+          asString(record?.missionName) ||
           asString(record?.content) ||
           mission?.title ||
           `스티커 ${index + 1}`,
+        pendingStickerId:
+          parseCountValue(record?.pendingStickerId) ||
+          parseCountValue(record?.stickerId) ||
+          null,
         position,
       };
     })
@@ -478,10 +497,14 @@ function normalizeCompletedBoard(value: unknown, index: number): CompletedSticke
             asString(item?.emoji) ||
             asString(item?.stickerEmoji) ||
             asString(item?.missionEmoji) ||
-            '⭐',
+            asString(item?.emoticon) ||
+            asString(item?.content) ||
+            '',
           title:
             asString(item?.title) ||
             asString(item?.missionTitle) ||
+            asString(item?.missionName) ||
+            asString(item?.content) ||
             `스티커 ${stickerIndex + 1}`,
         };
       },
@@ -516,12 +539,27 @@ export async function requestMissionSticker(missionId: string): Promise<void> {
   assertOkStatus(response, '스티커 요청에 실패했습니다.');
 }
 
-export async function attachGrowthSticker(position: number): Promise<GrowthStickerBoard> {
+export async function attachGrowthSticker({
+  pendingStickerId,
+  position,
+}: AttachGrowthStickerInput): Promise<GrowthStickerBoard> {
   await requireAuthSession();
 
-  const response = await getApiClient().post('/sungjang/sticker/attach', {
+  console.log('[growth] attach request payload', {
+    pendingStickerId,
     position,
   });
+
+  const response = await getApiClient().post('/sungjang/sticker/attach', {
+    pendingStickerId,
+    position,
+  });
+
+  console.log('[growth] attach response', {
+    status: response.status,
+    data: response.data,
+  });
+
   assertOkStatus(response, '스티커 부착에 실패했습니다.');
 
   return getGrowthStickerBoard();

@@ -221,7 +221,21 @@ export default function GrowthTree({
 
   const handleAttachSticker = useCallback(
     async (cellId: number, sticker: GrowthAvailableSticker, stickerIdx: number) => {
+      console.log('[growth/tree] handleAttachSticker called', {
+        cellId,
+        sticker,
+        stickerIdx,
+      });
+
       if (attachStickerMutation.isPending) {
+        return;
+      }
+
+      const pendingStickerId = sticker.pendingStickerId ?? Number.parseInt(sticker.id, 10);
+
+      if (!Number.isFinite(pendingStickerId)) {
+        Alert.alert('부착 실패', '스티커 정보를 다시 불러와 주세요.');
+        await refetch().catch(() => undefined);
         return;
       }
 
@@ -238,7 +252,10 @@ export default function GrowthTree({
       setAvailableStickers((prev) => prev.filter((item) => item.id !== sticker.id));
 
       try {
-        await attachStickerMutation.mutateAsync(cellId);
+        await attachStickerMutation.mutateAsync({
+          pendingStickerId,
+          position: cellId,
+        });
       } catch (attachError) {
         await refetch().catch(() => undefined);
         const message =
@@ -252,17 +269,27 @@ export default function GrowthTree({
   const getFirstAvailableCellId = useCallback(() => {
     for (const cell of gridCells) {
       if (!placedStickersRef.current[cell.id]) {
+        console.log('[growth/tree] first available cell', cell.id);
         return cell.id;
       }
     }
 
+    console.log('[growth/tree] no available cell');
     return null;
   }, [gridCells]);
 
   const getGridCellFromPoint = useCallback((absoluteX: number, absoluteY: number): number | null => {
     const { x, y, width, height } = boardLayoutRef.current;
 
+    console.log('[growth/tree] getGridCellFromPoint input', {
+      absoluteX,
+      absoluteY,
+      boardLayout: { x, y, width, height },
+      boardScrollOffsetY,
+    });
+
     if (width <= 0 || height <= 0) {
+      console.log('[growth/tree] board layout not ready');
       return null;
     }
 
@@ -277,6 +304,10 @@ export default function GrowthTree({
     const relativeY = absoluteY - y + boardScrollOffsetY;
 
     if (relativeX < 0 || absoluteY - y < 0 || relativeX > width || absoluteY - y > height) {
+      console.log('[growth/tree] drop point outside board', {
+        relativeX,
+        relativeY,
+      });
       return null;
     }
 
@@ -287,12 +318,22 @@ export default function GrowthTree({
         : Math.round((relativeY - GROWTH_BOARD_VERTICAL_EDGE_INSET) / rowGap);
 
     if (row < 0 || row >= totalRows || col < 0 || col >= GROWTH_GRID_COLS) {
+      console.log('[growth/tree] computed row/col out of range', {
+        row,
+        col,
+        totalRows,
+      });
       return null;
     }
 
     const cellId = row * GROWTH_GRID_COLS + col + 1;
 
-    if (placedStickersRef.current[cellId]) return null;
+    if (placedStickersRef.current[cellId]) {
+      console.log('[growth/tree] cell already occupied', cellId);
+      return null;
+    }
+
+    console.log('[growth/tree] resolved cellId', cellId);
 
     return cellId;
   }, [boardScrollOffsetY, gridCells]);
@@ -337,6 +378,16 @@ export default function GrowthTree({
               moveX < GROWTH_STICKER_TAP_MOVE_THRESHOLD &&
               moveY < GROWTH_STICKER_TAP_MOVE_THRESHOLD;
 
+            console.log('[growth/tree] pan release', {
+              idx,
+              dropX,
+              dropY,
+              moveX,
+              moveY,
+              isTapLike,
+              sticker,
+            });
+
             setDraggingStickerIdx(null);
             setDragPos(null);
 
@@ -370,6 +421,25 @@ export default function GrowthTree({
       return panHandlersMap.current[idx];
     },
     [availableStickers, getFirstAvailableCellId, getGridCellFromPoint, handleAttachSticker],
+  );
+
+  const handleStickerPress = useCallback(
+    (idx: number) => {
+      const sticker = availableStickers[idx];
+
+      if (!sticker) {
+        return;
+      }
+
+      const firstCellId = getFirstAvailableCellId();
+
+      if (firstCellId === null) {
+        return;
+      }
+
+      void handleAttachSticker(firstCellId, sticker, idx);
+    },
+    [availableStickers, getFirstAvailableCellId, handleAttachSticker],
   );
 
   const handleCellPress = (id: number) => {
@@ -458,11 +528,13 @@ export default function GrowthTree({
 
                       return (
                         <View key={availableStickers[idx]?.id ?? idx} style={styles.bigStickerOption}>
-                          <Pressable {...getPanHandlers(idx)} style={styles.draggableArea}>
+                          <View {...getPanHandlers(idx)} style={styles.draggableArea}>
                             <View style={[styles.stickerCircle, isDraggingThis && { opacity: 0 }]}>
-                              <FloatingStickerIcon emoji={availableStickers[idx]?.emoji} />
+                              <Pressable onPress={() => handleStickerPress(idx)} style={styles.stickerButton}>
+                                <FloatingStickerIcon emoji={availableStickers[idx]?.emoji} />
+                              </Pressable>
                             </View>
-                          </Pressable>
+                          </View>
                         </View>
                       );
                     })}
@@ -646,6 +718,12 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stickerButton: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },

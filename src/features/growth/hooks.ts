@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   attachGrowthSticker,
+  type AttachGrowthStickerInput,
   getCompletedGrowthStickerBoards,
   getGrowthStickerBoard,
   requestMissionSticker,
@@ -36,8 +37,8 @@ export function useRequestMissionSticker() {
 export function useAttachGrowthSticker() {
   const queryClient = useQueryClient();
 
-  return useMutation<GrowthStickerBoard, Error, number>({
-    mutationFn: (position: number) => attachGrowthSticker(position),
+  return useMutation<GrowthStickerBoard, Error, AttachGrowthStickerInput>({
+    mutationFn: (input: AttachGrowthStickerInput) => attachGrowthSticker(input),
     onSuccess: (board) => {
       queryClient.setQueryData(GROWTH_QUERY_KEYS.board(), board);
     },
