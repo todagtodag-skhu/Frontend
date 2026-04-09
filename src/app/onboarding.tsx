@@ -9,15 +9,18 @@ import { InviteShareStep } from '@/components/onboarding/InviteShareStep';
 import { OnboardingInfoStep } from '@/components/onboarding/OnboardingInfoStep';
 import { RoleSelectStep } from '@/components/onboarding/RoleSelectStep';
 import { CalendarModal } from '@/components/todagi/CalendarModal';
-import { useGrowth } from '@/contexts/GrowthContext';
+import { useCreateSungjangInviteCode, useTodakOnboarding } from '@/features/onboarding/hooks';
+import { getTodakRelations } from '@/features/relation/api';
+import { useUpdateSungjangInfo } from '@/features/relation/hooks';
+import { toISODate } from '@/lib/dateUtils';
+import { getPostLoginRoute } from '@/features/auth/routing';
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { addChild } = useGrowth();
+
   const [step, setStep] = useState(0);
   const [selectedRole, setSelectedRole] = useState<'todagi' | 'growth' | null>(null);
   const [inviteCode, setInviteCode] = useState('');
-  const [createdChildId, setCreatedChildId] = useState<string | null>(null);
   const [childName, setChildName] = useState('');
   const [birthday, setBirthday] = useState('');
   const [birthdayModalVisible, setBirthdayModalVisible] = useState(false);
@@ -28,34 +31,23 @@ export default function OnboardingScreen() {
   const confirmLabel =
     (isGrowth && step === 2) || (isTodagi && step === 4) ? '시작하기' : '다음';
 
-  const generateInviteCode = () => Math.random().toString().slice(2, 8).padEnd(6, '0');
+  const createSungjangInviteCode = useCreateSungjangInviteCode();
+  const todakOnboarding = useTodakOnboarding();
+  const updateSungjangInfo = useUpdateSungjangInfo();
 
-  const routeToChildren = (childId: string) => {
-    router.replace({
-      pathname: '/children',
-      params: { focusChildId: childId },
-    });
-  };
-
-  const routeToGrowth = () => {
-    router.replace('/tree');
-  };
-
-  const handleSelectRole = (role: 'todagi' | 'growth') => {
-    setSelectedRole(role);
-  };
+  const isPending =
+    createSungjangInviteCode.isPending ||
+    todakOnboarding.isPending ||
+    updateSungjangInfo.isPending;
 
   const handleShareInviteCode = async () => {
-    if (!inviteCode) {
-      return;
-    }
-
+    if (!inviteCode) return;
     await Share.share({
       message: `내 초대코드는 ${inviteCode} 이야. 토닥이 앱에서 이 코드를 입력해 연결해줘.`,
     });
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (step === 0) {
       if (!selectedRole) {
         Alert.alert('알림', '역할을 선택해주세요.');
@@ -63,16 +55,16 @@ export default function OnboardingScreen() {
       }
 
       if (isGrowth) {
-        const nextInviteCode = generateInviteCode();
-        const childId = await addChild({
-          inviteCode: nextInviteCode,
-          name: '성장이',
-          birthday: '-',
+        // 성장이: 서버에서 초대코드 발급 (PENDING 토큰 사용)
+        createSungjangInviteCode.mutate(undefined, {
+          onSuccess: (data) => {
+            setInviteCode(data.inviteCode);
+            setStep(1);
+          },
+          onError: () => {
+            Alert.alert('오류', '초대코드 발급에 실패했습니다. 다시 시도해주세요.');
+          },
         });
-
-        setInviteCode(nextInviteCode);
-        setCreatedChildId(childId);
-        setStep(1);
         return;
       }
 
@@ -81,19 +73,13 @@ export default function OnboardingScreen() {
     }
 
     if (step === 1) {
-      if (isGrowth) {
-        setStep(2);
-        return;
-      }
-
       setStep(2);
       return;
     }
 
     if (isGrowth) {
-      if (createdChildId) {
-        routeToGrowth();
-      }
+      // 성장이 온보딩 완료 → 성장 화면으로
+      router.replace(getPostLoginRoute('SUNGJANG'));
       return;
     }
 
@@ -108,22 +94,52 @@ export default function OnboardingScreen() {
         return;
       }
 
-      setStep(4);
+      // 토닥이: 초대코드로 역할 전환 + 관계 연결
+      todakOnboarding.mutate(inviteCode.trim(), {
+        onSuccess: () => {
+          setStep(4);
+        },
+        onError: () => {
+          Alert.alert('오류', '초대코드가 올바르지 않습니다. 다시 확인해주세요.');
+        },
+      });
       return;
     }
 
+    // step === 4: 성장이 이름·생일 입력
     if (!childName.trim() || !birthday.trim()) {
       Alert.alert('알림', '이름과 생일을 모두 입력해주세요.');
       return;
     }
 
-    const childId = await addChild({
-      inviteCode: inviteCode.trim(),
-      name: childName.trim(),
-      birthday: birthday.trim(),
-    });
-
-    routeToChildren(childId);
+    // 방금 연결된 관계 ID 조회 후 성장이 정보 저장
+    getTodakRelations()
+      .then((data) => {
+        const relation = data.relations[0];
+        if (!relation) throw new Error('관계를 찾을 수 없습니다.');
+        return relation.relationId;
+      })
+      .then((relationId) => {
+        updateSungjangInfo.mutate(
+          {
+            relationId,
+            sungjangName: childName.trim(),
+            sungjangBirthday: toISODate(birthday.trim()),
+          },
+          {
+            onSuccess: () => {
+              router.replace(getPostLoginRoute('TODAGI'));
+            },
+            onError: () => {
+              // 정보 저장 실패해도 온보딩은 완료로 처리
+              router.replace(getPostLoginRoute('TODAGI'));
+            },
+          },
+        );
+      })
+      .catch(() => {
+        router.replace(getPostLoginRoute('TODAGI'));
+      });
   };
 
   const handleBack = () => {
@@ -138,11 +154,12 @@ export default function OnboardingScreen() {
         onBack={handleBack}
         confirmLabel={confirmLabel}
         onConfirm={handleConfirm}
+        confirmDisabled={isPending}
       >
         {step === 0 ? (
           <RoleSelectStep
             selectedRole={selectedRole}
-            onSelectRole={handleSelectRole}
+            onSelectRole={setSelectedRole}
           />
         ) : step === 1 ? (
           isGrowth ? (

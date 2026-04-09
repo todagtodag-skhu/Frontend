@@ -6,25 +6,40 @@ import { ChildInfoStep } from '@/components/onboarding/ChildInfoStep';
 import { CommonOnboardingScreen } from '@/components/onboarding/CommonOnboardingScreen';
 import { InviteCodeStep } from '@/components/onboarding/InviteCodeStep';
 import { CalendarModal } from '@/components/todagi/CalendarModal';
-import { useGrowth } from '@/contexts/GrowthContext';
+import { useConnectTodak } from '@/features/relation/hooks';
+import { useUpdateSungjangInfo } from '@/features/relation/hooks';
+import { toISODate } from '@/lib/dateUtils';
 
 export default function RegisterChildScreen() {
   const router = useRouter();
-  const { addChild } = useGrowth();
   const [step, setStep] = useState(0);
   const [inviteCode, setInviteCode] = useState('');
   const [childName, setChildName] = useState('');
   const [birthday, setBirthday] = useState('');
   const [birthdayModalVisible, setBirthdayModalVisible] = useState(false);
+  const [connectedRelationId, setConnectedRelationId] = useState<number | null>(null);
 
-  const handleConfirm = async () => {
+  const connectTodak = useConnectTodak();
+  const updateSungjangInfo = useUpdateSungjangInfo();
+
+  const isPending = connectTodak.isPending || updateSungjangInfo.isPending;
+
+  const handleConfirm = () => {
     if (step === 0) {
       if (!inviteCode.trim()) {
         Alert.alert('알림', '초대코드를 입력해주세요.');
         return;
       }
 
-      setStep(1);
+      connectTodak.mutate(inviteCode.trim(), {
+        onSuccess: (data) => {
+          setConnectedRelationId(data.relationId);
+          setStep(1);
+        },
+        onError: () => {
+          Alert.alert('오류', '초대코드가 올바르지 않거나 이미 연결된 관계입니다.');
+        },
+      });
       return;
     }
 
@@ -33,16 +48,26 @@ export default function RegisterChildScreen() {
       return;
     }
 
-    const childId = await addChild({
-      inviteCode: inviteCode.trim(),
-      name: childName.trim(),
-      birthday: birthday.trim(),
-    });
+    if (!connectedRelationId) return;
 
-    router.replace({
-      pathname: '/children',
-      params: { focusChildId: childId },
-    });
+    updateSungjangInfo.mutate(
+      {
+        relationId: connectedRelationId,
+        sungjangName: childName.trim(),
+        sungjangBirthday: toISODate(birthday.trim()),
+      },
+      {
+        onSuccess: () => {
+          router.replace({
+            pathname: '/children',
+            params: { focusChildId: connectedRelationId.toString() },
+          });
+        },
+        onError: () => {
+          Alert.alert('오류', '성장이 정보 저장에 실패했습니다.');
+        },
+      },
+    );
   };
 
   const handleBack = () => {
@@ -57,6 +82,7 @@ export default function RegisterChildScreen() {
         onBack={handleBack}
         confirmLabel={step === 0 ? '다음' : '확인'}
         onConfirm={handleConfirm}
+        confirmDisabled={isPending}
       >
         {step === 0 ? (
           <InviteCodeStep

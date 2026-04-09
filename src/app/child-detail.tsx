@@ -9,77 +9,66 @@ import { CalendarModal } from '@/components/todagi/CalendarModal';
 import { Section } from '@/components/todagi/Section';
 import { todagiStyles } from '@/components/todagi/styles';
 import { Text } from '@/components/ui/Text';
+import { useTodakRelations, useUpdateSungjangInfo } from '@/features/relation/hooks';
+import { toISODate } from '@/lib/dateUtils';
 import { useGrowth } from '@/contexts/GrowthContext';
 
 export default function ChildDetailScreen() {
   const router = useRouter();
   const { childId } = useLocalSearchParams<{ childId?: string }>();
-  const { getBoardByChildId, getChildById, deleteStickerBoard, updateChild, deleteChild } =
-    useGrowth();
+  const { getBoardByChildId, deleteStickerBoard } = useGrowth();
 
-  const child = getChildById(childId);
+  const { data: relationsData } = useTodakRelations();
+  const updateSungjangInfo = useUpdateSungjangInfo();
+
+  const relation = relationsData?.relations.find(
+    (r) => r.relationId.toString() === childId,
+  );
   const activeBoard = getBoardByChildId(childId);
-  const resolvedChildName = child?.name ?? '성장이';
+
   const [isEditing, setIsEditing] = useState(false);
-  const [inviteCode, setInviteCode] = useState('');
   const [name, setName] = useState('');
   const [birthday, setBirthday] = useState('');
   const [birthdayModalVisible, setBirthdayModalVisible] = useState(false);
 
   useEffect(() => {
-    if (!child) {
-      return;
+    if (relation) {
+      setName(relation.sungjangName);
     }
-
-    setInviteCode(child.inviteCode);
-    setName(child.name);
-    setBirthday(child.birthday);
-  }, [child]);
+  }, [relation]);
 
   const handleSave = () => {
-    if (!childId || !child) {
+    if (!childId || !relation) return;
+
+    if (!name.trim()) {
+      Alert.alert('알림', '이름을 입력해주세요.');
       return;
     }
 
-    if (!inviteCode.trim() || !name.trim() || !birthday.trim()) {
-      Alert.alert('알림', '초대코드, 이름, 생일을 모두 입력해주세요.');
-      return;
-    }
+    const relationId = parseInt(childId, 10);
 
-    updateChild(childId, {
-      inviteCode: inviteCode.trim(),
-      name: name.trim(),
-      birthday: birthday.trim(),
-    });
-    setIsEditing(false);
+    updateSungjangInfo.mutate(
+      {
+        relationId,
+        sungjangName: name.trim(),
+        sungjangBirthday: birthday.trim() ? toISODate(birthday.trim()) : toISODate(new Date().toISOString().slice(0, 10).replace(/-/g, '.')),
+      },
+      {
+        onSuccess: () => {
+          setIsEditing(false);
+        },
+        onError: () => {
+          Alert.alert('오류', '성장이 정보 수정에 실패했습니다.');
+        },
+      },
+    );
   };
 
   const handleCancelEdit = () => {
-    if (child) {
-      setInviteCode(child.inviteCode);
-      setName(child.name);
-      setBirthday(child.birthday);
+    if (relation) {
+      setName(relation.sungjangName);
     }
-
     setIsEditing(false);
-  };
-
-  const handleDeleteChild = () => {
-    if (!childId || !child) {
-      return;
-    }
-
-    Alert.alert('성장이 삭제', `"${child.name}" 정보를 삭제할까요?`, [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '삭제',
-        style: 'destructive',
-        onPress: () => {
-          deleteChild(childId);
-          router.replace('/children');
-        },
-      },
-    ]);
   };
 
   return (
@@ -93,17 +82,6 @@ export default function ChildDetailScreen() {
             <View style={todagiStyles.card}>
               {isEditing ? (
                 <View style={styles.editForm}>
-                  <View style={styles.field}>
-                    <Text style={styles.fieldLabel}>초대코드</Text>
-                    <TextInput
-                      value={inviteCode}
-                      onChangeText={setInviteCode}
-                      placeholder="초대코드 입력"
-                      align="left"
-                      size="md"
-                      style={styles.fieldInput}
-                    />
-                  </View>
                   <View style={styles.field}>
                     <Text style={styles.fieldLabel}>이름</Text>
                     <TextInput
@@ -140,29 +118,21 @@ export default function ChildDetailScreen() {
                       variant="chip"
                       size="sm"
                       style={styles.actionButton}
+                      disabled={updateSungjangInfo.isPending}
                     />
                   </View>
                 </View>
               ) : (
                 <>
                   <Text weight="bold" style={styles.itemTitle}>
-                    {resolvedChildName}
+                    {relation?.sungjangName ?? '성장이'}
                   </Text>
-                  <Text style={styles.itemSub}>초대코드 {child?.inviteCode ?? '-'}</Text>
-                  <Text style={styles.itemSub}>생일 {child?.birthday ?? '-'}</Text>
                   <Text style={styles.itemSub}>현재 스티커판 {activeBoard ? '생성됨' : '없음'}</Text>
                   <View style={styles.actionRow}>
                     <Button
                       title="수정"
                       onPress={() => setIsEditing(true)}
                       variant="chip"
-                      size="sm"
-                      style={styles.actionButton}
-                    />
-                    <Button
-                      title="삭제"
-                      onPress={handleDeleteChild}
-                      variant="chipDanger"
                       size="sm"
                       style={styles.actionButton}
                     />

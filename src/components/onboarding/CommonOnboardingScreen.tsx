@@ -10,6 +10,7 @@ type CommonOnboardingScreenProps = {
   onBack?: () => void;
   confirmLabel?: string;
   onConfirm: () => void;
+  confirmDisabled?: boolean;
   step: number;
   totalSteps: number;
 };
@@ -19,6 +20,7 @@ export function CommonOnboardingScreen({
   onBack,
   confirmLabel = '확인',
   onConfirm,
+  confirmDisabled = false,
   step,
   totalSteps,
 }: CommonOnboardingScreenProps) {
@@ -39,6 +41,7 @@ export function CommonOnboardingScreen({
           <Button
             title={confirmLabel}
             onPress={onConfirm}
+            disabled={confirmDisabled}
           />
         </View>
       </View>
