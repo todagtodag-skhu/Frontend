@@ -213,8 +213,8 @@ const styles = StyleSheet.create({
   },
   placedStickerEmoji: {
     fontSize: 22,
-    lineHeight: 22,
+    lineHeight: 28,
     textAlign: 'center',
-    includeFontPadding: false,
+    includeFontPadding: true,
   },
 });
