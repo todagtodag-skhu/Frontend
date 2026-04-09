@@ -204,13 +204,32 @@ function normalizeMission(value: unknown, index: number): Mission {
 
   return {
     id: asString(item?.missionId) || asString(item?.id) || `mission-${index + 1}`,
-    emoji: asString(item?.emoji) || asString(item?.stickerEmoji) || asString(item?.icon) || '⭐',
-    title: asString(item?.title) || asString(item?.missionTitle) || asString(item?.name) || `미션 ${index + 1}`,
+    emoji:
+      asString(item?.emoji) ||
+      asString(item?.stickerEmoji) ||
+      asString(item?.icon) ||
+      asString(item?.emoticon) ||
+      '⭐',
+    title:
+      asString(item?.title) ||
+      asString(item?.missionTitle) ||
+      asString(item?.name) ||
+      `미션 ${index + 1}`,
     days: asString(item?.days) || asString(item?.dayOfWeeks),
     frequency: asString(item?.frequency) || asString(item?.frequencyText) || asString(item?.cycle) || '하루 1회',
-    completionCount: typeof item?.completionCount === 'number' ? item.completionCount : undefined,
+    completionCount:
+      typeof item?.completionCount === 'number'
+        ? item.completionCount
+        : typeof item?.targetCount === 'number'
+        ? item.targetCount
+        : undefined,
     stickerPerCompletion:
-      typeof item?.stickerPerCompletion === 'number' ? item.stickerPerCompletion : undefined,
+      typeof item?.stickerPerCompletion === 'number'
+        ? item.stickerPerCompletion
+        : typeof item?.rewardStickerCount === 'number'
+        ? item.rewardStickerCount
+        : undefined,
+    isRequested: typeof item?.isRequested === 'boolean' ? item.isRequested : undefined,
   };
 }
 
@@ -267,16 +286,23 @@ function normalizeGrowthBoard(value: unknown): GrowthStickerBoard | null {
     parseCountValue(record.totalSpots) ||
     parseCountValue(record.stickerCount) ||
     parseCountValue(record.stickerCountLabel) ||
+    parseCountValue(record.remainingStickerCount) ||
     parseCountValue(record.maxStickerCount) ||
     parseCountValue(record.goalCount);
 
   return {
     id: asString(record.stickerBoardId) || asString(record.id) || 'growth-board',
-    title: asString(record.title) || asString(record.stickerBoardTitle) || asString(record.boardName) || '스티커판',
+    title:
+      asString(record.title) ||
+      asString(record.stickerBoardTitle) ||
+      asString(record.boardName) ||
+      asString(record.name) ||
+      '스티커판',
     rewardText:
       asString(record.rewardText) ||
       asString(record.reward) ||
-      asString(record.rewardName),
+      asString(record.rewardName) ||
+      asString(record.finalReward),
     boardDesign: normalizeBoardDesign(record.boardDesign ?? record.design),
     stickerCount: getStickerCountLabel(totalSpots, asString(record.stickerCountLabel)),
     totalSpots,
