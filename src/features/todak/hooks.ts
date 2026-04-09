@@ -16,6 +16,7 @@ import {
   rejectMissionRequest,
   adaptApiStickerBoard,
   adaptApiCompletedBoard,
+  STICKER_COUNT_FROM_API,
 } from './api';
 import type {
   ApiCreateStickerBoardRequest,
@@ -32,19 +33,28 @@ export const TODAK_KEYS = {
 
 // ─── Sticker Board ──────────────────────────────────────────────────────────────
 
-export function useTodakStickerBoard(relationId?: number) {
+export function useTodakStickerBoard(
+  relationId?: number,
+  options?: { refetchInterval?: number | false },
+) {
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: TODAK_KEYS.stickerBoard(relationId!),
     queryFn: async () => {
       try {
         const board = await getTodakStickerBoard(relationId!);
-        return adaptApiStickerBoard(board, relationId!);
+        const previousBoard = queryClient.getQueryData<ReturnType<typeof adaptApiStickerBoard> | null>(
+          TODAK_KEYS.stickerBoard(relationId!),
+        );
+        return adaptApiStickerBoard(board, relationId!, previousBoard);
       } catch (e) {
         if (axios.isAxiosError(e) && e.response?.status === 404) return null;
         throw e;
       }
     },
     enabled: !!relationId,
+    refetchInterval: options?.refetchInterval,
   });
 }
 
@@ -56,7 +66,16 @@ export function useCreateStickerBoard() {
       ...body
     }: { relationId: number } & ApiCreateStickerBoardRequest) =>
       createTodakStickerBoard(relationId, body),
-    onSuccess: (_, { relationId }) => {
+    onSuccess: (_, { relationId, stickerCount }) => {
+      queryClient.setQueryData<{
+        id?: string;
+        childId?: string;
+        stickerCount?: string;
+      } | null>(TODAK_KEYS.stickerBoard(relationId), (prev) => ({
+        ...(prev ?? {}),
+        childId: relationId.toString(),
+        stickerCount: STICKER_COUNT_FROM_API[stickerCount],
+      }));
       queryClient.invalidateQueries({ queryKey: TODAK_KEYS.stickerBoard(relationId) });
     },
   });
@@ -71,8 +90,20 @@ export function useUpdateStickerBoard() {
       ...body
     }: { stickerBoardId: number; relationId: number } & ApiUpdateStickerBoardRequest) =>
       updateTodakStickerBoard(stickerBoardId, body),
-    onSuccess: (_, { relationId }) => {
-      queryClient.invalidateQueries({ queryKey: TODAK_KEYS.stickerBoard(relationId) });
+    onSuccess: (board, { relationId, stickerCount }) => {
+      queryClient.setQueryData(
+        TODAK_KEYS.stickerBoard(relationId),
+        adaptApiStickerBoard(board, relationId, {
+          id: board.stickerBoardId.toString(),
+          childId: relationId.toString(),
+          title: board.name,
+          stickerCount: STICKER_COUNT_FROM_API[stickerCount],
+          remainingStickerCount: board.remainingStickerCount,
+          boardDesign: board.boardDesign,
+          rewardText: board.finalReward,
+          missions: [],
+        }),
+      );
     },
   });
 }
@@ -167,6 +198,7 @@ export function useAcceptMissionRequest() {
       acceptMissionRequest(missionRequestId),
     onSuccess: (_, { relationId }) => {
       queryClient.invalidateQueries({ queryKey: TODAK_KEYS.missionRequests(relationId) });
+      queryClient.invalidateQueries({ queryKey: TODAK_KEYS.stickerBoard(relationId) });
     },
   });
 }

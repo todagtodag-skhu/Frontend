@@ -40,6 +40,10 @@ export const STICKER_COUNT_FROM_API: Record<StickerCountApi, string> = {
   FIFTY: '50개',
 };
 
+export function isStickerCountLabel(value?: string | null): value is string {
+  return !!value && Object.values(STICKER_COUNT_FROM_API).includes(value);
+}
+
 export function formatStickerCountLabel(value?: string | null): string {
   if (!value) return '';
 
@@ -66,15 +70,25 @@ export function adaptApiMission(m: ApiMission): Mission {
     frequency: `${m.targetCount}회 달성 시 스티커 ${m.rewardStickerCount}개`,
     completionCount: m.targetCount,
     stickerPerCompletion: m.rewardStickerCount,
+    isRequested: m.isRequested,
   };
 }
 
-export function adaptApiStickerBoard(board: ApiStickerBoard, relationId: number): StickerBoard {
+export function adaptApiStickerBoard(
+  board: ApiStickerBoard,
+  relationId: number,
+  previousBoard?: StickerBoard | null,
+): StickerBoard {
+  const remainingStickerCount = formatStickerCountLabel(board.remainingStickerCount);
+
   return {
     id: board.stickerBoardId.toString(),
     childId: relationId.toString(),
     title: board.name,
-    stickerCount: formatStickerCountLabel(board.remainingStickerCount),
+    stickerCount: isStickerCountLabel(previousBoard?.stickerCount)
+      ? previousBoard.stickerCount
+      : remainingStickerCount,
+    remainingStickerCount,
     boardDesign: BOARD_DESIGN_FROM_API[board.boardDesign] ?? board.boardDesign,
     rewardText: board.finalReward,
     missions: board.missions.map(adaptApiMission),

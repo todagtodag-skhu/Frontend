@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { Alert, Pressable } from 'react-native';
 
 import { ChildrenEmptyState } from '@/components/children/ChildrenEmptyState';
@@ -32,6 +33,7 @@ import { toISODate } from '@/lib/dateUtils';
 export default function ChildrenScreen() {
   const router = useRouter();
   const { focusChildId } = useLocalSearchParams<{ focusChildId?: string }>();
+  const isFocused = useIsFocused();
 
   const { data: relationsData, isLoading } = useTodakRelations();
   const updateSungjangInfo = useUpdateSungjangInfo();
@@ -76,8 +78,8 @@ export default function ChildrenScreen() {
 
   const selectedRelationId = selectedChild ? parseInt(selectedChild.id, 10) : undefined;
 
-  const { data: activeBoardData } = useTodakStickerBoard(selectedRelationId);
-  const { data: missionRequestData } = useMissionRequests(selectedRelationId);
+  const { data: activeBoardData, refetch: refetchActiveBoard } = useTodakStickerBoard(selectedRelationId);
+  const { data: missionRequestData, refetch: refetchMissionRequests } = useMissionRequests(selectedRelationId);
 
   const activeBoard = activeBoardData ?? undefined;
 
@@ -94,21 +96,34 @@ export default function ChildrenScreen() {
     [missionRequestData],
   );
 
+  const visibleStickerRequests = useMemo(
+    () => stickerRequests.filter((request) => !dismissedMissionIds.has(request.id)),
+    [dismissedMissionIds, stickerRequests],
+  );
+
+  const apiRemainingStickerCount = Number.parseInt(activeBoard?.remainingStickerCount ?? '0', 10) || 0;
   const totalStickerCount = Number.parseInt(activeBoard?.stickerCount ?? '0', 10) || 0;
-  const currentStickerCount = givenStickerCount;
-  const showNotification = (selectedChild?.id === focusChildId) || stickerRequests.length > 0;
+  const currentStickerCount = Math.max(totalStickerCount - apiRemainingStickerCount, 0) + givenStickerCount;
+  const showNotification = visibleStickerRequests.length > 0;
+
+  useEffect(() => {
+    if (!isFocused || !selectedRelationId) return;
+
+    void refetchActiveBoard();
+    void refetchMissionRequests();
+  }, [isFocused, refetchActiveBoard, refetchMissionRequests, selectedRelationId]);
 
   useEffect(() => {
     setGivenStickerCount(0);
     setDismissedMissionIds(new Set());
-  }, [activeBoard?.id]);
+  }, [activeBoard?.id, activeBoard?.remainingStickerCount]);
 
   const handleDismissMission = (missionId: string) => {
     setDismissedMissionIds((prev) => new Set(prev).add(missionId));
   };
 
   const handleManualSticker = (): boolean => {
-    if (givenStickerCount >= totalStickerCount) {
+    if (apiRemainingStickerCount - givenStickerCount <= 0) {
       setStickerRequestVisible(false);
       setBoardFullVisible(true);
       return false;
@@ -241,6 +256,8 @@ export default function ChildrenScreen() {
                   board={activeBoard}
                   currentStickerCount={currentStickerCount}
                   totalStickerCount={totalStickerCount}
+                  showTotalStickerCount={totalStickerCount > 0}
+                  remainingStickerCount={Math.max(apiRemainingStickerCount - givenStickerCount, 0)}
                   showNotification={showNotification}
                   onPressStickerButton={() => setStickerRequestVisible(true)}
                   onPressEditBoard={() => setEditBoardVisible(true)}
@@ -302,8 +319,17 @@ export default function ChildrenScreen() {
               handleDismissMission(requestId);
               const missionRequestId = parseInt(requestId, 10);
               const relationId = parseInt(selectedChild.id, 10);
+              const dismissedRequest = stickerRequests.find((request) => request.id === requestId);
+
               if (action === 'accept') {
-                acceptRequest.mutate({ missionRequestId, relationId });
+                acceptRequest.mutate(
+                  { missionRequestId, relationId },
+                  {
+                    onSuccess: () => {
+                      setGivenStickerCount((prev) => prev + (dismissedRequest?.stickerCount ?? 0));
+                    },
+                  },
+                );
               } else {
                 rejectRequest.mutate({ missionRequestId, relationId });
               }

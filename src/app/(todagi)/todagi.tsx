@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { Alert } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -43,6 +44,7 @@ import {
 export default function TodagiScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const isFocused = useIsFocused();
   const {
     childId,
     boardId,
@@ -76,7 +78,9 @@ export default function TodagiScreen() {
 
   const relationId = resolvedChildId ? parseInt(resolvedChildId, 10) : undefined;
 
-  const { data: boardFromApi } = useTodakStickerBoard(relationId);
+  const { data: boardFromApi, refetch: refetchBoard } = useTodakStickerBoard(relationId, {
+    refetchInterval: 3000,
+  });
 
   const child = useMemo(() => {
     const relation = relationsData?.relations.find(
@@ -114,6 +118,10 @@ export default function TodagiScreen() {
   const [frequencyModal, setFrequencyModal] = useState(false);
   const [editingEmojiForId, setEditingEmojiForId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const visibleMissions = useMemo(
+    () => missions.filter((mission) => !mission.isRequested),
+    [missions],
+  );
 
   // new-board 모드: params로 받은 기본 정보 초기화
   useEffect(() => {
@@ -129,6 +137,12 @@ export default function TodagiScreen() {
     if (!child || isEditMode || isNewBoardMode) return;
     setBoardTitle(`${child.name}의 스티커판`);
   }, [child, isEditMode, isNewBoardMode]);
+
+  useEffect(() => {
+    if (!isFocused || !relationId) return;
+
+    void refetchBoard();
+  }, [isFocused, refetchBoard, relationId]);
 
   useEffect(() => {
     // Only populate form from API when editing/managing missions for a specific board
@@ -413,7 +427,7 @@ export default function TodagiScreen() {
 
         {isMissionsMode || isNewBoardMode ? (
           <MissionInlineEditorSection
-            missions={missions}
+            missions={visibleMissions}
             onPressMissionEmoji={setEditingEmojiForId}
             onChangeTitle={(missionId, title) => handleUpdateMission(missionId, { title })}
             onChangeCompletionCount={(missionId, count) =>
@@ -427,7 +441,7 @@ export default function TodagiScreen() {
           />
         ) : (
           <MissionBuilderSection
-            missions={missions}
+            missions={visibleMissions}
             missionEmoji={missionEmoji}
             missionTitle={missionTitle}
             selectedDays={selectedDays}

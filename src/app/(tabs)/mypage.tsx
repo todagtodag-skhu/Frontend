@@ -12,7 +12,6 @@ export default function MyPageScreen() {
   const router = useRouter();
   const logout = useLogout();
   const withdraw = useWithdraw();
-
   const handleLogout = () => {
     Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [
       { text: '취소', style: 'cancel' },
