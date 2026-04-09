@@ -14,20 +14,24 @@ import {
   getMissionRequests,
   acceptMissionRequest,
   rejectMissionRequest,
+  giveTodakSticker,
   adaptApiStickerBoard,
   adaptApiCompletedBoard,
+  BOARD_DESIGN_FROM_API,
   STICKER_COUNT_FROM_API,
 } from './api';
 import type {
   ApiCreateStickerBoardRequest,
   ApiUpdateStickerBoardRequest,
   ApiMissionInput,
+  ApiGiveStickerRequest,
 } from './types';
 
 export const TODAK_KEYS = {
   stickerBoard: (relationId: number) => ['todak', 'sticker-board', relationId] as const,
   missions: (relationId: number) => ['todak', 'missions', relationId] as const,
   missionRequests: (relationId: number) => ['todak', 'mission-requests', relationId] as const,
+  carriedMissionRequests: (relationId: number) => ['todak', 'carried-mission-requests', relationId] as const,
   memory: (relationId: number) => ['todak', 'memory', relationId] as const,
 };
 
@@ -66,16 +70,29 @@ export function useCreateStickerBoard() {
       ...body
     }: { relationId: number } & ApiCreateStickerBoardRequest) =>
       createTodakStickerBoard(relationId, body),
-    onSuccess: (_, { relationId, stickerCount }) => {
-      queryClient.setQueryData<{
-        id?: string;
-        childId?: string;
-        stickerCount?: string;
-      } | null>(TODAK_KEYS.stickerBoard(relationId), (prev) => ({
-        ...(prev ?? {}),
+    onSuccess: (createdBoard, { relationId, name, stickerCount, boardDesign, finalReward, missions }) => {
+      const stickerCountLabel = STICKER_COUNT_FROM_API[stickerCount];
+      const totalStickerCount = stickerCountLabel.replace(/[^0-9]/g, '');
+
+      queryClient.setQueryData(TODAK_KEYS.stickerBoard(relationId), {
+        id: createdBoard.stickerBoardId.toString(),
         childId: relationId.toString(),
-        stickerCount: STICKER_COUNT_FROM_API[stickerCount],
-      }));
+        title: name,
+        stickerCount: stickerCountLabel,
+        remainingStickerCount: totalStickerCount,
+        boardDesign: BOARD_DESIGN_FROM_API[boardDesign] ?? boardDesign,
+        rewardText: finalReward,
+        missions: missions.map((mission, index) => ({
+          id: `new-${index}`,
+          emoji: mission.emoticon,
+          title: mission.name,
+          days: '',
+          frequency: `${mission.targetCount}회 달성 시 스티커 ${mission.rewardStickerCount}개`,
+          completionCount: mission.targetCount,
+          stickerPerCompletion: mission.rewardStickerCount,
+          isRequested: false,
+        })),
+      });
       queryClient.invalidateQueries({ queryKey: TODAK_KEYS.stickerBoard(relationId) });
     },
   });
@@ -213,6 +230,22 @@ export function useRejectMissionRequest() {
       rejectMissionRequest(missionRequestId),
     onSuccess: (_, { relationId }) => {
       queryClient.invalidateQueries({ queryKey: TODAK_KEYS.missionRequests(relationId) });
+    },
+  });
+}
+
+// ─── Sticker (수동 부여) ────────────────────────────────────────────────────────
+
+export function useGiveSticker() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      relationId,
+      ...body
+    }: { relationId: number } & ApiGiveStickerRequest) =>
+      giveTodakSticker(relationId, body),
+    onSuccess: (_, { relationId }) => {
+      queryClient.invalidateQueries({ queryKey: TODAK_KEYS.stickerBoard(relationId) });
     },
   });
 }
