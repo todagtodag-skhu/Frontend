@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert, Pressable } from 'react-native';
 
-import { MOCK_PREVIOUS_STICKER_REQUESTS, MOCK_STICKER_REQUESTS } from '@/mocks/data';
-
 import { ChildrenEmptyState } from '@/components/children/ChildrenEmptyState';
 import { ChildSelectorRow } from '@/components/children/ChildSelectorRow';
 import { ConfirmModal } from '@/components/children/ConfirmModal';
@@ -15,21 +13,32 @@ import { StickerBoardSummaryCard } from '@/components/children/StickerBoardSumma
 import { StickerRequestModal } from '@/components/children/StickerRequestModal';
 import { childrenStyles as styles } from '@/components/children/styles';
 import { AppScreen } from '@/components/layout/AppScreen';
-import { ChildProfile } from '@/components/todagi/types';
+import { ChildProfile, StickerRequest } from '@/components/todagi/types';
 import { Text } from '@/components/ui/Text';
 import { useTodakRelations, useUpdateSungjangInfo } from '@/features/relation/hooks';
+import {
+  useTodakStickerBoard,
+  useUpdateStickerBoard,
+  useMissionRequests,
+  useAcceptMissionRequest,
+  useRejectMissionRequest,
+} from '@/features/todak/hooks';
+import {
+  BOARD_DESIGN_TO_API,
+  STICKER_COUNT_TO_API,
+} from '@/features/todak/api';
 import { toISODate } from '@/lib/dateUtils';
-import { useGrowth } from '@/contexts/GrowthContext';
 
 export default function ChildrenScreen() {
   const router = useRouter();
   const { focusChildId } = useLocalSearchParams<{ focusChildId?: string }>();
-  const { getBoardsByChildId, addStickerBoard, updateStickerBoard } = useGrowth();
 
   const { data: relationsData, isLoading } = useTodakRelations();
   const updateSungjangInfo = useUpdateSungjangInfo();
+  const updateStickerBoardMutation = useUpdateStickerBoard();
+  const acceptRequest = useAcceptMissionRequest();
+  const rejectRequest = useRejectMissionRequest();
 
-  // 서버 데이터 + 로컬 생일 오버레이 관리
   const [localBirthdays, setLocalBirthdays] = useState<Record<string, string>>({});
 
   const children: ChildProfile[] = useMemo(
@@ -52,10 +61,6 @@ export default function ChildrenScreen() {
   const [dismissedMissionIds, setDismissedMissionIds] = useState<Set<string>>(new Set());
   const [givenStickerCount, setGivenStickerCount] = useState(0);
 
-  const handleDismissMission = (missionId: string) => {
-    setDismissedMissionIds((prev) => new Set(prev).add(missionId));
-  };
-
   useEffect(() => {
     if (focusChildId) {
       setSelectedChildId(focusChildId);
@@ -69,22 +74,38 @@ export default function ChildrenScreen() {
     [children, selectedChildId],
   );
 
-  const selectedBoards = useMemo(
-    () => getBoardsByChildId(selectedChild?.id),
-    [getBoardsByChildId, selectedChild?.id],
+  const selectedRelationId = selectedChild ? parseInt(selectedChild.id, 10) : undefined;
+
+  const { data: activeBoardData } = useTodakStickerBoard(selectedRelationId);
+  const { data: missionRequestData } = useMissionRequests(selectedRelationId);
+
+  const activeBoard = activeBoardData ?? undefined;
+
+  const stickerRequests: StickerRequest[] = useMemo(
+    () =>
+      (missionRequestData?.requests ?? []).map((req) => ({
+        id: req.missionRequestId.toString(),
+        missionId: req.missionId.toString(),
+        missionEmoji: req.emoticon,
+        missionTitle: req.missionName,
+        stickerCount: 1,
+        requestedAt: '',
+      })),
+    [missionRequestData],
   );
 
-  const activeBoard = selectedBoards[0];
   const totalStickerCount = Number.parseInt(activeBoard?.stickerCount ?? '0', 10) || 0;
   const currentStickerCount = givenStickerCount;
-  const remainingMissionCount = (activeBoard?.missions ?? []).filter(
-    (m) => !dismissedMissionIds.has(m.id),
-  ).length;
-  const showNotification = selectedChild?.id === focusChildId || remainingMissionCount > 0;
+  const showNotification = (selectedChild?.id === focusChildId) || stickerRequests.length > 0;
 
   useEffect(() => {
     setGivenStickerCount(0);
+    setDismissedMissionIds(new Set());
   }, [activeBoard?.id]);
+
+  const handleDismissMission = (missionId: string) => {
+    setDismissedMissionIds((prev) => new Set(prev).add(missionId));
+  };
 
   const handleManualSticker = (): boolean => {
     if (givenStickerCount >= totalStickerCount) {
@@ -111,32 +132,38 @@ export default function ChildrenScreen() {
     if (activeBoard) {
       router.push({
         pathname: '/create-sticker',
-        params: { childId: selectedChild.id, returnTo: 'children', boardId: activeBoard.id, mode: 'missions' },
+        params: {
+          childId: selectedChild.id,
+          returnTo: 'children',
+          boardId: activeBoard.id,
+          mode: 'missions',
+        },
       });
     } else {
       setCreateBoardVisible(true);
     }
   };
 
-  const handleCreateBoard = async (
+  const handleCreateBoard = (
     title: string,
     stickerCount: string,
     boardDesign: string,
     rewardText: string,
   ) => {
     if (!selectedChild) return;
-    const boardId = await addStickerBoard({
-      childId: selectedChild.id,
-      title,
-      stickerCount,
-      boardDesign,
-      rewardText,
-      missions: [],
-    });
     setCreateBoardVisible(false);
+    // API는 todagi.tsx에서 미션까지 다 모은 후 한 번에 호출
     router.push({
       pathname: '/create-sticker',
-      params: { childId: selectedChild.id, returnTo: 'children', boardId, mode: 'missions' },
+      params: {
+        childId: selectedChild.id,
+        returnTo: 'children',
+        mode: 'new-board',
+        initName: title,
+        initStickerCount: stickerCount,
+        initBoardDesign: boardDesign,
+        initReward: rewardText,
+      },
     });
   };
 
@@ -169,15 +196,25 @@ export default function ChildrenScreen() {
     rewardText: string,
   ) => {
     if (!activeBoard || !selectedChild) return;
-    updateStickerBoard(activeBoard.id, {
-      childId: selectedChild.id,
-      title,
-      stickerCount,
-      boardDesign,
-      rewardText,
-      missions: activeBoard.missions,
-    });
-    setEditBoardVisible(false);
+
+    updateStickerBoardMutation.mutate(
+      {
+        stickerBoardId: parseInt(activeBoard.id, 10),
+        relationId: parseInt(selectedChild.id, 10),
+        name: title,
+        stickerCount: STICKER_COUNT_TO_API[stickerCount] ?? 'THIRTY',
+        boardDesign: BOARD_DESIGN_TO_API[boardDesign] ?? 'TIGER',
+        finalReward: rewardText,
+      },
+      {
+        onSuccess: () => {
+          setEditBoardVisible(false);
+        },
+        onError: () => {
+          Alert.alert('오류', '스티커판 수정에 실패했습니다.');
+        },
+      },
+    );
   };
 
   if (isLoading) {
@@ -258,10 +295,19 @@ export default function ChildrenScreen() {
           <StickerRequestModal
             visible={stickerRequestVisible}
             childName={selectedChild.name}
-            requests={MOCK_STICKER_REQUESTS}
-            previousRequests={MOCK_PREVIOUS_STICKER_REQUESTS}
+            requests={stickerRequests}
+            previousRequests={[]}
             dismissedIds={dismissedMissionIds}
-            onDismiss={handleDismissMission}
+            onDismiss={(requestId, action) => {
+              handleDismissMission(requestId);
+              const missionRequestId = parseInt(requestId, 10);
+              const relationId = parseInt(selectedChild.id, 10);
+              if (action === 'accept') {
+                acceptRequest.mutate({ missionRequestId, relationId });
+              } else {
+                rejectRequest.mutate({ missionRequestId, relationId });
+              }
+            }}
             onManualSticker={handleManualSticker}
             onClose={() => setStickerRequestVisible(false)}
           />
