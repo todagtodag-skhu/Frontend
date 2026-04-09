@@ -56,6 +56,13 @@ const MissionListScreen: React.FC = () => {
   };
 
   const handleMissionPress = (missionId: string) => {
+    const mission = board?.missions.find((item) => item.id === missionId);
+
+    if (mission?.isRequested) {
+      Alert.alert('알림', '이미 스티커를 요청한 미션이에요.');
+      return;
+    }
+
     setSelectedMissionId((prev) => (prev === missionId ? null : missionId));
   };
 
@@ -80,7 +87,10 @@ const MissionListScreen: React.FC = () => {
   };
 
   const handleRequestStickerPress = () => {
-    if (!board?.missions.length) {
+    const requestableMissions = board?.missions.filter((mission) => !mission.isRequested) ?? [];
+
+    if (!requestableMissions.length) {
+      Alert.alert('알림', '요청할 수 있는 미션이 없어요.');
       return;
     }
 
@@ -90,12 +100,14 @@ const MissionListScreen: React.FC = () => {
     }
 
     const missionToOpen =
-      board.missions.find((mission) => mission.id === selectedMissionId) ?? board.missions[0];
+      requestableMissions.find((mission) => mission.id === selectedMissionId) ?? requestableMissions[0];
 
     setSelectedMission(missionToOpen);
   };
 
+  const requestableMissions = board?.missions.filter((mission) => !mission.isRequested) ?? [];
   const hasMissions = Boolean(board?.missions.length);
+  const hasRequestableMissions = requestableMissions.length > 0;
   const progressTotal = board?.totalSpots ?? 0;
   const placedCount = board?.placedStickers.length ?? 0;
   const isRequesting = requestStickerMutation.isPending;
@@ -136,9 +148,9 @@ const MissionListScreen: React.FC = () => {
                     key={mission.id}
                     emoji={mission.emoji}
                     title={mission.title}
-                    frequency={mission.frequency}
+                    frequency={mission.isRequested ? '요청 완료' : mission.frequency}
                     reward={board.rewardText || '스티커 1개'}
-                    isSelected={selectedMissionId === mission.id}
+                    isSelected={!mission.isRequested && selectedMissionId === mission.id}
                     onPress={() => handleMissionPress(mission.id)}
                     onManagePress={() => handleManageOpen(mission)}
                   />
@@ -148,10 +160,12 @@ const MissionListScreen: React.FC = () => {
               <TouchableOpacity
                 style={styles.requestButton}
                 onPress={handleRequestStickerPress}
-                disabled={isRequesting}
+                disabled={isRequesting || !hasRequestableMissions}
                 activeOpacity={0.85}
               >
-                <Text style={styles.requestButtonText}>{isRequesting ? '요청 중...' : '스티커 주세요'}</Text>
+                <Text style={styles.requestButtonText}>
+                  {isRequesting ? '요청 중...' : '스티커 주세요'}
+                </Text>
               </TouchableOpacity>
             </>
           ) : (

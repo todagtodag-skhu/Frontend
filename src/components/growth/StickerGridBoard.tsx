@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 999,
-    backgroundColor: '#D9D9D9',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -213,8 +213,8 @@ const styles = StyleSheet.create({
   },
   placedStickerEmoji: {
     fontSize: 22,
-    lineHeight: 22,
+    lineHeight: 28,
     textAlign: 'center',
-    includeFontPadding: false,
+    includeFontPadding: true,
   },
 });

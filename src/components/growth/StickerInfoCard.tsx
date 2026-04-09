@@ -13,7 +13,6 @@ const STICKER_ICON_OUTLINE_SIZE = 44;
 function StickerIcon({ emoji }: { emoji?: string }) {
   return (
     <View style={styles.stickerIconWrap}>
-      <View style={styles.iconBackground} />
       {emoji ? <Text style={styles.stickerEmoji}>{emoji}</Text> : null}
     </View>
   );
@@ -64,17 +63,6 @@ const styles = StyleSheet.create({
     height: STICKER_ICON_OUTLINE_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconBackground: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 1,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
   },
   stickerEmoji: {
     fontSize: 24,

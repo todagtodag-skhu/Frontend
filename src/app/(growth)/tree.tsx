@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import { useIsFocused } from '@react-navigation/native';
 import {
   Alert,
   View,
@@ -26,7 +27,11 @@ import {
   getGrowthBoardHeight,
   getGrowthBoardWidth,
 } from '@/features/growth/constants';
-import { useAttachGrowthSticker, useGrowthStickerBoard } from '@/features/growth/hooks';
+import {
+  useAttachGrowthSticker,
+  useGrowthStickerBoard,
+} from '@/features/growth/hooks';
+import type { GrowthAvailableSticker, GrowthStickerPlacement } from '@/features/growth/api';
 import { type TreeMission } from '@/mocks/data';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -60,6 +65,39 @@ function FloatingStickerIcon({ emoji }: { emoji?: string }) {
   );
 }
 
+function isFallbackStickerTitle(title?: string) {
+  return !title || /^스티커 \d+$/.test(title);
+}
+
+function buildPlacedStickerMap(
+  stickers: GrowthStickerPlacement[],
+  missionIndexMap: Map<string, number>,
+  previousPlacedStickers: Record<number, StickerInfo>,
+) {
+  return stickers.reduce<Record<number, StickerInfo>>((acc, sticker) => {
+    const previousSticker = previousPlacedStickers[sticker.cellId];
+    const resolvedTitle =
+      isFallbackStickerTitle(sticker.title) && previousSticker?.mission.title
+        ? previousSticker.mission.title
+        : sticker.title;
+    const resolvedEmoji =
+      sticker.emoji || previousSticker?.mission.emoji || '⭐';
+
+    acc[sticker.cellId] = {
+      placedAt: previousSticker?.placedAt ?? new Date(),
+      mission: {
+        id: sticker.missionId,
+        emoji: resolvedEmoji,
+        title: resolvedTitle,
+        completed: true,
+      },
+      stickerIdx: missionIndexMap.get(sticker.missionId) ?? previousSticker?.stickerIdx ?? 0,
+    };
+
+    return acc;
+  }, {});
+}
+
 export default function GrowthTree({
   boardName,
   reward,
@@ -67,6 +105,7 @@ export default function GrowthTree({
 }: TreeProps) {
   const { data: board, isLoading, error, refetch } = useGrowthStickerBoard();
   const attachStickerMutation = useAttachGrowthSticker();
+  const isFocused = useIsFocused();
 
   const resolvedBoardName = board?.title ?? boardName ?? '';
   const resolvedReward = board?.rewardText ?? reward ?? '';
@@ -101,7 +140,7 @@ export default function GrowthTree({
   }, [totalSpots]);
 
   const [placedStickers, setPlacedStickers] = useState<Record<number, StickerInfo>>({});
-  const [usedStickerIndices, setUsedStickerIndices] = useState<number[]>([]);
+  const [availableStickers, setAvailableStickers] = useState<GrowthAvailableSticker[]>([]);
   const [stickerPage, setStickerPage] = useState(0);
   const [draggingStickerIdx, setDraggingStickerIdx] = useState<number | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
@@ -118,33 +157,25 @@ export default function GrowthTree({
   useEffect(() => {
     if (!board) {
       setPlacedStickers({});
-      setUsedStickerIndices([]);
+      setAvailableStickers([]);
       return;
     }
 
     const missionIndexMap = new Map(board.missions.map((mission, index) => [mission.id, index]));
-    const nextPlacedStickers = board.placedStickers.reduce<Record<number, StickerInfo>>((acc, sticker) => {
-      acc[sticker.cellId] = {
-        placedAt: new Date(),
-        mission: {
-          id: sticker.missionId,
-          emoji: sticker.emoji,
-          title: sticker.title,
-          completed: true,
-        },
-        stickerIdx: missionIndexMap.get(sticker.missionId) ?? 0,
-      };
-
-      return acc;
-    }, {});
-
-    setPlacedStickers(nextPlacedStickers);
-    setUsedStickerIndices(
-      board.placedStickers
-        .map((sticker) => missionIndexMap.get(sticker.missionId))
-        .filter((value): value is number => typeof value === 'number'),
+    setPlacedStickers((previousPlacedStickers) =>
+      buildPlacedStickerMap(board.placedStickers, missionIndexMap, previousPlacedStickers),
     );
+    setAvailableStickers(board.availableStickers);
+    setStickerPage(0);
   }, [board]);
+
+  useEffect(() => {
+    if (!isFocused) {
+      return;
+    }
+
+    void refetch();
+  }, [isFocused, refetch]);
 
   const getScaleAnim = (id: number) => {
     if (!scaleAnims.current[id]) {
@@ -155,8 +186,9 @@ export default function GrowthTree({
 
   const placedCount = Object.keys(placedStickers).length;
 
-  const totalPages = Math.max(1, Math.ceil(resolvedMissions.length / GROWTH_STICKER_PAGE_SIZE));
-  const pagedIndices = Array.from({ length: resolvedMissions.length })
+  const availableStickerCount = availableStickers.length;
+  const totalPages = Math.max(1, Math.ceil(availableStickerCount / GROWTH_STICKER_PAGE_SIZE));
+  const pagedIndices = Array.from({ length: availableStickerCount })
     .map((_, i) => i)
     .slice(
       stickerPage * GROWTH_STICKER_PAGE_SIZE,
@@ -188,16 +220,42 @@ export default function GrowthTree({
   }, []);
 
   const handleAttachSticker = useCallback(
-    async (cellId: number, mission: Mission, stickerIdx: number) => {
+    async (cellId: number, sticker: GrowthAvailableSticker, stickerIdx: number) => {
+      console.log('[growth/tree] handleAttachSticker called', {
+        cellId,
+        sticker,
+        stickerIdx,
+      });
+
       if (attachStickerMutation.isPending) {
         return;
       }
 
-      placeSticker(cellId, mission, stickerIdx);
-      setUsedStickerIndices((prev) => (prev.includes(stickerIdx) ? prev : [...prev, stickerIdx]));
+      const pendingStickerId = sticker.pendingStickerId ?? Number.parseInt(sticker.id, 10);
+
+      if (!Number.isFinite(pendingStickerId)) {
+        Alert.alert('부착 실패', '스티커 정보를 다시 불러와 주세요.');
+        await refetch().catch(() => undefined);
+        return;
+      }
+
+      placeSticker(
+        cellId,
+        {
+          id: sticker.missionId,
+          emoji: sticker.emoji,
+          title: sticker.title,
+          completed: true,
+        },
+        stickerIdx,
+      );
+      setAvailableStickers((prev) => prev.filter((item) => item.id !== sticker.id));
 
       try {
-        await attachStickerMutation.mutateAsync(cellId);
+        await attachStickerMutation.mutateAsync({
+          pendingStickerId,
+          position: cellId,
+        });
       } catch (attachError) {
         await refetch().catch(() => undefined);
         const message =
@@ -211,17 +269,27 @@ export default function GrowthTree({
   const getFirstAvailableCellId = useCallback(() => {
     for (const cell of gridCells) {
       if (!placedStickersRef.current[cell.id]) {
+        console.log('[growth/tree] first available cell', cell.id);
         return cell.id;
       }
     }
 
+    console.log('[growth/tree] no available cell');
     return null;
   }, [gridCells]);
 
   const getGridCellFromPoint = useCallback((absoluteX: number, absoluteY: number): number | null => {
     const { x, y, width, height } = boardLayoutRef.current;
 
+    console.log('[growth/tree] getGridCellFromPoint input', {
+      absoluteX,
+      absoluteY,
+      boardLayout: { x, y, width, height },
+      boardScrollOffsetY,
+    });
+
     if (width <= 0 || height <= 0) {
+      console.log('[growth/tree] board layout not ready');
       return null;
     }
 
@@ -236,6 +304,10 @@ export default function GrowthTree({
     const relativeY = absoluteY - y + boardScrollOffsetY;
 
     if (relativeX < 0 || absoluteY - y < 0 || relativeX > width || absoluteY - y > height) {
+      console.log('[growth/tree] drop point outside board', {
+        relativeX,
+        relativeY,
+      });
       return null;
     }
 
@@ -246,12 +318,22 @@ export default function GrowthTree({
         : Math.round((relativeY - GROWTH_BOARD_VERTICAL_EDGE_INSET) / rowGap);
 
     if (row < 0 || row >= totalRows || col < 0 || col >= GROWTH_GRID_COLS) {
+      console.log('[growth/tree] computed row/col out of range', {
+        row,
+        col,
+        totalRows,
+      });
       return null;
     }
 
     const cellId = row * GROWTH_GRID_COLS + col + 1;
 
-    if (placedStickersRef.current[cellId]) return null;
+    if (placedStickersRef.current[cellId]) {
+      console.log('[growth/tree] cell already occupied', cellId);
+      return null;
+    }
+
+    console.log('[growth/tree] resolved cellId', cellId);
 
     return cellId;
   }, [boardScrollOffsetY, gridCells]);
@@ -289,24 +371,34 @@ export default function GrowthTree({
           onPanResponderRelease: (evt, gestureState) => {
             const dropX = evt?.nativeEvent?.pageX;
             const dropY = evt?.nativeEvent?.pageY;
-            const mission = resolvedMissions[idx];
+            const sticker = availableStickers[idx];
             const moveX = Math.abs(gestureState.dx);
             const moveY = Math.abs(gestureState.dy);
             const isTapLike =
               moveX < GROWTH_STICKER_TAP_MOVE_THRESHOLD &&
               moveY < GROWTH_STICKER_TAP_MOVE_THRESHOLD;
 
+            console.log('[growth/tree] pan release', {
+              idx,
+              dropX,
+              dropY,
+              moveX,
+              moveY,
+              isTapLike,
+              sticker,
+            });
+
             setDraggingStickerIdx(null);
             setDragPos(null);
 
-            if (typeof dropX !== 'number' || typeof dropY !== 'number' || !mission) return;
+            if (typeof dropX !== 'number' || typeof dropY !== 'number' || !sticker) return;
 
             if (isTapLike) {
               const firstCellId = getFirstAvailableCellId();
 
               if (firstCellId === null) return;
 
-              void handleAttachSticker(firstCellId, mission, idx);
+              void handleAttachSticker(firstCellId, sticker, idx);
               return;
             }
 
@@ -314,7 +406,7 @@ export default function GrowthTree({
 
             if (cellId === null) return;
 
-            void handleAttachSticker(cellId, mission, idx);
+            void handleAttachSticker(cellId, sticker, idx);
           },
 
           onPanResponderTerminate: () => {
@@ -328,7 +420,26 @@ export default function GrowthTree({
 
       return panHandlersMap.current[idx];
     },
-    [getFirstAvailableCellId, getGridCellFromPoint, handleAttachSticker, resolvedMissions],
+    [availableStickers, getFirstAvailableCellId, getGridCellFromPoint, handleAttachSticker],
+  );
+
+  const handleStickerPress = useCallback(
+    (idx: number) => {
+      const sticker = availableStickers[idx];
+
+      if (!sticker) {
+        return;
+      }
+
+      const firstCellId = getFirstAvailableCellId();
+
+      if (firstCellId === null) {
+        return;
+      }
+
+      void handleAttachSticker(firstCellId, sticker, idx);
+    },
+    [availableStickers, getFirstAvailableCellId, handleAttachSticker],
   );
 
   const handleCellPress = (id: number) => {
@@ -400,56 +511,57 @@ export default function GrowthTree({
               boardDesign={resolvedBoardDesign}
             />
 
-            <View style={styles.stickerPickerWrap}>
-              <TouchableOpacity
-                style={styles.arrowBtn}
-                disabled={stickerPage === 0}
-                onPress={() => setStickerPage((p) => Math.max(p - 1, 0))}
-              >
-                <Text style={[styles.arrowText, stickerPage === 0 && styles.arrowDisabled]}>‹</Text>
-              </TouchableOpacity>
+            {availableStickerCount > 0 ? (
+              <>
+                <View style={styles.stickerPickerWrap}>
+                  <TouchableOpacity
+                    style={styles.arrowBtn}
+                    disabled={stickerPage === 0}
+                    onPress={() => setStickerPage((p) => Math.max(p - 1, 0))}
+                  >
+                    <Text style={[styles.arrowText, stickerPage === 0 && styles.arrowDisabled]}>‹</Text>
+                  </TouchableOpacity>
 
-              <View style={styles.stickerPickerInner}>
-                {pagedIndices.map((idx) => {
-                  const isUsed = usedStickerIndices.includes(idx);
-                  const isDraggingThis = draggingStickerIdx === idx;
+                  <View style={styles.stickerPickerInner}>
+                    {pagedIndices.map((idx) => {
+                      const isDraggingThis = draggingStickerIdx === idx;
 
-                  return (
-                    <View key={idx} style={styles.bigStickerOption}>
-                      {!isUsed ? (
-                        <Pressable {...getPanHandlers(idx)} style={styles.draggableArea}>
-                          <View style={[styles.stickerCircle, isDraggingThis && { opacity: 0 }]}>
-                            <FloatingStickerIcon emoji={resolvedMissions[idx]?.emoji} />
+                      return (
+                        <View key={availableStickers[idx]?.id ?? idx} style={styles.bigStickerOption}>
+                          <View {...getPanHandlers(idx)} style={styles.draggableArea}>
+                            <View style={[styles.stickerCircle, isDraggingThis && { opacity: 0 }]}>
+                              <Pressable onPress={() => handleStickerPress(idx)} style={styles.stickerButton}>
+                                <FloatingStickerIcon emoji={availableStickers[idx]?.emoji} />
+                              </Pressable>
+                            </View>
                           </View>
-                        </Pressable>
-                      ) : (
-                        <View style={styles.usedSlot} />
-                      )}
-                    </View>
-                  );
-                })}
+                        </View>
+                      );
+                    })}
 
-                {Array.from({ length: GROWTH_STICKER_PAGE_SIZE - pagedIndices.length }).map((_, i) => (
-                  <View key={`dummy-${i}`} style={styles.bigStickerOption} />
-                ))}
-              </View>
+                    {Array.from({ length: GROWTH_STICKER_PAGE_SIZE - pagedIndices.length }).map((_, i) => (
+                      <View key={`dummy-${i}`} style={styles.bigStickerOption} />
+                    ))}
+                  </View>
 
-              <TouchableOpacity
-                style={styles.arrowBtn}
-                disabled={stickerPage === totalPages - 1}
-                onPress={() => setStickerPage((p) => Math.min(p + 1, totalPages - 1))}
-              >
-                <Text style={[styles.arrowText, stickerPage === totalPages - 1 && styles.arrowDisabled]}>
-                  ›
+                  <TouchableOpacity
+                    style={styles.arrowBtn}
+                    disabled={stickerPage === totalPages - 1}
+                    onPress={() => setStickerPage((p) => Math.min(p + 1, totalPages - 1))}
+                  >
+                    <Text style={[styles.arrowText, stickerPage === totalPages - 1 && styles.arrowDisabled]}>
+                      ›
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.stickerCountText}>
+                  {attachStickerMutation.isPending
+                    ? '스티커를 붙이는 중이에요...'
+                    : `붙일 수 있는 스티커를 ${availableStickerCount}개 가지고 있어요!`}
                 </Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.stickerCountText}>
-              {attachStickerMutation.isPending
-                ? '스티커를 붙이는 중이에요...'
-                : `붙일 수 있는 스티커를 ${placedCount}개 가지고 있어요!`}
-            </Text>
+              </>
+            ) : null}
           </>
         )}
       </View>
@@ -465,7 +577,7 @@ export default function GrowthTree({
             },
           ]}
         >
-          <FloatingStickerIcon emoji={resolvedMissions[draggingStickerIdx]?.emoji} />
+          <FloatingStickerIcon emoji={availableStickers[draggingStickerIdx]?.emoji} />
         </View>
       )}
 
@@ -606,6 +718,12 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stickerButton: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
