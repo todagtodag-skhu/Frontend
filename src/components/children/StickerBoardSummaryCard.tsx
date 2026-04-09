@@ -11,6 +11,8 @@ type StickerBoardSummaryCardProps = {
   board?: StickerBoard;
   currentStickerCount: number;
   totalStickerCount: number;
+  showTotalStickerCount?: boolean;
+  remainingStickerCount?: number;
   showNotification: boolean;
   onPressStickerButton?: () => void;
   onPressEditBoard?: () => void;
@@ -21,11 +23,16 @@ export function StickerBoardSummaryCard({
   board,
   currentStickerCount,
   totalStickerCount,
+  showTotalStickerCount = true,
+  remainingStickerCount,
   showNotification,
   onPressStickerButton,
   onPressEditBoard,
 }: StickerBoardSummaryCardProps) {
   const title = board?.title ?? `${childName}의 스티커판`;
+  const stickerBadgeLabel = showTotalStickerCount
+    ? `${currentStickerCount} / ${totalStickerCount || '-'}`
+    : `잔여 ${remainingStickerCount ?? 0}개`;
 
   return (
     <View style={styles.boardCardWrapper}>
@@ -36,7 +43,7 @@ export function StickerBoardSummaryCard({
         </Text>
         <View style={styles.stickerBadge}>
           <Text weight="bold" style={styles.stickerBadgeText}>
-            {currentStickerCount} / {totalStickerCount || '-'}
+            {stickerBadgeLabel}
           </Text>
         </View>
       </View>

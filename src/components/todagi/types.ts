@@ -6,6 +6,7 @@ export type Mission = {
   frequency: string;
   completionCount?: number;
   stickerPerCompletion?: number;
+  isRequested?: boolean;
 };
 
 export type StickerRequest = {
@@ -29,6 +30,8 @@ export type StickerBoard = {
   childId: string;
   title: string;
   stickerCount: string;
+  currentStickerCount?: string;
+  remainingStickerCount?: string;
   boardDesign: string;
   rewardText: string;
   missions: Mission[];

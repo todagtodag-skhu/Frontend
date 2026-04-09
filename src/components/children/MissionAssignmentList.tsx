@@ -29,7 +29,7 @@ export function MissionAssignmentList({
                 <Text weight="bold" style={styles.missionTitle}>
                   {mission.title}
                 </Text>
-                <Text style={styles.missionMeta}>{mission.frequency} / 스티커 1개</Text>
+                <Text style={styles.missionMeta}>{mission.frequency}</Text>
               </View>
             </View>
           ))}

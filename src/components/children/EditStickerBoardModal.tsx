@@ -9,6 +9,7 @@ import { StickerBoard } from '@/components/todagi/types';
 import { Text } from '@/components/ui/Text';
 import { borderWidth } from '@/constants/borders';
 import { colors } from '@/constants/colors';
+import { formatStickerCountLabel } from '@/features/todak/api';
 
 type EditStickerBoardModalProps = {
   visible: boolean;
@@ -28,7 +29,7 @@ export function EditStickerBoardModal({ visible, board, mode = 'edit', onSave, o
     if (visible) {
       if (board) {
         setTitle(board.title);
-        setStickerCount(board.stickerCount.replace(/[^0-9]/g, ''));
+        setStickerCount(formatStickerCountLabel(board.stickerCount));
         setBoardDesign(board.boardDesign);
         setRewardText(board.rewardText);
       } else {
@@ -82,27 +83,29 @@ export function EditStickerBoardModal({ visible, board, mode = 'edit', onSave, o
             />
           </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>스티커 개수</Text>
-            <View style={styles.designRow}>
-              {STICKER_COUNT_OPTIONS.map((count) => (
-                <Pressable
-                  key={count}
-                  style={[styles.designChip, stickerCount === count && styles.designChipSelected]}
-                  onPress={() => setStickerCount(count)}
-                >
-                  <Text
-                    style={[
-                      styles.designChipText,
-                      stickerCount === count && styles.designChipTextSelected,
-                    ]}
+          {mode === 'create' || !!board?.stickerCount ? (
+            <View style={styles.field}>
+              <Text style={styles.label}>스티커 개수</Text>
+              <View style={styles.designRow}>
+                {STICKER_COUNT_OPTIONS.map((count) => (
+                  <Pressable
+                    key={count}
+                    style={[styles.designChip, stickerCount === count && styles.designChipSelected]}
+                    onPress={() => setStickerCount(count)}
                   >
-                    {count}
-                  </Text>
-                </Pressable>
-              ))}
+                    <Text
+                      style={[
+                        styles.designChipText,
+                        stickerCount === count && styles.designChipTextSelected,
+                      ]}
+                    >
+                      {count}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
             </View>
-          </View>
+          ) : null}
 
           <View style={styles.field}>
             <Text style={styles.label}>판 디자인</Text>

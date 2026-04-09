@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import GiftCard from '@/components/growth/GiftCard';
@@ -21,6 +21,7 @@ import { StickerInfoCard } from '@/components/growth/StickerInfoCard';
 import { StickerGridBoard, type GridCell } from '@/components/growth/StickerGridBoard';
 import { fontFamily } from '@/constants/fonts';
 import { getCompletedStickerBoards } from '@/features/growth/data';
+import { useTodakMemory } from '@/features/todak/hooks';
 import { type CompletedStickerBoard } from '@/mocks/data';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -41,8 +42,6 @@ type PreviewStickerInfo = {
   };
   stickerIdx: number;
 };
-
-const COMPLETED_BOARDS = getCompletedStickerBoards();
 
 function CompletedBoardCarouselCard({ board }: { board: CompletedStickerBoard }) {
   const scaleAnimsRef = useRef<Record<number, Animated.Value>>({});
@@ -125,10 +124,19 @@ function CompletedBoardCarouselCard({ board }: { board: CompletedStickerBoard })
 }
 
 const MemoryStorageScreen: React.FC = () => {
+  const { relationId: relationIdParam } = useLocalSearchParams<{ relationId?: string }>();
   const scrollRef = useRef<ScrollView>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const currentBoard = COMPLETED_BOARDS[selectedIndex] ?? COMPLETED_BOARDS[0];
+  const parsedRelationId = relationIdParam ? parseInt(relationIdParam, 10) : undefined;
+  const { data: apiBoards } = useTodakMemory(parsedRelationId);
+
+  const completedBoards = useMemo<CompletedStickerBoard[]>(() => {
+    if (parsedRelationId && apiBoards) return apiBoards;
+    return getCompletedStickerBoards();
+  }, [parsedRelationId, apiBoards]);
+
+  const currentBoard = completedBoards[selectedIndex] ?? completedBoards[0];
 
   const swipeResponder = useMemo(
     () =>
@@ -149,11 +157,11 @@ const MemoryStorageScreen: React.FC = () => {
       event.nativeEvent.contentOffset.x / (CAROUSEL_CARD_WIDTH + CAROUSEL_GAP),
     );
 
-    setSelectedIndex(Math.max(0, Math.min(nextIndex, COMPLETED_BOARDS.length - 1)));
+    setSelectedIndex(Math.max(0, Math.min(nextIndex, completedBoards.length - 1)));
   };
 
   const moveCarousel = (direction: -1 | 1) => {
-    const nextIndex = Math.max(0, Math.min(selectedIndex + direction, COMPLETED_BOARDS.length - 1));
+    const nextIndex = Math.max(0, Math.min(selectedIndex + direction, completedBoards.length - 1));
 
     scrollRef.current?.scrollTo({
       x: nextIndex * (CAROUSEL_CARD_WIDTH + CAROUSEL_GAP),
@@ -189,7 +197,7 @@ const MemoryStorageScreen: React.FC = () => {
             onMomentumScrollEnd={handleCarouselScrollEnd}
             contentContainerStyle={styles.carouselContent}
           >
-            {COMPLETED_BOARDS.map((board) => (
+            {completedBoards.map((board) => (
               <CompletedBoardCarouselCard key={board.id} board={board} />
             ))}
           </ScrollView>
@@ -197,13 +205,13 @@ const MemoryStorageScreen: React.FC = () => {
           <TouchableOpacity
             style={[styles.arrowButton, styles.arrowRight]}
             onPress={() => moveCarousel(1)}
-            disabled={selectedIndex === COMPLETED_BOARDS.length - 1}
+            disabled={selectedIndex === completedBoards.length - 1}
             activeOpacity={0.8}
           >
             <Text
               style={[
                 styles.arrowText,
-                selectedIndex === COMPLETED_BOARDS.length - 1 && styles.arrowDisabled,
+                selectedIndex === completedBoards.length - 1 && styles.arrowDisabled,
               ]}
             >
               ›
@@ -212,7 +220,7 @@ const MemoryStorageScreen: React.FC = () => {
         </View>
 
         <Text style={styles.sectionTitle}>스티커판 완료 보상 내용</Text>
-        <GiftCard label={currentBoard.reward} status="열기전" onPress={() => undefined} />
+        <GiftCard label={currentBoard?.reward ?? ''} status="열기전" onPress={() => undefined} />
       </ScrollView>
     </SafeAreaView>
   );
