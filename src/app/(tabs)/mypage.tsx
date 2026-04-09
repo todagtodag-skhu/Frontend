@@ -9,11 +9,13 @@ import { Section } from '@/components/todagi/Section';
 import { todagiStyles } from '@/components/todagi/styles';
 import { Text } from '@/components/ui/Text';
 import { useLogout, useWithdraw } from '@/features/auth/hooks';
+import { useTodakRelations } from '@/features/relation/hooks';
 
 export default function MyPageScreen() {
   const router = useRouter();
   const logout = useLogout();
   const withdraw = useWithdraw();
+  const { data: relationsData } = useTodakRelations();
   const [termsVisible, setTermsVisible] = useState(false);
   const handleLogout = () => {
     Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [
@@ -53,6 +55,15 @@ export default function MyPageScreen() {
     );
   };
 
+  const handleOpenMemoryStorage = () => {
+    const firstRelationId = relationsData?.relations?.[0]?.relationId;
+
+    router.push({
+      pathname: '/todak-memory',
+      params: firstRelationId ? { relationId: firstRelationId.toString() } : undefined,
+    });
+  };
+
   return (
     <AppScreen bodyStyle={todagiStyles.scrollView} contentContainerStyle={styles.scrollView}>
       <Section title="일반 설정">
@@ -68,7 +79,7 @@ export default function MyPageScreen() {
 
           <Pressable
             style={todagiStyles.card}
-            onPress={() => Alert.alert('준비 중', '완료한 스티커판 기능은 아직 연결되지 않았습니다.')}
+            onPress={handleOpenMemoryStorage}
           >
             <Text weight="bold" style={styles.itemText}>
               완료한 스티커판 열람

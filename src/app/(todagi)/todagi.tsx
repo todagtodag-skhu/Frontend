@@ -33,12 +33,15 @@ import {
   BOARD_DESIGN_TO_API,
   STICKER_COUNT_TO_API,
   createTodakStickerBoard,
+  completeTodakStickerBoard,
   updateTodakStickerBoard,
   createTodakMission,
   updateTodakMission,
   deleteTodakMission,
   formatStickerCountLabel,
   missionToApiInput,
+  getTodakStickerBoard,
+  adaptApiStickerBoard,
 } from '@/features/todak/api';
 
 export default function TodagiScreen() {
@@ -54,6 +57,7 @@ export default function TodagiScreen() {
     initStickerCount,
     initBoardDesign,
     initReward,
+    reopenStickerRequests,
   } = useLocalSearchParams<{
     childId?: string;
     boardId?: string;
@@ -63,6 +67,7 @@ export default function TodagiScreen() {
     initStickerCount?: string;
     initBoardDesign?: string;
     initReward?: string;
+    reopenStickerRequests?: string;
   }>();
 
   const isMissionsMode = mode === 'missions';
@@ -244,7 +249,12 @@ export default function TodagiScreen() {
     }
     router.replace({
       pathname: '/children',
-      params: resolvedChildId ? { focusChildId: resolvedChildId } : undefined,
+      params: resolvedChildId
+        ? {
+            focusChildId: resolvedChildId,
+            ...(reopenStickerRequests === '1' ? { reopenStickerRequests: '1' } : {}),
+          }
+        : undefined,
     });
   };
 
@@ -266,6 +276,9 @@ export default function TodagiScreen() {
 
       setIsSubmitting(true);
       try {
+        if (boardFromApi) {
+          await completeTodakStickerBoard(parseInt(boardFromApi.id, 10));
+        }
         await createTodakStickerBoard(relationId, {
           name: boardTitle.trim() || (initName ?? ''),
           stickerCount: STICKER_COUNT_TO_API[stickerCount] ?? 'THIRTY',
@@ -273,7 +286,16 @@ export default function TodagiScreen() {
           missions: missions.map(missionToApiInput),
           finalReward: rewardText.trim() || (initReward ?? ''),
         });
-        queryClient.invalidateQueries({ queryKey: TODAK_KEYS.stickerBoard(relationId) });
+        try {
+          const newBoard = await getTodakStickerBoard(relationId);
+          queryClient.setQueryData(
+            TODAK_KEYS.stickerBoard(relationId),
+            adaptApiStickerBoard(newBoard, relationId, null),
+          );
+        } catch {
+          queryClient.removeQueries({ queryKey: TODAK_KEYS.stickerBoard(relationId) });
+        }
+        queryClient.invalidateQueries({ queryKey: TODAK_KEYS.memory(relationId) });
         Alert.alert('완료', '스티커판이 생성되었습니다!', [
           { text: '확인', onPress: navigateBack },
         ]);

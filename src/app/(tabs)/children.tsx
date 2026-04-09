@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import { Alert, Pressable } from 'react-native';
 
 import { ChildrenEmptyState } from '@/components/children/ChildrenEmptyState';
@@ -23,6 +25,8 @@ import {
   useMissionRequests,
   useAcceptMissionRequest,
   useRejectMissionRequest,
+  useGiveSticker,
+  TODAK_KEYS,
 } from '@/features/todak/hooks';
 import {
   BOARD_DESIGN_TO_API,
@@ -32,7 +36,11 @@ import { toISODate } from '@/lib/dateUtils';
 
 export default function ChildrenScreen() {
   const router = useRouter();
-  const { focusChildId } = useLocalSearchParams<{ focusChildId?: string }>();
+  const queryClient = useQueryClient();
+  const { focusChildId, reopenStickerRequests } = useLocalSearchParams<{
+    focusChildId?: string;
+    reopenStickerRequests?: string;
+  }>();
   const isFocused = useIsFocused();
 
   const { data: relationsData, isLoading } = useTodakRelations();
@@ -40,6 +48,7 @@ export default function ChildrenScreen() {
   const updateStickerBoardMutation = useUpdateStickerBoard();
   const acceptRequest = useAcceptMissionRequest();
   const rejectRequest = useRejectMissionRequest();
+  const giveSticker = useGiveSticker();
 
   const [localBirthdays, setLocalBirthdays] = useState<Record<string, string>>({});
 
@@ -62,6 +71,7 @@ export default function ChildrenScreen() {
   const [boardFullVisible, setBoardFullVisible] = useState(false);
   const [dismissedMissionIds, setDismissedMissionIds] = useState<Set<string>>(new Set());
   const [givenStickerCount, setGivenStickerCount] = useState(0);
+  const [hasConsumedReopenParam, setHasConsumedReopenParam] = useState(false);
 
   useEffect(() => {
     if (focusChildId) {
@@ -80,30 +90,31 @@ export default function ChildrenScreen() {
 
   const { data: activeBoardData, refetch: refetchActiveBoard } = useTodakStickerBoard(selectedRelationId);
   const { data: missionRequestData, refetch: refetchMissionRequests } = useMissionRequests(selectedRelationId);
+  const { data: carriedRequests = [] } = useQuery<StickerRequest[]>({
+    queryKey: selectedRelationId ? TODAK_KEYS.carriedMissionRequests(selectedRelationId) : ['todak', 'carried-mission-requests', 'idle'],
+    queryFn: async () => [],
+    enabled: !!selectedRelationId,
+    initialData: [],
+  });
 
   const activeBoard = activeBoardData ?? undefined;
+  const stickerRequests = missionRequestData?.requests ?? [];
+  const previousStickerRequests = useMemo(() => {
+    const serverPreviousRequests = missionRequestData?.previousRequests ?? [];
+    const dedupedCurrentIds = new Set([...stickerRequests, ...serverPreviousRequests].map((request) => request.id));
+    const nextCarriedRequests = carriedRequests.filter((request) => !dedupedCurrentIds.has(request.id));
 
-  const stickerRequests: StickerRequest[] = useMemo(
-    () =>
-      (missionRequestData?.requests ?? []).map((req) => ({
-        id: req.missionRequestId.toString(),
-        missionId: req.missionId.toString(),
-        missionEmoji: req.emoticon,
-        missionTitle: req.missionName,
-        stickerCount: 1,
-        requestedAt: '',
-      })),
-    [missionRequestData],
-  );
+    return [...serverPreviousRequests, ...nextCarriedRequests];
+  }, [carriedRequests, missionRequestData?.previousRequests, stickerRequests]);
 
   const visibleStickerRequests = useMemo(
-    () => stickerRequests.filter((request) => !dismissedMissionIds.has(request.id)),
-    [dismissedMissionIds, stickerRequests],
+    () => [...previousStickerRequests, ...stickerRequests].filter((request) => !dismissedMissionIds.has(request.id)),
+    [dismissedMissionIds, previousStickerRequests, stickerRequests],
   );
 
   const apiRemainingStickerCount = Number.parseInt(activeBoard?.remainingStickerCount ?? '0', 10) || 0;
   const totalStickerCount = Number.parseInt(activeBoard?.stickerCount ?? '0', 10) || 0;
-  const currentStickerCount = Math.max(totalStickerCount - apiRemainingStickerCount, 0) + givenStickerCount;
+  const currentStickerCount = Math.max(totalStickerCount - apiRemainingStickerCount, 0);
   const showNotification = visibleStickerRequests.length > 0;
 
   useEffect(() => {
@@ -118,21 +129,74 @@ export default function ChildrenScreen() {
     setDismissedMissionIds(new Set());
   }, [activeBoard?.id, activeBoard?.remainingStickerCount]);
 
+  useEffect(() => {
+    if (!isFocused || reopenStickerRequests !== '1' || !activeBoard || hasConsumedReopenParam) return;
+    setStickerRequestVisible(true);
+    setHasConsumedReopenParam(true);
+    router.replace({
+      pathname: '/children',
+      params: selectedChild?.id ? { focusChildId: selectedChild.id } : undefined,
+    });
+  }, [activeBoard, hasConsumedReopenParam, isFocused, reopenStickerRequests, router, selectedChild?.id]);
+
+  useEffect(() => {
+    if (reopenStickerRequests === '1') {
+      setHasConsumedReopenParam(false);
+    }
+  }, [reopenStickerRequests]);
+
+  const updateCarriedRequests = (updater: (prev: StickerRequest[]) => StickerRequest[]) => {
+    if (!selectedRelationId) return;
+    queryClient.setQueryData<StickerRequest[]>(
+      TODAK_KEYS.carriedMissionRequests(selectedRelationId),
+      (prev) => updater(prev ?? []),
+    );
+  };
+
+  const persistVisibleRequestsAsCarryOver = (extraRequests: StickerRequest[] = []) => {
+    updateCarriedRequests((prev) => {
+      const merged = [...prev, ...previousStickerRequests, ...stickerRequests, ...extraRequests]
+        .filter((request) => !dismissedMissionIds.has(request.id));
+      const deduped = new Map(merged.map((request) => [request.id, request]));
+      return [...deduped.values()];
+    });
+  };
+
   const handleDismissMission = (missionId: string) => {
     setDismissedMissionIds((prev) => new Set(prev).add(missionId));
   };
 
-  const handleManualSticker = (): boolean => {
+  const resetBoardProgressState = () => {
+    setGivenStickerCount(0);
+    setDismissedMissionIds(new Set());
+  };
+
+  const openNewBoardFlow = () => {
+    resetBoardProgressState();
+    setStickerRequestVisible(false);
+    setBoardFullVisible(true);
+  };
+
+  const handleManualSticker = async (): Promise<boolean> => {
     if (apiRemainingStickerCount - givenStickerCount <= 0) {
-      setStickerRequestVisible(false);
-      setBoardFullVisible(true);
+      persistVisibleRequestsAsCarryOver();
+      openNewBoardFlow();
       return false;
     }
-    setGivenStickerCount((prev) => prev + 1);
-    return true;
+    const relationId = selectedChild ? parseInt(selectedChild.id, 10) : null;
+    if (!relationId) return false;
+    try {
+      await giveSticker.mutateAsync({ relationId, content: null, emoticon: '⭐' });
+      setGivenStickerCount((prev) => prev + 1);
+      return true;
+    } catch {
+      Alert.alert('오류', '스티커 지급에 실패했습니다. 다시 시도해주세요.');
+      return false;
+    }
   };
 
   const handleNewBoard = () => {
+    resetBoardProgressState();
     setBoardFullVisible(false);
     setCreateBoardVisible(true);
   };
@@ -166,6 +230,7 @@ export default function ChildrenScreen() {
     rewardText: string,
   ) => {
     if (!selectedChild) return;
+    resetBoardProgressState();
     setCreateBoardVisible(false);
     // API는 todagi.tsx에서 미션까지 다 모은 후 한 번에 호출
     router.push({
@@ -178,6 +243,7 @@ export default function ChildrenScreen() {
         initStickerCount: stickerCount,
         initBoardDesign: boardDesign,
         initReward: rewardText,
+        ...(carriedRequests.length > 0 ? { reopenStickerRequests: '1' } : {}),
       },
     });
   };
@@ -257,7 +323,7 @@ export default function ChildrenScreen() {
                   currentStickerCount={currentStickerCount}
                   totalStickerCount={totalStickerCount}
                   showTotalStickerCount={totalStickerCount > 0}
-                  remainingStickerCount={Math.max(apiRemainingStickerCount - givenStickerCount, 0)}
+                  remainingStickerCount={apiRemainingStickerCount}
                   showNotification={showNotification}
                   onPressStickerButton={() => setStickerRequestVisible(true)}
                   onPressEditBoard={() => setEditBoardVisible(true)}
@@ -313,25 +379,48 @@ export default function ChildrenScreen() {
             visible={stickerRequestVisible}
             childName={selectedChild.name}
             requests={stickerRequests}
-            previousRequests={[]}
+            previousRequests={previousStickerRequests}
             dismissedIds={dismissedMissionIds}
-            onDismiss={(requestId, action) => {
-              handleDismissMission(requestId);
+            onDismiss={async (requestId, action) => {
               const missionRequestId = parseInt(requestId, 10);
               const relationId = parseInt(selectedChild.id, 10);
-              const dismissedRequest = stickerRequests.find((request) => request.id === requestId);
+              const targetRequest = [...previousStickerRequests, ...stickerRequests].find(
+                (request) => request.id === requestId,
+              );
+              if (!targetRequest) return false;
 
               if (action === 'accept') {
-                acceptRequest.mutate(
-                  { missionRequestId, relationId },
-                  {
-                    onSuccess: () => {
-                      setGivenStickerCount((prev) => prev + (dismissedRequest?.stickerCount ?? 0));
-                    },
-                  },
-                );
+                if (apiRemainingStickerCount - givenStickerCount < targetRequest.stickerCount) {
+                  persistVisibleRequestsAsCarryOver([targetRequest]);
+                  openNewBoardFlow();
+                  return false;
+                }
+
+                try {
+                  await acceptRequest.mutateAsync({ missionRequestId, relationId });
+                  handleDismissMission(requestId);
+                  updateCarriedRequests((prev) => prev.filter((request) => request.id !== requestId));
+                  setGivenStickerCount((prev) => prev + targetRequest.stickerCount);
+                  return true;
+                } catch (error) {
+                  if (axios.isAxiosError(error) && error.response?.status === 409) {
+                    persistVisibleRequestsAsCarryOver([targetRequest]);
+                    openNewBoardFlow();
+                    return false;
+                  }
+                  Alert.alert('오류', '스티커 지급에 실패했습니다. 다시 시도해주세요.');
+                  return false;
+                }
               } else {
-                rejectRequest.mutate({ missionRequestId, relationId });
+                try {
+                  await rejectRequest.mutateAsync({ missionRequestId, relationId });
+                  handleDismissMission(requestId);
+                  updateCarriedRequests((prev) => prev.filter((request) => request.id !== requestId));
+                  return true;
+                } catch {
+                  Alert.alert('오류', '미션 요청 거절에 실패했습니다. 다시 시도해주세요.');
+                  return false;
+                }
               }
             }}
             onManualSticker={handleManualSticker}
