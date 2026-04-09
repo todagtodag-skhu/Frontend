@@ -20,16 +20,21 @@ import GiftCard from '@/components/growth/GiftCard';
 import { StickerInfoCard } from '@/components/growth/StickerInfoCard';
 import { StickerGridBoard, type GridCell } from '@/components/growth/StickerGridBoard';
 import { fontFamily } from '@/constants/fonts';
-import { getCompletedStickerBoards } from '@/features/growth/data';
+import {
+  GROWTH_GRID_COLS,
+  GROWTH_MEMORY_CAROUSEL_GAP,
+  getGrowthBoardHeight,
+  getGrowthBoardWidth,
+  getGrowthMemoryCarouselCardWidth,
+} from '@/features/growth/constants';
+import { useCompletedGrowthStickerBoards } from '@/features/growth/hooks';
 import { type CompletedStickerBoard } from '@/mocks/data';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const CAROUSEL_CARD_WIDTH = SCREEN_WIDTH - 32;
-const CAROUSEL_GAP = 19;
-const BOARD_WIDTH = Math.min(SCREEN_WIDTH - 44, 320);
-const BOARD_HEIGHT = BOARD_WIDTH * 1.08;
-const BOARD_COLS = 5;
+const CAROUSEL_CARD_WIDTH = getGrowthMemoryCarouselCardWidth(SCREEN_WIDTH);
+const BOARD_WIDTH = getGrowthBoardWidth(SCREEN_WIDTH);
+const BOARD_HEIGHT = getGrowthBoardHeight(SCREEN_WIDTH);
 
 type PreviewStickerInfo = {
   placedAt: Date;
@@ -42,8 +47,6 @@ type PreviewStickerInfo = {
   stickerIdx: number;
 };
 
-const COMPLETED_BOARDS = getCompletedStickerBoards();
-
 function CompletedBoardCarouselCard({ board }: { board: CompletedStickerBoard }) {
   const scaleAnimsRef = useRef<Record<number, Animated.Value>>({});
   const [selectedSticker, setSelectedSticker] = useState<PreviewStickerInfo | null>(null);
@@ -51,14 +54,14 @@ function CompletedBoardCarouselCard({ board }: { board: CompletedStickerBoard })
   const gridCells: GridCell[] = useMemo(
     () =>
       Array.from({ length: board.stickers.length }, (_, index) => {
-        const row = Math.floor(index / BOARD_COLS);
-        const col = index % BOARD_COLS;
+        const row = Math.floor(index / GROWTH_GRID_COLS);
+        const col = index % GROWTH_GRID_COLS;
 
         return {
           id: index + 1,
           row,
           col,
-          x: (col + 0.5) / BOARD_COLS,
+          x: (col + 0.5) / GROWTH_GRID_COLS,
           y: row,
         };
       }),
@@ -126,9 +129,10 @@ function CompletedBoardCarouselCard({ board }: { board: CompletedStickerBoard })
 
 const MemoryStorageScreen: React.FC = () => {
   const scrollRef = useRef<ScrollView>(null);
+  const { data: boards = [], isLoading, error } = useCompletedGrowthStickerBoards();
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const currentBoard = COMPLETED_BOARDS[selectedIndex] ?? COMPLETED_BOARDS[0];
+  const currentBoard = boards[selectedIndex] ?? boards[0];
 
   const swipeResponder = useMemo(
     () =>
@@ -146,17 +150,17 @@ const MemoryStorageScreen: React.FC = () => {
 
   const handleCarouselScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const nextIndex = Math.round(
-      event.nativeEvent.contentOffset.x / (CAROUSEL_CARD_WIDTH + CAROUSEL_GAP),
+      event.nativeEvent.contentOffset.x / (CAROUSEL_CARD_WIDTH + GROWTH_MEMORY_CAROUSEL_GAP),
     );
 
-    setSelectedIndex(Math.max(0, Math.min(nextIndex, COMPLETED_BOARDS.length - 1)));
+    setSelectedIndex(Math.max(0, Math.min(nextIndex, boards.length - 1)));
   };
 
   const moveCarousel = (direction: -1 | 1) => {
-    const nextIndex = Math.max(0, Math.min(selectedIndex + direction, COMPLETED_BOARDS.length - 1));
+    const nextIndex = Math.max(0, Math.min(selectedIndex + direction, boards.length - 1));
 
     scrollRef.current?.scrollTo({
-      x: nextIndex * (CAROUSEL_CARD_WIDTH + CAROUSEL_GAP),
+      x: nextIndex * (CAROUSEL_CARD_WIDTH + GROWTH_MEMORY_CAROUSEL_GAP),
       animated: true,
     });
 
@@ -182,14 +186,14 @@ const MemoryStorageScreen: React.FC = () => {
             ref={scrollRef}
             horizontal
             pagingEnabled={false}
-            snapToInterval={CAROUSEL_CARD_WIDTH + CAROUSEL_GAP}
+            snapToInterval={CAROUSEL_CARD_WIDTH + GROWTH_MEMORY_CAROUSEL_GAP}
             decelerationRate="fast"
             disableIntervalMomentum
             showsHorizontalScrollIndicator={false}
             onMomentumScrollEnd={handleCarouselScrollEnd}
             contentContainerStyle={styles.carouselContent}
           >
-            {COMPLETED_BOARDS.map((board) => (
+            {boards.map((board) => (
               <CompletedBoardCarouselCard key={board.id} board={board} />
             ))}
           </ScrollView>
@@ -197,13 +201,13 @@ const MemoryStorageScreen: React.FC = () => {
           <TouchableOpacity
             style={[styles.arrowButton, styles.arrowRight]}
             onPress={() => moveCarousel(1)}
-            disabled={selectedIndex === COMPLETED_BOARDS.length - 1}
+            disabled={selectedIndex === boards.length - 1 || boards.length === 0}
             activeOpacity={0.8}
           >
             <Text
               style={[
                 styles.arrowText,
-                selectedIndex === COMPLETED_BOARDS.length - 1 && styles.arrowDisabled,
+                (selectedIndex === boards.length - 1 || boards.length === 0) && styles.arrowDisabled,
               ]}
             >
               ›
@@ -212,7 +216,15 @@ const MemoryStorageScreen: React.FC = () => {
         </View>
 
         <Text style={styles.sectionTitle}>스티커판 완료 보상 내용</Text>
-        <GiftCard label={currentBoard.reward} status="열기전" onPress={() => undefined} />
+        {error ? (
+          <Text style={styles.sectionTitle}>{error.message}</Text>
+        ) : isLoading ? (
+          <Text style={styles.sectionTitle}>완성된 스티커판을 불러오는 중이에요.</Text>
+        ) : currentBoard ? (
+          <GiftCard label={currentBoard.reward} status="열기전" onPress={() => undefined} />
+        ) : (
+          <Text style={styles.sectionTitle}>아직 완성된 스티커판이 없어요.</Text>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -242,7 +254,7 @@ const styles = StyleSheet.create({
   },
   carouselContent: {
     paddingHorizontal: 0,
-    columnGap: CAROUSEL_GAP,
+    columnGap: GROWTH_MEMORY_CAROUSEL_GAP,
   },
   carouselCard: {
     width: CAROUSEL_CARD_WIDTH,

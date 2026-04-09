@@ -2,11 +2,13 @@ import React, { useCallback, useRef } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { fontFamily } from '@/constants/fonts';
 import { colors } from '@/constants/colors';
+import {
+  GROWTH_BOARD_VERTICAL_EDGE_INSET,
+  GROWTH_GRID_ROWS,
+} from '@/features/growth/constants';
 import FoxImage from '../../../assets/foxImage.svg';
 import MeowImage from '../../../assets/meowImage.svg';
 import TigerImage from '../../../assets/tigerImage.svg';
-
-const VERTICAL_EDGE_INSET = 53;
 
 type Mission = {
   id: string;
@@ -42,7 +44,7 @@ type StickerGridBoardProps = {
 };
 
 function MascotImage({ boardDesign }: { boardDesign?: string }) {
-  if (boardDesign === '우주 탐험') {
+  if (boardDesign === 'meowImage') {
     return (
       <View style={styles.meowImageWrap}>
         <MeowImage width={190} height={106} />
@@ -50,7 +52,7 @@ function MascotImage({ boardDesign }: { boardDesign?: string }) {
     );
   }
 
-  if (boardDesign === '바다 여행') {
+  if (boardDesign === 'tigerImage') {
     return <TigerImage width={146} height={96} />;
   }
 
@@ -69,12 +71,14 @@ export function StickerGridBoard({
   boardDesign,
 }: StickerGridBoardProps) {
   const boardWrapRef = useRef<View>(null);
-  const totalRows = Math.max(...cells.map((cell) => cell.row)) + 1;
-  const visibleRows = Math.min(totalRows, 4);
+  const totalRows = cells.length > 0 ? Math.max(...cells.map((cell) => cell.row)) + 1 : 0;
+  const visibleRows = Math.min(totalRows, GROWTH_GRID_ROWS);
   const rowGap =
-    visibleRows === 1 ? 0 : (height - VERTICAL_EDGE_INSET * 2) / (visibleRows - 1);
+    visibleRows === 1
+      ? 0
+      : (height - GROWTH_BOARD_VERTICAL_EDGE_INSET * 2) / (visibleRows - 1);
   const contentHeight =
-    totalRows === 1 ? height : VERTICAL_EDGE_INSET * 2 + rowGap * (totalRows - 1);
+    totalRows <= 1 ? height : GROWTH_BOARD_VERTICAL_EDGE_INSET * 2 + rowGap * (totalRows - 1);
   const handleMeasureBoard = useCallback(() => {
     boardWrapRef.current?.measureInWindow((x, y, measuredWidth, measuredHeight) => {
       onLayoutBoard({
@@ -105,7 +109,8 @@ export function StickerGridBoard({
           {cells.map((cell) => {
             const sticker = placedStickers[cell.id];
             const left = cell.x * width;
-            const centerY = totalRows === 1 ? height / 2 : VERTICAL_EDGE_INSET + cell.row * rowGap;
+            const centerY =
+              totalRows === 1 ? height / 2 : GROWTH_BOARD_VERTICAL_EDGE_INSET + cell.row * rowGap;
 
             return (
               <Pressable
