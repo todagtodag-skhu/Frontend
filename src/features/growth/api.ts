@@ -6,6 +6,7 @@ import { clearAuthSession, getAuthSession } from '@/features/auth/session';
 import { type CompletedStickerBoard } from '@/mocks/data';
 
 export type GrowthStickerPlacement = {
+  id: string;
   cellId: number;
   missionId: string;
   emoji: string;
@@ -300,14 +301,20 @@ function normalizePlacedStickers(value: unknown, missions: Mission[]): GrowthSti
       const missionId =
         asIdentifier(record?.missionId) ||
         asIdentifier(record?.id) ||
+        asIdentifier(record?.stickerId) ||
         asIdentifier(nestedMission?.id);
       const mission = missionMap.get(missionId);
+      const cellId =
+        parseCountValue(record?.cellId) ||
+        parseCountValue(record?.position) ||
+        parseCountValue(record?.slot);
 
       return {
-        cellId:
-          parseCountValue(record?.cellId) ||
-          parseCountValue(record?.position) ||
-          parseCountValue(record?.slot),
+        id:
+          asIdentifier(record?.stickerId) ||
+          asIdentifier(record?.id) ||
+          `placed-sticker-${index + 1}`,
+        cellId,
         missionId: missionId || mission?.id || `mission-${index + 1}`,
         emoji:
           asString(record?.emoji) ||
@@ -336,9 +343,14 @@ function normalizeAvailableStickers(value: unknown, missions: Mission[]): Growth
       const missionId =
         asIdentifier(record?.missionId) ||
         asIdentifier(record?.id) ||
+        asIdentifier(record?.stickerId) ||
         asIdentifier(nestedMission?.id) ||
         `available-mission-${index + 1}`;
       const mission = missionMap.get(missionId);
+      const position =
+        parseCountValue(record?.position) ||
+        parseCountValue(record?.cellId) ||
+        parseCountValue(record?.slot);
 
       return {
         id:
@@ -360,9 +372,11 @@ function normalizeAvailableStickers(value: unknown, missions: Mission[]): Growth
           asString(record?.content) ||
           mission?.title ||
           `스티커 ${index + 1}`,
+        position,
       };
     })
-    .filter((sticker) => Boolean(sticker.id));
+    .filter((sticker) => Boolean(sticker.id) && (!sticker.position || sticker.position <= 0))
+    .map(({ position: _position, ...sticker }) => sticker);
 }
 
 function normalizeGrowthBoard(value: unknown): GrowthStickerBoard | null {
@@ -384,6 +398,7 @@ function normalizeGrowthBoard(value: unknown): GrowthStickerBoard | null {
     record.receivedStickers ??
     record.stickerQueue ??
     record.attachableStickers;
+  const stickerSource = record.stickers;
   const totalSpots =
     parseCountValue(record.totalSpots) ||
     parseCountValue(record.totalStickerCount) ||
@@ -401,29 +416,16 @@ function normalizeGrowthBoard(value: unknown): GrowthStickerBoard | null {
     parseCountValue(record.leftStickerCount) ||
     Math.max(totalSpots, 0);
   const placedStickers = normalizePlacedStickers(
-    record.placedStickers ??
+    stickerSource ??
+      record.placedStickers ??
       record.attachedStickers ??
       record.completedMissions,
     missions,
   );
   const availableStickers = normalizeAvailableStickers(
     availableStickerSource ??
-      record.stickers,
+      stickerSource,
     missions,
-  );
-  const grantedStickerCount = Math.max(totalSpots - remainingSpots, 0);
-  const missingManualStickerCount = Math.max(
-    grantedStickerCount - placedStickers.length - availableStickers.length,
-    0,
-  );
-  const manualStickers: GrowthAvailableSticker[] = Array.from(
-    { length: missingManualStickerCount },
-    (_, index) => ({
-      id: `manual-sticker-${index + 1}`,
-      missionId: `manual-sticker-${index + 1}`,
-      emoji: '❤',
-      title: '부모님이 준 칭찬 스티커',
-    }),
   );
 
   return {
@@ -445,7 +447,7 @@ function normalizeGrowthBoard(value: unknown): GrowthStickerBoard | null {
     remainingSpots,
     missions,
     placedStickers,
-    availableStickers: [...availableStickers, ...manualStickers],
+    availableStickers,
   };
 }
 
