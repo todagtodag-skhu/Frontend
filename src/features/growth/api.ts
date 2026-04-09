@@ -12,6 +12,13 @@ export type GrowthStickerPlacement = {
   title: string;
 };
 
+export type GrowthAvailableSticker = {
+  id: string;
+  missionId: string;
+  emoji: string;
+  title: string;
+};
+
 export type GrowthStickerBoard = {
   id: string;
   title: string;
@@ -21,12 +28,19 @@ export type GrowthStickerBoard = {
   totalSpots: number;
   missions: Mission[];
   placedStickers: GrowthStickerPlacement[];
+  availableStickers: GrowthAvailableSticker[];
 };
 
 const BOARD_DESIGN_MAP: Record<string, string> = {
   '성장 나무': 'foxImage',
   '우주 탐험': 'meowImage',
   '바다 여행': 'tigerImage',
+  '래서판다': 'foxImage',
+  '고양이': 'meowImage',
+  '호랑이': 'tigerImage',
+  PANDA: 'foxImage',
+  CAT: 'meowImage',
+  TIGER: 'tigerImage',
   foxImage: 'foxImage',
   meowImage: 'meowImage',
   tigerImage: 'tigerImage',
@@ -81,7 +95,37 @@ function parseCountValue(value: unknown): number {
     return value;
   }
 
+  if (value && typeof value === 'object') {
+    const record = asRecord(value);
+
+    if (record) {
+      return (
+        parseCountValue(record.count) ||
+        parseCountValue(record.value) ||
+        parseCountValue(record.label) ||
+        parseCountValue(record.name) ||
+        parseCountValue(record.type) ||
+        parseCountValue(record.stickerCount) ||
+        parseCountValue(record.remainingStickerCount)
+      );
+    }
+  }
+
   if (typeof value === 'string') {
+    const normalized = value.trim().toUpperCase();
+
+    if (normalized === 'TWENTY') {
+      return 20;
+    }
+
+    if (normalized === 'THIRTY') {
+      return 30;
+    }
+
+    if (normalized === 'FIFTY') {
+      return 50;
+    }
+
     const matched = value.match(/\d+/);
     if (matched) {
       return Number.parseInt(matched[0], 10);
@@ -250,8 +294,7 @@ function normalizePlacedStickers(value: unknown, missions: Mission[]): GrowthSti
         cellId:
           parseCountValue(record?.cellId) ||
           parseCountValue(record?.position) ||
-          parseCountValue(record?.slot) ||
-          index + 1,
+          parseCountValue(record?.slot),
         missionId: missionId || mission?.id || `mission-${index + 1}`,
         emoji:
           asString(record?.emoji) ||
@@ -266,7 +309,47 @@ function normalizePlacedStickers(value: unknown, missions: Mission[]): GrowthSti
           `스티커 ${index + 1}`,
       };
     })
+    .filter((sticker) => sticker.cellId > 0)
     .sort((left, right) => left.cellId - right.cellId);
+}
+
+function normalizeAvailableStickers(value: unknown, missions: Mission[]): GrowthAvailableSticker[] {
+  const missionMap = new Map(missions.map((mission) => [mission.id, mission]));
+
+  return asArray(value)
+    .map((item, index) => {
+      const record = asRecord(item);
+      const nestedMission = asRecord(record?.mission);
+      const missionId =
+        asString(record?.missionId) ||
+        asString(record?.id) ||
+        asString(nestedMission?.id) ||
+        `available-mission-${index + 1}`;
+      const mission = missionMap.get(missionId);
+
+      return {
+        id:
+          asString(record?.stickerId) ||
+          asString(record?.id) ||
+          asString(record?.missionRequestId) ||
+          `available-sticker-${index + 1}`,
+        missionId,
+        emoji:
+          asString(record?.emoji) ||
+          asString(record?.stickerEmoji) ||
+          asString(record?.missionEmoji) ||
+          asString(record?.emoticon) ||
+          mission?.emoji ||
+          '⭐',
+        title:
+          asString(record?.title) ||
+          asString(record?.missionTitle) ||
+          asString(record?.content) ||
+          mission?.title ||
+          `스티커 ${index + 1}`,
+      };
+    })
+    .filter((sticker) => Boolean(sticker.id));
 }
 
 function normalizeGrowthBoard(value: unknown): GrowthStickerBoard | null {
@@ -282,13 +365,23 @@ function normalizeGrowthBoard(value: unknown): GrowthStickerBoard | null {
     record.availableMissions ??
     record.todoMissions;
   const missions = asArray(missionSource).map(normalizeMission);
+  const availableStickerSource =
+    record.availableStickers ??
+    record.pendingStickers ??
+    record.receivedStickers ??
+    record.stickerQueue ??
+    record.attachableStickers;
   const totalSpots =
     parseCountValue(record.totalSpots) ||
+    parseCountValue(record.totalStickerCount) ||
+    parseCountValue(record.stickerTotalCount) ||
     parseCountValue(record.stickerCount) ||
     parseCountValue(record.stickerCountLabel) ||
     parseCountValue(record.remainingStickerCount) ||
+    parseCountValue(record.maxCount) ||
     parseCountValue(record.maxStickerCount) ||
-    parseCountValue(record.goalCount);
+    parseCountValue(record.goalCount) ||
+    parseCountValue(record.stickerGoalCount);
 
   return {
     id: asString(record.stickerBoardId) || asString(record.id) || 'growth-board',
@@ -310,8 +403,12 @@ function normalizeGrowthBoard(value: unknown): GrowthStickerBoard | null {
     placedStickers: normalizePlacedStickers(
       record.placedStickers ??
         record.attachedStickers ??
-        record.stickers ??
         record.completedMissions,
+      missions,
+    ),
+    availableStickers: normalizeAvailableStickers(
+      availableStickerSource ??
+        record.stickers,
       missions,
     ),
   };

@@ -26,7 +26,11 @@ import {
   getGrowthBoardHeight,
   getGrowthBoardWidth,
 } from '@/features/growth/constants';
-import { useAttachGrowthSticker, useGrowthStickerBoard } from '@/features/growth/hooks';
+import {
+  useAttachGrowthSticker,
+  useGrowthStickerBoard,
+} from '@/features/growth/hooks';
+import type { GrowthAvailableSticker } from '@/features/growth/api';
 import { type TreeMission } from '@/mocks/data';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -101,7 +105,7 @@ export default function GrowthTree({
   }, [totalSpots]);
 
   const [placedStickers, setPlacedStickers] = useState<Record<number, StickerInfo>>({});
-  const [usedStickerIndices, setUsedStickerIndices] = useState<number[]>([]);
+  const [availableStickers, setAvailableStickers] = useState<GrowthAvailableSticker[]>([]);
   const [stickerPage, setStickerPage] = useState(0);
   const [draggingStickerIdx, setDraggingStickerIdx] = useState<number | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
@@ -118,7 +122,7 @@ export default function GrowthTree({
   useEffect(() => {
     if (!board) {
       setPlacedStickers({});
-      setUsedStickerIndices([]);
+      setAvailableStickers([]);
       return;
     }
 
@@ -139,11 +143,8 @@ export default function GrowthTree({
     }, {});
 
     setPlacedStickers(nextPlacedStickers);
-    setUsedStickerIndices(
-      board.placedStickers
-        .map((sticker) => missionIndexMap.get(sticker.missionId))
-        .filter((value): value is number => typeof value === 'number'),
-    );
+    setAvailableStickers(board.availableStickers);
+    setStickerPage(0);
   }, [board]);
 
   const getScaleAnim = (id: number) => {
@@ -155,8 +156,9 @@ export default function GrowthTree({
 
   const placedCount = Object.keys(placedStickers).length;
 
-  const totalPages = Math.max(1, Math.ceil(resolvedMissions.length / GROWTH_STICKER_PAGE_SIZE));
-  const pagedIndices = Array.from({ length: resolvedMissions.length })
+  const availableStickerCount = availableStickers.length;
+  const totalPages = Math.max(1, Math.ceil(availableStickerCount / GROWTH_STICKER_PAGE_SIZE));
+  const pagedIndices = Array.from({ length: availableStickerCount })
     .map((_, i) => i)
     .slice(
       stickerPage * GROWTH_STICKER_PAGE_SIZE,
@@ -188,13 +190,22 @@ export default function GrowthTree({
   }, []);
 
   const handleAttachSticker = useCallback(
-    async (cellId: number, mission: Mission, stickerIdx: number) => {
+    async (cellId: number, sticker: GrowthAvailableSticker, stickerIdx: number) => {
       if (attachStickerMutation.isPending) {
         return;
       }
 
-      placeSticker(cellId, mission, stickerIdx);
-      setUsedStickerIndices((prev) => (prev.includes(stickerIdx) ? prev : [...prev, stickerIdx]));
+      placeSticker(
+        cellId,
+        {
+          id: sticker.missionId,
+          emoji: sticker.emoji,
+          title: sticker.title,
+          completed: true,
+        },
+        stickerIdx,
+      );
+      setAvailableStickers((prev) => prev.filter((item) => item.id !== sticker.id));
 
       try {
         await attachStickerMutation.mutateAsync(cellId);
@@ -289,7 +300,7 @@ export default function GrowthTree({
           onPanResponderRelease: (evt, gestureState) => {
             const dropX = evt?.nativeEvent?.pageX;
             const dropY = evt?.nativeEvent?.pageY;
-            const mission = resolvedMissions[idx];
+            const sticker = availableStickers[idx];
             const moveX = Math.abs(gestureState.dx);
             const moveY = Math.abs(gestureState.dy);
             const isTapLike =
@@ -299,14 +310,14 @@ export default function GrowthTree({
             setDraggingStickerIdx(null);
             setDragPos(null);
 
-            if (typeof dropX !== 'number' || typeof dropY !== 'number' || !mission) return;
+            if (typeof dropX !== 'number' || typeof dropY !== 'number' || !sticker) return;
 
             if (isTapLike) {
               const firstCellId = getFirstAvailableCellId();
 
               if (firstCellId === null) return;
 
-              void handleAttachSticker(firstCellId, mission, idx);
+              void handleAttachSticker(firstCellId, sticker, idx);
               return;
             }
 
@@ -314,7 +325,7 @@ export default function GrowthTree({
 
             if (cellId === null) return;
 
-            void handleAttachSticker(cellId, mission, idx);
+            void handleAttachSticker(cellId, sticker, idx);
           },
 
           onPanResponderTerminate: () => {
@@ -328,7 +339,7 @@ export default function GrowthTree({
 
       return panHandlersMap.current[idx];
     },
-    [getFirstAvailableCellId, getGridCellFromPoint, handleAttachSticker, resolvedMissions],
+    [availableStickers, getFirstAvailableCellId, getGridCellFromPoint, handleAttachSticker],
   );
 
   const handleCellPress = (id: number) => {
@@ -400,56 +411,55 @@ export default function GrowthTree({
               boardDesign={resolvedBoardDesign}
             />
 
-            <View style={styles.stickerPickerWrap}>
-              <TouchableOpacity
-                style={styles.arrowBtn}
-                disabled={stickerPage === 0}
-                onPress={() => setStickerPage((p) => Math.max(p - 1, 0))}
-              >
-                <Text style={[styles.arrowText, stickerPage === 0 && styles.arrowDisabled]}>‹</Text>
-              </TouchableOpacity>
+            {availableStickerCount > 0 ? (
+              <>
+                <View style={styles.stickerPickerWrap}>
+                  <TouchableOpacity
+                    style={styles.arrowBtn}
+                    disabled={stickerPage === 0}
+                    onPress={() => setStickerPage((p) => Math.max(p - 1, 0))}
+                  >
+                    <Text style={[styles.arrowText, stickerPage === 0 && styles.arrowDisabled]}>‹</Text>
+                  </TouchableOpacity>
 
-              <View style={styles.stickerPickerInner}>
-                {pagedIndices.map((idx) => {
-                  const isUsed = usedStickerIndices.includes(idx);
-                  const isDraggingThis = draggingStickerIdx === idx;
+                  <View style={styles.stickerPickerInner}>
+                    {pagedIndices.map((idx) => {
+                      const isDraggingThis = draggingStickerIdx === idx;
 
-                  return (
-                    <View key={idx} style={styles.bigStickerOption}>
-                      {!isUsed ? (
-                        <Pressable {...getPanHandlers(idx)} style={styles.draggableArea}>
-                          <View style={[styles.stickerCircle, isDraggingThis && { opacity: 0 }]}>
-                            <FloatingStickerIcon emoji={resolvedMissions[idx]?.emoji} />
-                          </View>
-                        </Pressable>
-                      ) : (
-                        <View style={styles.usedSlot} />
-                      )}
-                    </View>
-                  );
-                })}
+                      return (
+                        <View key={availableStickers[idx]?.id ?? idx} style={styles.bigStickerOption}>
+                          <Pressable {...getPanHandlers(idx)} style={styles.draggableArea}>
+                            <View style={[styles.stickerCircle, isDraggingThis && { opacity: 0 }]}>
+                              <FloatingStickerIcon emoji={availableStickers[idx]?.emoji} />
+                            </View>
+                          </Pressable>
+                        </View>
+                      );
+                    })}
 
-                {Array.from({ length: GROWTH_STICKER_PAGE_SIZE - pagedIndices.length }).map((_, i) => (
-                  <View key={`dummy-${i}`} style={styles.bigStickerOption} />
-                ))}
-              </View>
+                    {Array.from({ length: GROWTH_STICKER_PAGE_SIZE - pagedIndices.length }).map((_, i) => (
+                      <View key={`dummy-${i}`} style={styles.bigStickerOption} />
+                    ))}
+                  </View>
 
-              <TouchableOpacity
-                style={styles.arrowBtn}
-                disabled={stickerPage === totalPages - 1}
-                onPress={() => setStickerPage((p) => Math.min(p + 1, totalPages - 1))}
-              >
-                <Text style={[styles.arrowText, stickerPage === totalPages - 1 && styles.arrowDisabled]}>
-                  ›
+                  <TouchableOpacity
+                    style={styles.arrowBtn}
+                    disabled={stickerPage === totalPages - 1}
+                    onPress={() => setStickerPage((p) => Math.min(p + 1, totalPages - 1))}
+                  >
+                    <Text style={[styles.arrowText, stickerPage === totalPages - 1 && styles.arrowDisabled]}>
+                      ›
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.stickerCountText}>
+                  {attachStickerMutation.isPending
+                    ? '스티커를 붙이는 중이에요...'
+                    : `붙일 수 있는 스티커를 ${availableStickerCount}개 가지고 있어요!`}
                 </Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.stickerCountText}>
-              {attachStickerMutation.isPending
-                ? '스티커를 붙이는 중이에요...'
-                : `붙일 수 있는 스티커를 ${placedCount}개 가지고 있어요!`}
-            </Text>
+              </>
+            ) : null}
           </>
         )}
       </View>
@@ -465,7 +475,7 @@ export default function GrowthTree({
             },
           ]}
         >
-          <FloatingStickerIcon emoji={resolvedMissions[draggingStickerIdx]?.emoji} />
+          <FloatingStickerIcon emoji={availableStickers[draggingStickerIdx]?.emoji} />
         </View>
       )}
 
