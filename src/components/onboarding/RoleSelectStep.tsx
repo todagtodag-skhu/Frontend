@@ -32,7 +32,7 @@ const ROLE_OPTIONS: Array<{
     role: 'growth',
     img: <GrowImg width={100} height={100} />,
     title: '성장이',
-    description: '성장이는 토닥이가 지정한 미션을  수행하며 스티커를 모아요.',
+    description: '성장이는 토닥이가 지정한 미션을 수행하며 스티커를 모아요.',
   },
 ];
 

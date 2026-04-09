@@ -90,6 +90,18 @@ function asString(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;
 }
 
+function asIdentifier(value: unknown, fallback = ''): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return fallback;
+}
+
 function parseCountValue(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
@@ -247,7 +259,7 @@ function normalizeMission(value: unknown, index: number): Mission {
   const item = asRecord(value);
 
   return {
-    id: asString(item?.missionId) || asString(item?.id) || `mission-${index + 1}`,
+    id: asIdentifier(item?.missionId) || asIdentifier(item?.id) || `mission-${index + 1}`,
     emoji:
       asString(item?.emoji) ||
       asString(item?.stickerEmoji) ||
@@ -285,9 +297,9 @@ function normalizePlacedStickers(value: unknown, missions: Mission[]): GrowthSti
       const record = asRecord(item);
       const nestedMission = asRecord(record?.mission);
       const missionId =
-        asString(record?.missionId) ||
-        asString(record?.id) ||
-        asString(nestedMission?.id);
+        asIdentifier(record?.missionId) ||
+        asIdentifier(record?.id) ||
+        asIdentifier(nestedMission?.id);
       const mission = missionMap.get(missionId);
 
       return {
@@ -321,17 +333,17 @@ function normalizeAvailableStickers(value: unknown, missions: Mission[]): Growth
       const record = asRecord(item);
       const nestedMission = asRecord(record?.mission);
       const missionId =
-        asString(record?.missionId) ||
-        asString(record?.id) ||
-        asString(nestedMission?.id) ||
+        asIdentifier(record?.missionId) ||
+        asIdentifier(record?.id) ||
+        asIdentifier(nestedMission?.id) ||
         `available-mission-${index + 1}`;
       const mission = missionMap.get(missionId);
 
       return {
         id:
-          asString(record?.stickerId) ||
-          asString(record?.id) ||
-          asString(record?.missionRequestId) ||
+          asIdentifier(record?.stickerId) ||
+          asIdentifier(record?.id) ||
+          asIdentifier(record?.missionRequestId) ||
           `available-sticker-${index + 1}`,
         missionId,
         emoji:
@@ -384,7 +396,7 @@ function normalizeGrowthBoard(value: unknown): GrowthStickerBoard | null {
     parseCountValue(record.stickerGoalCount);
 
   return {
-    id: asString(record.stickerBoardId) || asString(record.id) || 'growth-board',
+    id: asIdentifier(record.stickerBoardId) || asIdentifier(record.id) || 'growth-board',
     title:
       asString(record.title) ||
       asString(record.stickerBoardTitle) ||
@@ -422,7 +434,7 @@ function normalizeCompletedBoard(value: unknown, index: number): CompletedSticke
   }
 
   return {
-    id: asString(record.stickerBoardId) || asString(record.id) || `completed-board-${index + 1}`,
+    id: asIdentifier(record.stickerBoardId) || asIdentifier(record.id) || `completed-board-${index + 1}`,
     title:
       asString(record.title) ||
       asString(record.stickerBoardTitle) ||
@@ -497,7 +509,7 @@ export async function getCompletedGrowthStickerBoards(): Promise<CompletedSticke
     .filter((board): board is CompletedStickerBoard => Boolean(board));
 
   if (boards.length === 0) {
-    throw new Error('완성된 스티커판 응답이 비어 있습니다.');
+    throw new Error('아직 완성된 스티커판이 없어요!');
   }
 
   return boards;

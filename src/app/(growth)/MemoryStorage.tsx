@@ -214,7 +214,7 @@ const MemoryStorageScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionTitle}>스티커판 완료 보상 내용</Text>
+        <Text style={styles.sectionTitle}></Text>
         {error ? (
           <Text style={styles.sectionTitle}>{error.message}</Text>
         ) : isLoading ? (
@@ -222,7 +222,7 @@ const MemoryStorageScreen: React.FC = () => {
         ) : currentBoard ? (
           <GiftCard label={currentBoard.reward} status="열기전" onPress={() => undefined} />
         ) : (
-          <Text style={styles.sectionTitle}>아직 완성된 스티커판이 없어요.</Text>
+          <Text style={styles.emptyStateText}>아직 완성된 스티커판이 없어요!</Text>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -309,5 +309,13 @@ const styles = StyleSheet.create({
     color: '#6D655E',
     fontFamily: fontFamily.bold,
     marginBottom: 12,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    lineHeight: 26,
+    color: '#6D655E',
+    fontFamily: fontFamily.bold,
+    textAlign: 'center',
+    marginTop: 20,
   },
 });
