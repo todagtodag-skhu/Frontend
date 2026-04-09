@@ -26,6 +26,7 @@ export type GrowthStickerBoard = {
   boardDesign: string;
   stickerCount: string;
   totalSpots: number;
+  remainingSpots: number;
   missions: Mission[];
   placedStickers: GrowthStickerPlacement[];
   availableStickers: GrowthAvailableSticker[];
@@ -394,6 +395,36 @@ function normalizeGrowthBoard(value: unknown): GrowthStickerBoard | null {
     parseCountValue(record.maxStickerCount) ||
     parseCountValue(record.goalCount) ||
     parseCountValue(record.stickerGoalCount);
+  const remainingSpots =
+    parseCountValue(record.remainingStickerCount) ||
+    parseCountValue(record.remainingCount) ||
+    parseCountValue(record.leftStickerCount) ||
+    Math.max(totalSpots, 0);
+  const placedStickers = normalizePlacedStickers(
+    record.placedStickers ??
+      record.attachedStickers ??
+      record.completedMissions,
+    missions,
+  );
+  const availableStickers = normalizeAvailableStickers(
+    availableStickerSource ??
+      record.stickers,
+    missions,
+  );
+  const grantedStickerCount = Math.max(totalSpots - remainingSpots, 0);
+  const missingManualStickerCount = Math.max(
+    grantedStickerCount - placedStickers.length - availableStickers.length,
+    0,
+  );
+  const manualStickers: GrowthAvailableSticker[] = Array.from(
+    { length: missingManualStickerCount },
+    (_, index) => ({
+      id: `manual-sticker-${index + 1}`,
+      missionId: `manual-sticker-${index + 1}`,
+      emoji: '❤',
+      title: '부모님이 준 칭찬 스티커',
+    }),
+  );
 
   return {
     id: asIdentifier(record.stickerBoardId) || asIdentifier(record.id) || 'growth-board',
@@ -411,18 +442,10 @@ function normalizeGrowthBoard(value: unknown): GrowthStickerBoard | null {
     boardDesign: normalizeBoardDesign(record.boardDesign ?? record.design),
     stickerCount: getStickerCountLabel(totalSpots, asString(record.stickerCountLabel)),
     totalSpots,
+    remainingSpots,
     missions,
-    placedStickers: normalizePlacedStickers(
-      record.placedStickers ??
-        record.attachedStickers ??
-        record.completedMissions,
-      missions,
-    ),
-    availableStickers: normalizeAvailableStickers(
-      availableStickerSource ??
-        record.stickers,
-      missions,
-    ),
+    placedStickers,
+    availableStickers: [...availableStickers, ...manualStickers],
   };
 }
 
@@ -469,8 +492,13 @@ export async function getGrowthStickerBoard(): Promise<GrowthStickerBoard> {
 
   const response = await getApiClient().get('/sungjang/sticker-board');
   assertOkStatus(response, '성장이 스티커판을 불러오지 못했습니다.');
+  console.log('[growth] /sungjang/sticker-board raw response', response.data);
 
-  const board = normalizeGrowthBoard(unwrapData(response.data));
+  const unwrappedPayload = unwrapData(response.data);
+  console.log('[growth] /sungjang/sticker-board unwrapped payload', unwrappedPayload);
+
+  const board = normalizeGrowthBoard(unwrappedPayload);
+  console.log('[growth] normalized sticker board', board);
 
   if (!board) {
     throw new Error('성장이 스티커판 응답이 올바르지 않습니다.');

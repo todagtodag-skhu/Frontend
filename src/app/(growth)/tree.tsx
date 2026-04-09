@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import { useIsFocused } from '@react-navigation/native';
 import {
   Alert,
   View,
@@ -30,7 +31,7 @@ import {
   useAttachGrowthSticker,
   useGrowthStickerBoard,
 } from '@/features/growth/hooks';
-import type { GrowthAvailableSticker } from '@/features/growth/api';
+import type { GrowthAvailableSticker, GrowthStickerPlacement } from '@/features/growth/api';
 import { type TreeMission } from '@/mocks/data';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -64,6 +65,39 @@ function FloatingStickerIcon({ emoji }: { emoji?: string }) {
   );
 }
 
+function isFallbackStickerTitle(title?: string) {
+  return !title || /^스티커 \d+$/.test(title);
+}
+
+function buildPlacedStickerMap(
+  stickers: GrowthStickerPlacement[],
+  missionIndexMap: Map<string, number>,
+  previousPlacedStickers: Record<number, StickerInfo>,
+) {
+  return stickers.reduce<Record<number, StickerInfo>>((acc, sticker) => {
+    const previousSticker = previousPlacedStickers[sticker.cellId];
+    const resolvedTitle =
+      isFallbackStickerTitle(sticker.title) && previousSticker?.mission.title
+        ? previousSticker.mission.title
+        : sticker.title;
+    const resolvedEmoji =
+      sticker.emoji || previousSticker?.mission.emoji || '⭐';
+
+    acc[sticker.cellId] = {
+      placedAt: previousSticker?.placedAt ?? new Date(),
+      mission: {
+        id: sticker.missionId,
+        emoji: resolvedEmoji,
+        title: resolvedTitle,
+        completed: true,
+      },
+      stickerIdx: missionIndexMap.get(sticker.missionId) ?? previousSticker?.stickerIdx ?? 0,
+    };
+
+    return acc;
+  }, {});
+}
+
 export default function GrowthTree({
   boardName,
   reward,
@@ -71,6 +105,7 @@ export default function GrowthTree({
 }: TreeProps) {
   const { data: board, isLoading, error, refetch } = useGrowthStickerBoard();
   const attachStickerMutation = useAttachGrowthSticker();
+  const isFocused = useIsFocused();
 
   const resolvedBoardName = board?.title ?? boardName ?? '';
   const resolvedReward = board?.rewardText ?? reward ?? '';
@@ -127,25 +162,20 @@ export default function GrowthTree({
     }
 
     const missionIndexMap = new Map(board.missions.map((mission, index) => [mission.id, index]));
-    const nextPlacedStickers = board.placedStickers.reduce<Record<number, StickerInfo>>((acc, sticker) => {
-      acc[sticker.cellId] = {
-        placedAt: new Date(),
-        mission: {
-          id: sticker.missionId,
-          emoji: sticker.emoji,
-          title: sticker.title,
-          completed: true,
-        },
-        stickerIdx: missionIndexMap.get(sticker.missionId) ?? 0,
-      };
-
-      return acc;
-    }, {});
-
-    setPlacedStickers(nextPlacedStickers);
+    setPlacedStickers((previousPlacedStickers) =>
+      buildPlacedStickerMap(board.placedStickers, missionIndexMap, previousPlacedStickers),
+    );
     setAvailableStickers(board.availableStickers);
     setStickerPage(0);
   }, [board]);
+
+  useEffect(() => {
+    if (!isFocused) {
+      return;
+    }
+
+    void refetch();
+  }, [isFocused, refetch]);
 
   const getScaleAnim = (id: number) => {
     if (!scaleAnims.current[id]) {
