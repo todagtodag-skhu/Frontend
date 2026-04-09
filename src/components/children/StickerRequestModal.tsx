@@ -22,8 +22,8 @@ type StickerRequestModalProps = {
   requests: StickerRequest[];
   previousRequests?: StickerRequest[];
   dismissedIds: Set<string>;
-  onDismiss: (requestId: string, action: 'accept' | 'reject') => void;
-  onManualSticker: () => boolean;
+  onDismiss: (requestId: string, action: 'accept' | 'reject') => Promise<boolean>;
+  onManualSticker: () => Promise<boolean>;
   onClose: () => void;
 };
 
@@ -35,22 +35,25 @@ export function StickerRequestModal({ visible, childName, requests, previousRequ
   const visiblePreviousRequests = (previousRequests ?? []).filter((r) => !dismissedIds.has(r.id));
   const hasPreviousRequests = visiblePreviousRequests.length > 0;
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (!pendingAction) return;
 
-    if (pendingAction.type === 'accept') {
-      setResultModal({
-        title: '완료',
-        description: `"${pendingAction.missionTitle}" 미션에 스티커를 지급했어요!`,
-      });
-    } else {
-      setResultModal({
-        title: '완료',
-        description: `"${pendingAction.missionTitle}" 미션 요청을 거절했어요.`,
-      });
+    const success = await onDismiss(pendingAction.requestId, pendingAction.type);
+
+    if (success) {
+      if (pendingAction.type === 'accept') {
+        setResultModal({
+          title: '완료',
+          description: `"${pendingAction.missionTitle}" 미션에 스티커를 지급했어요!`,
+        });
+      } else {
+        setResultModal({
+          title: '완료',
+          description: `"${pendingAction.missionTitle}" 미션 요청을 거절했어요.`,
+        });
+      }
     }
 
-    onDismiss(pendingAction.requestId, pendingAction.type);
     setPendingAction(null);
   };
 
@@ -120,8 +123,8 @@ export function StickerRequestModal({ visible, childName, requests, previousRequ
         <View style={styles.footer}>
           <Pressable
             style={styles.manualButton}
-            onPress={() => {
-              const success = onManualSticker();
+            onPress={async () => {
+              const success = await onManualSticker();
               if (success) {
                 setResultModal({ title: '스티커 지급', description: '칭찬스티커 1개를 부여했습니다' });
               }

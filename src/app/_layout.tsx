@@ -88,6 +88,18 @@ export default function RootLayout() {
             };
           }}
         />
+        <Stack.Screen
+          name="todak-memory"
+          options={{
+            headerShown: true,
+            title: '완성된 스티커 판',
+            headerLeft: () => (
+              <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 16 }}>
+                <Text>뒤로</Text>
+              </Pressable>
+            ),
+          }}
+        />
       </Stack>
     </GrowthProvider>
     </QueryClientProvider>

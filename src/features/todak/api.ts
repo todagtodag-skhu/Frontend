@@ -3,6 +3,7 @@ import { Mission, StickerBoard } from '@/components/todagi/types';
 import type { CompletedStickerBoard } from '@/mocks/data';
 import type {
   ApiMission,
+  ApiMissionRequest,
   ApiStickerBoard,
   ApiMissionInput,
   ApiCreateStickerBoardRequest,
@@ -12,7 +13,9 @@ import type {
   ApiCompletedBoard,
   BoardDesignApi,
   StickerCountApi,
+  ApiGiveStickerRequest,
 } from './types';
+import type { StickerRequest } from '@/components/todagi/types';
 
 // ─── Mapping tables ────────────────────────────────────────────────────────────
 
@@ -77,17 +80,22 @@ export function adaptApiMission(m: ApiMission): Mission {
 export function adaptApiStickerBoard(
   board: ApiStickerBoard,
   relationId: number,
-  previousBoard?: StickerBoard | null,
+  _previousBoard?: StickerBoard | null,
 ): StickerBoard {
-  const remainingStickerCount = formatStickerCountLabel(board.remainingStickerCount);
+  // API returns remainingStickerCount as "given/total" format (e.g. "2/50")
+  const progressMatch = board.remainingStickerCount?.match(/^(\d+)\/(\d+)$/);
+  const stickerCount = progressMatch
+    ? `${progressMatch[2]}개`
+    : formatStickerCountLabel(board.remainingStickerCount);
+  const remainingStickerCount = progressMatch
+    ? String(Number(progressMatch[2]) - Number(progressMatch[1]))
+    : board.remainingStickerCount;
 
   return {
     id: board.stickerBoardId.toString(),
     childId: relationId.toString(),
     title: board.name,
-    stickerCount: isStickerCountLabel(previousBoard?.stickerCount)
-      ? previousBoard.stickerCount
-      : remainingStickerCount,
+    stickerCount,
     remainingStickerCount,
     boardDesign: BOARD_DESIGN_FROM_API[board.boardDesign] ?? board.boardDesign,
     rewardText: board.finalReward,
@@ -117,6 +125,30 @@ export function missionToApiInput(m: Mission): ApiMissionInput {
   };
 }
 
+export function adaptApiMissionRequest(request: ApiMissionRequest): StickerRequest {
+  return {
+    id: request.missionRequestId.toString(),
+    missionId: request.missionId.toString(),
+    missionEmoji: request.emoticon,
+    missionTitle: request.missionName,
+    stickerCount: request.rewardStickerCount ?? 1,
+    requestedAt: request.requestedAt ?? '',
+  };
+}
+
+export function adaptApiMissionRequests(response: ApiMissionRequestListResponse): {
+  requests: StickerRequest[];
+  previousRequests: StickerRequest[];
+} {
+  const requests = (response.currentRequests ?? response.requests ?? []).map(adaptApiMissionRequest);
+  const previousRequests = (response.previousRequests ?? []).map(adaptApiMissionRequest);
+
+  return {
+    requests,
+    previousRequests,
+  };
+}
+
 // ─── Sticker Board ──────────────────────────────────────────────────────────────
 
 export async function getTodakStickerBoard(relationId: number): Promise<ApiStickerBoard> {
@@ -133,6 +165,10 @@ export async function createTodakStickerBoard(
     body,
   );
   return data;
+}
+
+export async function completeTodakStickerBoard(stickerBoardId: number): Promise<void> {
+  await apiClient.post(`/todak/sticker-board/${stickerBoardId}/complete`);
 }
 
 export async function updateTodakStickerBoard(
@@ -185,11 +221,11 @@ export async function updateTodakMission(
 
 export async function getMissionRequests(
   relationId: number,
-): Promise<ApiMissionRequestListResponse> {
+): Promise<{ requests: StickerRequest[]; previousRequests: StickerRequest[] }> {
   const { data } = await apiClient.get<ApiMissionRequestListResponse>(
     `/todak/mission-request/${relationId}`,
   );
-  return data;
+  return adaptApiMissionRequests(data);
 }
 
 export async function acceptMissionRequest(missionRequestId: number): Promise<void> {
@@ -198,4 +234,13 @@ export async function acceptMissionRequest(missionRequestId: number): Promise<vo
 
 export async function rejectMissionRequest(missionRequestId: number): Promise<void> {
   await apiClient.post(`/todak/mission-request/${missionRequestId}/reject`);
+}
+
+// ─── Sticker (수동 부여) ────────────────────────────────────────────────────────
+
+export async function giveTodakSticker(
+  relationId: number,
+  body: ApiGiveStickerRequest,
+): Promise<void> {
+  await apiClient.post(`/todak/sticker/give/${relationId}`, body);
 }

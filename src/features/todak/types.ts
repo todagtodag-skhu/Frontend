@@ -46,10 +46,14 @@ export interface ApiMissionRequest {
   missionId: number;
   missionName: string;
   emoticon: string;
+  rewardStickerCount?: number;
+  requestedAt?: string;
 }
 
 export interface ApiMissionRequestListResponse {
-  requests: ApiMissionRequest[];
+  requests?: ApiMissionRequest[];
+  currentRequests?: ApiMissionRequest[];
+  previousRequests?: ApiMissionRequest[];
 }
 
 export interface ApiSticker {
@@ -67,4 +71,9 @@ export interface ApiCompletedBoard {
 
 export interface ApiMemoryStorageResponse {
   stickerBoards: ApiCompletedBoard[];
+}
+
+export interface ApiGiveStickerRequest {
+  content: string | null;
+  emoticon: string;
 }
