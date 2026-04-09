@@ -22,7 +22,7 @@ type StickerRequestModalProps = {
   requests: StickerRequest[];
   previousRequests?: StickerRequest[];
   dismissedIds: Set<string>;
-  onDismiss: (requestId: string) => void;
+  onDismiss: (requestId: string, action: 'accept' | 'reject') => void;
   onManualSticker: () => boolean;
   onClose: () => void;
 };
@@ -50,7 +50,7 @@ export function StickerRequestModal({ visible, childName, requests, previousRequ
       });
     }
 
-    onDismiss(pendingAction.requestId);
+    onDismiss(pendingAction.requestId, pendingAction.type);
     setPendingAction(null);
   };
 

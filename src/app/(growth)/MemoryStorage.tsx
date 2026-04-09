@@ -131,7 +131,6 @@ const MemoryStorageScreen: React.FC = () => {
   const scrollRef = useRef<ScrollView>(null);
   const { data: boards = [], isLoading, error } = useCompletedGrowthStickerBoards();
   const [selectedIndex, setSelectedIndex] = useState(0);
-
   const currentBoard = boards[selectedIndex] ?? boards[0];
 
   const swipeResponder = useMemo(
